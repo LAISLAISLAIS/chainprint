@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>CHAINPRINT</title>
+  <style>
+    :root {
+      --chassis: #121416;
+      --panel: #1a1d21;
+      --silkscreen: #8a9098;
+      --lamp: #e8a317;
+      --lamp-dim: #8a6410;
+      --readout: #c8cdd4;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      background: var(--chassis);
+      color: var(--readout);
+      font-family: "IBM Plex Mono", "SF Mono", "Menlo", ui-monospace, monospace;
+    }
+
+    body {
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% 0%, #1c2026 0%, transparent 55%),
+        linear-gradient(180deg, #0e1012 0%, var(--chassis) 40%, #0a0b0d 100%);
+    }
+
+    .unit {
+      width: min(92vw, 420px);
+      background: linear-gradient(180deg, #22262c 0%, var(--panel) 12%, #15181c 100%);
+      border: 1px solid #2a2f36;
+      border-radius: 2px;
+      box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.06),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+        0 18px 40px rgba(0, 0, 0, 0.45);
+      padding: 28px 28px 24px;
+    }
+
+    .brand {
+      font-family: "DIN Condensed", "Arial Narrow", "Helvetica Neue Condensed", sans-serif;
+      font-weight: 700;
+      font-size: clamp(2.4rem, 8vw, 3.2rem);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #e6e9ee;
+      line-height: 1;
+    }
+
+    .label {
+      margin-top: 10px;
+      font-size: 0.68rem;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: var(--silkscreen);
+    }
+
+    .status {
+      margin-top: 28px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-top: 18px;
+      border-top: 1px solid #2a2f36;
+    }
+
+    .lamp {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--lamp);
+      box-shadow:
+        0 0 8px var(--lamp),
+        0 0 18px rgba(232, 163, 23, 0.35);
+      animation: pulse 2.4s ease-in-out infinite;
+    }
+
+    .status-text {
+      font-size: 0.75rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--lamp);
+    }
+
+    .meta {
+      margin-top: 14px;
+      font-size: 0.65rem;
+      letter-spacing: 0.08em;
+      color: var(--silkscreen);
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--lamp), 0 0 18px rgba(232, 163, 23, 0.35); }
+      50% { opacity: 0.72; box-shadow: 0 0 4px var(--lamp-dim); }
+    }
+  </style>
+</head>
+<body>
+  <main class="unit">
+    <h1 class="brand">Chainprint</h1>
+    <p class="label">Vocal signal readout</p>
+    <div class="status">
+      <span class="lamp" aria-hidden="true"></span>
+      <span class="status-text">Signal present</span>
+    </div>
+    <p class="meta">Step 0 · deploy check · client-side only</p>
+  </main>
+</body>
+</html>
