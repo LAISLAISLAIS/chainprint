@@ -541,7 +541,25 @@ function renderBands(bands) {
 
 function renderReadouts(readout, traits) {
   if (!readoutRoot) return;
-  const items = [
+  const items = [];
+  if (readout.tempo?.bpm) {
+    items.push([
+      "BPM",
+      `${readout.tempo.bpm}`,
+      readout.tempo.feel || (readout.tempo.confidence < 0.35 ? "low conf." : "pulse"),
+    ]);
+  }
+  if (readout.pitch?.keyLabel) {
+    items.push(["Key", readout.pitch.keyLabel, readout.pitch.register || "estimate"]);
+  }
+  if (readout.pitch?.f0Hz) {
+    items.push([
+      "F0",
+      `${readout.pitch.f0Hz.toFixed(0)} Hz`,
+      readout.pitch.noteName || "register",
+    ]);
+  }
+  items.push(
     ["Centroid", `${readout.centroidHz.toFixed(0)} Hz`, "vocal-weighted"],
     ["Crest", `${readout.dynamics.crestDb.toFixed(1)} dB`, traits.dynamics],
     ["RMS", `${readout.dynamics.rmsDb.toFixed(1)} dB`, "level"],
@@ -551,13 +569,20 @@ function renderReadouts(readout, traits) {
     ["Harsh", `${readout.tone.harshness.toFixed(1)}`, traits.tone.harshness],
     ["Mud", `${readout.tone.mud.toFixed(1)}`, traits.tone.mud],
     ["Corr", readout.stereo.correlation.toFixed(2), traits.stereo],
-    ["Side/Mid", readout.stereo.sideMidRatio.toFixed(2), "stereo"],
-  ];
+    ["Side/Mid", readout.stereo.sideMidRatio.toFixed(2), "stereo"]
+  );
   if (readout.loudness?.lufsProxy != null) {
     items.push(["Loud ≈", `${readout.loudness.lufsProxy.toFixed(1)}`, "proxy · not LUFS"]);
   }
   if (readout.transientIndex != null) {
     items.push(["Transients", `${readout.transientIndex.toFixed(1)}`, traits.deep?.attackFeel || "index"]);
+  }
+  if (readout.eqTargets) {
+    items.push([
+      "EQ peaks",
+      `${readout.eqTargets.mudHz} / ${readout.eqTargets.harshHz}`,
+      "mud · harsh Hz",
+    ]);
   }
   if (traits.deep) {
     items.push(["Density", traits.deep.denseness.replace(/_/g, " "), "Pro"]);
@@ -638,6 +663,8 @@ function renderMaster(master) {
     ["Side/Mid", r.sideMidRatio != null ? r.sideMidRatio.toFixed(2) : "—", "width"],
     ["Centroid", r.centroidHz != null ? `${r.centroidHz.toFixed(0)} Hz` : "—", "full mix"],
   ];
+  if (r.bpm) items.splice(0, 0, ["BPM", `${r.bpm}`, "estimate"]);
+  if (r.keyLabel) items.splice(r.bpm ? 1 : 0, 0, ["Key", r.keyLabel, "estimate"]);
   if (masterReadouts) {
     masterReadouts.innerHTML = items
       .map(
@@ -936,15 +963,21 @@ function showError(message, meta = null, opts = {}) {
   showIdentity(Boolean(opts.needsIdentity), opts.prefill || "");
   if (emptyEl) {
     emptyEl.classList.remove("hidden");
+    const kicker =
+      opts.code === "no_preview"
+        ? "No preview"
+        : opts.needsIdentity
+          ? "Confirm track"
+          : "Couldn’t measure";
+    const detail = opts.needsIdentity
+      ? "Enter artist – song for a preview, or upload the file."
+      : meta
+        ? "Upload the audio file for this track to continue."
+        : "Try another file or link.";
     emptyEl.innerHTML = `
+      <p class="empty-kicker">${escapeHtml(kicker)}</p>
       <h2>${escapeHtml(message)}</h2>
-      <p>${
-        opts.needsIdentity
-          ? "Enter artist – song for a preview, or upload the file."
-          : meta
-            ? "Upload the audio file for this track to continue."
-            : "Try another file or link."
-      }</p>`;
+      <p>${escapeHtml(detail)}</p>`;
   }
   if (consoleEl) consoleEl.textContent = message;
 }
@@ -1069,6 +1102,7 @@ async function runAnalysis() {
     const needsIdentity = err.code === "needs_identity" || err.code === "oembed";
     showError(err.message || String(err), err.meta || null, {
       needsIdentity,
+      code: err.code || "",
       prefill:
         err.meta?.title && err.meta?.artist
           ? `${err.meta.artist} – ${err.meta.title}`

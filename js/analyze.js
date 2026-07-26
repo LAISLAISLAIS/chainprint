@@ -40,7 +40,7 @@ export async function analyzeFile(file, { pluginMap = null, daw = "universal", m
   await tick();
   const readout = measureBuffer(buffer);
 
-  report("characterizing", "Reading tone & dynamics…", 0.72);
+  report("characterizing", "Reading tone, tempo & pitch…", 0.72);
   await tick();
   const traits = characterize(readout);
 
@@ -91,6 +91,21 @@ export function formatReadoutConsole(result) {
     `STEREO    corr ${r.stereo.correlation.toFixed(3)}  side/mid ${r.stereo.sideMidRatio.toFixed(3)}`,
   ];
 
+  if (r.tempo?.bpm) {
+    lines.push(
+      `TEMPO     ${r.tempo.bpm} BPM${r.tempo.feel ? ` · ${r.tempo.feel}` : ""} · conf ${r.tempo.confidence ?? "—"}`
+    );
+  }
+  if (r.pitch?.keyLabel || r.pitch?.f0Hz) {
+    lines.push(
+      `PITCH     ${r.pitch.keyLabel || "key?"} · F0 ${r.pitch.f0Hz != null ? `${r.pitch.f0Hz.toFixed(1)} Hz` : "—"} (${r.pitch.register || "?"})`
+    );
+  }
+  if (r.eqTargets) {
+    lines.push(
+      `EQ PEAKS  mud ${r.eqTargets.mudHz}  harsh ${r.eqTargets.harshHz}  deess ${r.eqTargets.deessHz}  air ${r.eqTargets.airHz}`
+    );
+  }
   if (traits) {
     lines.push(
       "",

@@ -24,11 +24,15 @@ export function deepenTraits(readout, traits) {
   const attackFeel = ti > 6 ? "bright_transients" : ti < 0 ? "soft_attack" : "balanced_attack";
   const monoCompat = corr > 0.85 ? "mono_safe" : corr < 0.45 ? "wide_risk" : "stereo_ok";
 
-  // Sound-design lane from space + tone
+  // Sound-design lane from space + tone + tempo feel
+  const bpm = readout.tempo?.bpm;
+  const feel = readout.tempo?.feel;
   let designLane = "polished_lead";
   if (side > 0.28 && air === "elevated") designLane = "atmospheric";
   else if (crest < 7 && sib === "elevated") designLane = "aggressive_pop";
   else if (side < 0.1 && air === "recessed") designLane = "intimate";
+  else if ((feel === "ballad" || (bpm && bpm < 88)) && side < 0.18) designLane = "intimate";
+  else if (feel === "fast" || (bpm && bpm > 140)) designLane = "aggressive_pop";
   else if (side > 0.22) designLane = "wide_fx";
 
   const spaceCharacter =
@@ -59,6 +63,12 @@ export function deepenTraits(readout, traits) {
   if (mud === "elevated") {
     summary.push("Deep: low-mid weight suggests a parallel ‘body’ bus or multiband tame before additive air.");
   }
+  if (readout.tempo?.bpm) {
+    summary.push(`Deep tempo sync: ~${readout.tempo.bpm} BPM for throws / granular lengths.`);
+  }
+  if (readout.pitch?.keyLabel) {
+    summary.push(`Deep pitch lane: scale center ≈ ${readout.pitch.keyLabel}.`);
+  }
 
   return {
     ...traits,
@@ -72,6 +82,9 @@ export function deepenTraits(readout, traits) {
       lufsProxy: lufs,
       transientIndex: ti,
       sideMidRatio: side,
+      bpm: readout.tempo?.bpm ?? null,
+      keyLabel: readout.pitch?.keyLabel ?? null,
+      register: readout.pitch?.register ?? null,
     },
     summary,
   };
@@ -113,6 +126,13 @@ export function buildMasterAnalysis(readout, traits) {
   }
   if (traits.deep?.designLane === "atmospheric") {
     notes.push("Atmospheric refs often print wetter — don’t over-limit or you’ll squash the ambient bloom.");
+  }
+
+  if (readout.tempo?.bpm) {
+    notes.push(`Tempo estimate ≈ ${readout.tempo.bpm} BPM — useful for delay throws on the master bus FX.`);
+  }
+  if (readout.pitch?.keyLabel) {
+    notes.push(`Tonal center ≈ ${readout.pitch.keyLabel} — keep master EQ musical around that key.`);
   }
 
   const steps = [
@@ -200,6 +220,8 @@ export function buildMasterAnalysis(readout, traits) {
       correlation: corr,
       sideMidRatio: side,
       centroidHz: m.centroidHz,
+      bpm: m.bpm ?? readout.tempo?.bpm ?? null,
+      keyLabel: m.keyLabel ?? readout.pitch?.keyLabel ?? null,
     },
     notes,
     steps,
@@ -294,6 +316,8 @@ export function deepVocalExtras(readout, traits) {
     affiliates: affiliatesForRole("multiband"),
   });
 
+  const keyLabel = readout.pitch?.keyLabel || traits.deep?.keyLabel;
+  const f0 = readout.pitch?.f0Hz;
   extras.push({
     role: "pitch",
     type: "Pitch",
@@ -301,6 +325,12 @@ export function deepVocalExtras(readout, traits) {
     plugin: "Pitch correction + formant",
     tier: "pro",
     dials: [
+      {
+        label: "Scale",
+        value: keyLabel
+          ? `${keyLabel}${f0 ? ` · lead ~${Math.round(f0)} Hz` : ""}`
+          : "Set key in your tuner to match the song",
+      },
       {
         label: "Mode",
         value:
@@ -316,15 +346,18 @@ export function deepVocalExtras(readout, traits) {
     ],
     visual: {
       kind: "eq",
-      bands: [{ id: "p", type: "bell", freq: 1000, gain: 0, q: 0.7, label: "Center" }],
+      bands: [{ id: "p", type: "bell", freq: f0 || 1000, gain: 0, q: 0.7, label: "Center" }],
     },
     copy: [
+      keyLabel ? `Lock correction scale to ${keyLabel}` : "Set the song key before hard correction",
       lane === "aggressive_pop"
         ? "Harder retune speed if the ref has that contemporary snap"
         : "Keep correction musical — don’t erase vibrato",
       "Formant tools only if the ref clearly shifts character",
     ],
-    why: "Deep chains include pitch lane decisions — stock ‘correction’ vs designed Auto-Tune / formant moves.",
+    why: keyLabel
+      ? `Measured tonal center ≈ ${keyLabel} — use it for correction scale / harmony stacks.`
+      : "Deep chains include pitch lane decisions — stock ‘correction’ vs designed Auto-Tune / formant moves.",
     how: "A/B the dry take. If it sounds like a plugin, slow the retune.",
     affiliates: affiliatesForRole("pitch"),
   });

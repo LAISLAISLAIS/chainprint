@@ -814,28 +814,40 @@
   display: grid;
   place-content: center;
   text-align: center;
-  gap: 10px;
+  gap: 8px;
   padding: 40px 28px;
-  max-width: 30rem;
+  max-width: 28rem;
   margin: 0 auto;
 }
 
-.chain-empty h2 {
-  font-family: var(--font-brand);
-  font-size: clamp(1.5rem, 2.8vw, 1.9rem);
-  font-weight: 750;
-  letter-spacing: -0.04em;
-  color: #f6f6f6;
-  line-height: 1.12;
+.chain-empty .empty-kicker {
   margin: 0;
+  font-family: var(--font-ui);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a7a7a;
+}
+
+.chain-empty h2 {
+  font-family: var(--font-ui);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: #f0f0f0;
+  line-height: 1.45;
+  margin: 0;
+  max-width: 26rem;
+  justify-self: center;
 }
 
 .chain-empty p {
   margin: 0;
   color: #8a8a8a;
-  font-size: 0.98rem;
-  line-height: 1.55;
-  letter-spacing: -0.012em;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  letter-spacing: -0.01em;
 }
 
 .studio.has-results .chain-empty {

@@ -92,6 +92,43 @@ export function blendReadouts(readoutA, readoutB, t = 0.5) {
       note: readoutA.loudness?.note || "Approximate loudness proxy — not certified LUFS.",
     },
     transientIndex: lerp(readoutA.transientIndex ?? 0, readoutB.transientIndex ?? 0, w),
+    tempo: {
+      bpm:
+        readoutA.tempo?.bpm && readoutB.tempo?.bpm
+          ? Math.round(lerp(readoutA.tempo.bpm, readoutB.tempo.bpm, w) * 10) / 10
+          : readoutA.tempo?.bpm || readoutB.tempo?.bpm || null,
+      confidence: lerp(readoutA.tempo?.confidence ?? 0, readoutB.tempo?.confidence ?? 0, w),
+      feel: w < 0.5 ? readoutA.tempo?.feel : readoutB.tempo?.feel,
+      note: "Blended tempo estimate — verify against both refs.",
+    },
+    pitch: {
+      f0Hz:
+        readoutA.pitch?.f0Hz && readoutB.pitch?.f0Hz
+          ? Math.round(lerp(readoutA.pitch.f0Hz, readoutB.pitch.f0Hz, w) * 10) / 10
+          : readoutA.pitch?.f0Hz || readoutB.pitch?.f0Hz || null,
+      keyLabel: w < 0.5 ? readoutA.pitch?.keyLabel : readoutB.pitch?.keyLabel,
+      register: w < 0.5 ? readoutA.pitch?.register : readoutB.pitch?.register,
+      noteName: w < 0.5 ? readoutA.pitch?.noteName : readoutB.pitch?.noteName,
+      keyConfidence: lerp(readoutA.pitch?.keyConfidence ?? 0, readoutB.pitch?.keyConfidence ?? 0, w),
+      note: "Blended pitch estimate — prefer the clearer of the two refs.",
+    },
+    eqTargets: {
+      mudHz: Math.round(
+        lerp(readoutA.eqTargets?.mudHz ?? 320, readoutB.eqTargets?.mudHz ?? 320, w)
+      ),
+      harshHz: Math.round(
+        lerp(readoutA.eqTargets?.harshHz ?? 3200, readoutB.eqTargets?.harshHz ?? 3200, w)
+      ),
+      presenceHz: Math.round(
+        lerp(readoutA.eqTargets?.presenceHz ?? 4500, readoutB.eqTargets?.presenceHz ?? 4500, w)
+      ),
+      deessHz: Math.round(
+        lerp(readoutA.eqTargets?.deessHz ?? 6500, readoutB.eqTargets?.deessHz ?? 6500, w)
+      ),
+      airHz: Math.round(
+        lerp(readoutA.eqTargets?.airHz ?? 11000, readoutB.eqTargets?.airHz ?? 11000, w)
+      ),
+    },
     master: {
       peakDb: dynamics.peakDb,
       rmsDb: dynamics.rmsDb,
@@ -105,6 +142,11 @@ export function blendReadouts(readoutA, readoutB, t = 0.5) {
         w
       ),
       bands: bandsFullMix,
+      bpm:
+        readoutA.tempo?.bpm && readoutB.tempo?.bpm
+          ? Math.round(lerp(readoutA.tempo.bpm, readoutB.tempo.bpm, w) * 10) / 10
+          : readoutA.tempo?.bpm || readoutB.tempo?.bpm || null,
+      keyLabel: w < 0.5 ? readoutA.pitch?.keyLabel : readoutB.pitch?.keyLabel,
       streamingTarget:
         readoutA.master?.streamingTarget ||
         "Aim integrated ≈ −14 LUFS / −1 dBTP for most DSPs (verify with a real meter).",

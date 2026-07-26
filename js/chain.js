@@ -5,6 +5,8 @@
  * Honesty: plausible reconstruction from measurements — not the true chain.
  */
 
+import { pickDelayNote, noteMs } from "./dsp/tempo.js";
+
 const PLUGINS = {
   gain: "Gain / Utility",
   eq: "Parametric EQ",
@@ -27,12 +29,17 @@ function round1(n) {
   return Math.round(n * 10) / 10;
 }
 
+function round0(n) {
+  return Math.round(n);
+}
+
 function dials(...pairs) {
   return pairs.filter(Boolean).map(([label, value]) => ({ label, value }));
 }
 
 /**
- * Dial numeric targets from the readout (still estimates).
+ * Dial numeric targets from continuous readout (not just 3-way labels).
+ * Frequencies come from measured spectral peaks; amounts from tone/dyn indices.
  */
 export function dialFromReadout(readout, traits) {
   const mud = readout.tone.mud;
@@ -40,88 +47,126 @@ export function dialFromReadout(readout, traits) {
   const sib = readout.tone.sibilance;
   const air = readout.tone.air;
   const crest = readout.dynamics.crestDb;
+  const range = readout.dynamics.shortTermRangeDb ?? 8;
   const sideMid = readout.stereo.sideMidRatio;
+  const corr = readout.stereo.correlation;
+  const centroid = readout.centroidHz || 2500;
+  const ti = readout.transientIndex ?? 0;
+  const targets = readout.eqTargets || {};
+  const f0 = readout.pitch?.f0Hz;
+  const register = readout.pitch?.register || traits.pitch?.register || "mid";
+  const bpm = readout.tempo?.bpm || traits.tempo?.bpm || null;
+  const feel = readout.tempo?.feel || traits.tempo?.feel || null;
 
-  const mudCut =
-    traits.tone.mud === "elevated" ? clamp(2 + mud * 0.35, 2, 4.5) :
-    traits.tone.mud === "recessed" ? 0.5 :
-    1.5;
+  // Continuous cuts — every song gets a unique amount from its indices
+  const mudCut = clamp(1.1 + (mud - -4) * 0.42, 0.3, 5.8);
+  const harshCut = clamp(0.7 + (harsh - -8) * 0.28, 0.25, 4.2);
+  const deessDb = clamp(2.4 + (sib - -6) * 0.55, 1.2, 9);
+  // Elevated air (higher index) → less shelf / slight cut; recessed → more boost
+  const airShelf = clamp(-0.18 * (air - -13), -3.8, 3.6);
+  const presenceDb = clamp(1.9 - Math.max(0, harsh + 7) * 0.32 - Math.max(0, sib + 4) * 0.12, 0, 3.2);
 
-  const harshCut =
-    traits.tone.harshness === "elevated" ? clamp(1.5 + Math.abs(harsh) * 0.08, 1.5, 3.5) :
-    1.0;
+  // HPF tracks vocal register + mud weight
+  let hpfHz = register === "low" ? 68 : register === "high" ? 105 : 85;
+  if (Number.isFinite(f0)) hpfHz = clamp(52 + f0 * 0.2, 55, 125);
+  hpfHz = clamp(hpfHz + Math.max(0, mud + 2) * 3.5, 55, 130);
 
-  const deessDb =
-    traits.tone.sibilance === "elevated" ? clamp(4 + sib * 0.4, 4, 8) :
-    traits.tone.sibilance === "recessed" ? 2 :
-    3.5;
+  const mudHz = round0(clamp(targets.mudHz || 320, 200, 420));
+  const harshHz = round0(clamp(targets.harshHz || 3200, 2400, 4200));
+  const presenceHz = round0(clamp(targets.presenceHz || 4500, 3000, 5200));
+  const deessHz = round0(clamp(targets.deessHz || 6500, 4800, 9000));
+  let airHz = round0(clamp(targets.airHz || 11000, 9000, 14000));
+  // Brighter centroids → slightly higher air hinge
+  if (centroid > 3200) airHz = round0(clamp(airHz + 400, 9000, 14500));
 
-  const airShelf =
-    traits.tone.air === "elevated" ? clamp(-1.5 - Math.abs(air) * 0.02, -3, -0.5) :
-    traits.tone.air === "recessed" ? clamp(1.5 + Math.abs(air) * 0.02, 1, 3.5) :
-    1.0;
+  const mudQ = round1(clamp(0.95 + Math.max(0, mud) * 0.05, 0.8, 1.6));
+  const harshQ = round1(clamp(0.7 + Math.max(0, harsh + 6) * 0.04, 0.55, 1.35));
 
-  let comp1Gr, comp1Attack, comp1Ratio, serial;
-  if (crest < 6) {
-    comp1Gr = 5;
-    comp1Attack = 8;
-    comp1Ratio = 4;
-    serial = true;
-  } else if (crest < 9) {
-    comp1Gr = 4;
-    comp1Attack = 10;
-    comp1Ratio = 3.5;
-    serial = true;
-  } else if (crest < 14) {
-    comp1Gr = 3;
-    comp1Attack = 12;
-    comp1Ratio = 3;
-    serial = false;
-  } else {
-    comp1Gr = 2;
-    comp1Attack = 18;
-    comp1Ratio = 2.5;
-    serial = false;
-  }
+  // Continuous compression from crest + short-term range + transients
+  const comp1Gr = round1(clamp(6.8 - crest * 0.38 - Math.max(0, range - 10) * 0.08, 1.4, 6.2));
+  const comp1Attack = round0(clamp(5 + crest * 1.05 - Math.max(0, ti) * 0.35, 4, 28));
+  const comp1Ratio = round1(clamp(5.4 - crest * 0.2, 2.2, 5.2));
+  const serial = crest < 9.5 || (crest < 11 && range < 7);
+  // Release tracks tempo when available (shorter on faster songs)
+  const beatMs = bpm ? noteMs(bpm, 0.25) : 90;
+  const releaseMs = round0(
+    clamp((beatMs || 90) * 0.55 + crest * 2.2, 35, 200)
+  );
 
+  const satAmt = clamp(
+    0.35 +
+      (traits.dynamics === "heavily_limited" ? 0.45 : 0) +
+      (air < -16 ? 0.35 : 0) +
+      (crest < 8 ? 0.25 : 0) +
+      Math.max(0, -ti) * 0.04,
+    0.2,
+    1.4
+  );
   const satDrive =
-    traits.dynamics === "heavily_limited" || traits.tone.air === "recessed" ? "low–medium" : "low";
+    satAmt >= 1.05 ? "medium" : satAmt >= 0.7 ? "low–medium" : "low";
 
   const widthMode =
-    traits.stereo === "wide" ? "fx_wide" :
-    traits.stereo === "narrow" ? "center" :
-    "focused";
+    sideMid > 0.32 || corr < 0.45
+      ? "fx_wide"
+      : sideMid < 0.09 && corr > 0.85
+        ? "center"
+        : "focused";
 
-  const verbSize = sideMid > 0.25 ? "Plate / short room" : "Short plate, tucked";
-  const useMod = traits.stereo === "wide" || sideMid > 0.28;
+  const verbSize =
+    sideMid > 0.3
+      ? "Hall / ambient plate"
+      : sideMid > 0.18
+        ? "Plate / short room"
+        : bpm && bpm < 90
+          ? "Short plate, intimate"
+          : "Short plate, tucked";
+
+  const useMod = sideMid > 0.24 || corr < 0.55 || traits.stereo === "wide";
+
+  const delay = pickDelayNote(bpm, feel);
+  const preDelayMs = round0(
+    clamp(
+      (sideMid > 0.22 ? 24 : 14) + (bpm ? clamp(60000 / bpm / 16, 8, 40) : 12) + crest * 0.4,
+      12,
+      55
+    )
+  );
+
+  const limitCatchDb = round1(clamp(3.4 - crest * 0.22, 0.8, 3.2));
 
   return {
-    hpfHz: 80,
-    mudHz: 320,
+    hpfHz: round0(hpfHz),
+    mudHz,
     mudCutDb: round1(mudCut),
-    mudQ: 1.2,
-    harshHz: 3200,
+    mudQ,
+    harshHz,
     harshCutDb: round1(harshCut),
-    harshQ: 0.85,
-    presenceHz: 4500,
-    presenceDb: traits.tone.harshness === "elevated" ? 0 : 1.5,
-    deessHz: 6500,
+    harshQ,
+    presenceHz,
+    presenceDb: round1(presenceDb),
+    deessHz,
     deessGrDb: round1(deessDb),
-    airHz: 11000,
+    airHz,
     airShelfDb: round1(airShelf),
     comp1: {
       ratio: comp1Ratio,
       attackMs: comp1Attack,
-      releaseMs: 65,
+      releaseMs,
       grDb: comp1Gr,
     },
     serial,
     satDrive,
-    limitCatchDb: crest < 8 ? 2 : 1.5,
+    satAmt: round1(satAmt),
+    limitCatchDb,
     widthMode,
     verbSize,
     useMod,
-    preDelayMs: sideMid > 0.25 ? 28 : 20,
+    preDelayMs,
+    bpm,
+    delayLabel: delay.label,
+    delayMs: delay.ms,
+    keyLabel: readout.pitch?.keyLabel || null,
+    register,
   };
 }
 
@@ -174,7 +219,10 @@ export function buildVocalChain(readout, traits, _daw = "universal") {
       ["High-pass", `${d.hpfHz} Hz · 18–24 dB/oct`],
       ["Mud cut", `${d.mudHz} Hz · −${d.mudCutDb} dB · Q ${d.mudQ}`],
       ["Harsh cut", `${d.harshHz} Hz · −${d.harshCutDb} dB · Q ${d.harshQ}`],
-      traits.tone.mud === "elevated" ? ["Focus", "Deeper mud cut — reference is low-mid heavy"] : null
+      d.register && d.register !== "unknown"
+        ? ["Register", `${d.register} vocal · HPF from measured pitch`]
+        : null,
+      d.mudCutDb >= 2.5 ? ["Focus", "Deeper mud cut — this ref is low-mid heavy"] : null
     ),
     visual: {
       kind: "eq",
@@ -189,8 +237,8 @@ export function buildVocalChain(readout, traits, _daw = "universal") {
       `Cut mud: ${d.mudHz} Hz, −${d.mudCutDb} dB, Q ${d.mudQ}`,
       `Cut harsh: ${d.harshHz} Hz, −${d.harshCutDb} dB, Q ${d.harshQ}`,
     ],
-    why: "Cut before you compress. Compressing muddy or harsh energy glues the problem into every syllable.",
-    how: "Sweep cuts with a narrow Q to find the ugly spot, then widen Q and use less cut. A/B at mix level, not solo.",
+    why: "Cut before you compress. Frequencies are placed on this track’s measured peaks — not a generic preset.",
+    how: "Sweep ±200 Hz around the suggested centers to confirm, then widen Q and use less cut. A/B at mix level, not solo.",
   }));
 
   inserts.push(step({
@@ -376,23 +424,31 @@ export function buildVocalChain(readout, traits, _daw = "universal") {
     title: "Delay send",
     plugin: plugs.delay,
     dials: dials(
-      ["Time", "1/8 or dotted 1/8 · low feedback (15–25%)"],
+      d.bpm && d.delayMs
+        ? ["Time", `${d.delayLabel} · ${d.delayMs} ms @ ${d.bpm} BPM`]
+        : ["Time", `${d.delayLabel || "1/8 or dotted 1/8"} · low feedback (15–25%)`],
+      ["Feedback", "15–25%"],
       ["Filter", "Low-pass the return ~4–5 kHz"],
-      ["Move", "Ride send on phrase ends — not 100% wet on the lead"]
+      ["Move", "Ride send on phrase ends — not 100% wet on the lead"],
+      d.keyLabel ? ["Key note", `Song center ≈ ${d.keyLabel}`] : null
     ),
     visual: {
       kind: "delay",
-      time: "1/8 or dotted 1/8",
+      time: d.bpm && d.delayMs ? `${d.delayLabel} (${d.delayMs} ms)` : d.delayLabel || "1/8",
       feedbackPct: 20,
       lowpassHz: 4500,
     },
     copy: [
-      "Time: 1/8 or dotted 1/8",
+      d.bpm && d.delayMs
+        ? `Time: ${d.delayLabel} = ${d.delayMs} ms at ${d.bpm} BPM`
+        : `Time: ${d.delayLabel || "1/8 or dotted 1/8"}`,
       "Feedback 15–25%",
       "Low-pass the return around 4–5 kHz",
       "Send on phrase ends — not always on",
     ],
-    why: "Pros put space on sends. Delay creates depth and width without smearing the dry lead.",
+    why: d.bpm
+      ? `Delay is tempo-synced to the measured ~${d.bpm} BPM pulse — verify against your DAW grid.`
+      : "Pros put space on sends. Delay creates depth and width without smearing the dry lead.",
     how: "HPF/LPF the return hard. Bright delay tails compete with S’s and air.",
   }));
 

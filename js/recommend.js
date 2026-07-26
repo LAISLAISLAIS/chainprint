@@ -53,19 +53,75 @@ export function characterize(readout) {
   const dynamics = crestCharacter(readout.dynamics.crestDb);
   const stereo = widthCharacter(readout.stereo.sideMidRatio, readout.stereo.correlation);
 
+  const tempo = {
+    bpm: readout.tempo?.bpm ?? null,
+    confidence: readout.tempo?.confidence ?? 0,
+    feel: readout.tempo?.feel ?? null,
+  };
+  const pitch = {
+    f0Hz: readout.pitch?.f0Hz ?? null,
+    keyLabel: readout.pitch?.keyLabel ?? null,
+    register: readout.pitch?.register ?? "unknown",
+    noteName: readout.pitch?.noteName ?? null,
+  };
+
   const summary = [];
+  if (tempo.bpm) {
+    summary.push(
+      `Pulse ≈ ${tempo.bpm} BPM${tempo.feel ? ` (${tempo.feel})` : ""}${
+        tempo.confidence < 0.35 ? " · low confidence" : ""
+      }.`
+    );
+  }
+  if (pitch.keyLabel) {
+    summary.push(
+      `Tonal center ≈ ${pitch.keyLabel}${
+        pitch.f0Hz ? ` · lead register ~${pitch.f0Hz.toFixed(0)} Hz (${pitch.register})` : ""
+      }.`
+    );
+  } else if (pitch.f0Hz) {
+    summary.push(`Lead register ~${pitch.f0Hz.toFixed(0)} Hz (${pitch.register}).`);
+  }
+
+  // Continuous-aware notes (not only elevated/recessed)
+  const mud = readout.tone.mud;
+  const sib = readout.tone.sibilance;
+  const harsh = readout.tone.harshness;
+  const air = readout.tone.air;
+  const crest = readout.dynamics.crestDb;
+  const targets = readout.eqTargets;
+
   if (tone.air === "elevated") summary.push("Air is up — top end is carrying presence.");
-  if (tone.air === "recessed") summary.push("Air is down — vocal sits darker / closer.");
+  else if (tone.air === "recessed") summary.push("Air is down — vocal sits darker / closer.");
+  else if (air < -14) summary.push("Top end sits slightly dark — gentle air shelf likely.");
+
   if (tone.sibilance === "elevated") summary.push("Sibilance region is hot relative to body.");
+  else if (sib > -5) summary.push(`Sibilance leaning forward (index ${sib.toFixed(1)}).`);
+
   if (tone.harshness === "elevated") summary.push("Upper-mid bite is forward (harshness band).");
+  else if (harsh > -7) summary.push(`Upper-mid bite present — cut near ${targets?.harshHz || 3e3} Hz.`);
+
   if (tone.mud === "elevated") summary.push("Low-mids are heavy — body may be masking clarity.");
+  else if (mud > -3) summary.push(`Low-mid weight — mud cut near ${targets?.mudHz || 320} Hz.`);
+
   if (dynamics === "heavily_limited") summary.push("Crest is low — dense, limited vocal region.");
   if (dynamics === "open") summary.push("Crest is high — more transient / less smashed.");
+  if (dynamics === "controlled" || dynamics === "dynamic") {
+    summary.push(`Crest ${crest.toFixed(1)} dB — compression dialed to this density.`);
+  }
+
   if (stereo === "wide") summary.push("Stereo image is wide in the side channel.");
   if (stereo === "narrow") summary.push("Image is mono-leaning — centered vocal pocket.");
+
+  if (targets) {
+    summary.push(
+      `EQ centers from this spectrum: mud ${targets.mudHz} · harsh ${targets.harshHz} · de-ess ${targets.deessHz} Hz.`
+    );
+  }
+
   if (!summary.length) summary.push("Balance sits near a typical contemporary vocal pocket.");
 
-  return { tone, dynamics, stereo, summary };
+  return { tone, dynamics, stereo, tempo, pitch, summary };
 }
 
 /**
@@ -138,7 +194,7 @@ export function recommend(traits, pluginMap, daw = "universal", readout = null, 
   };
   maybe("mud", liveTraits.tone.mud === "elevated", "Mud elevated — trust the deeper low-mid cut in Step 2.");
   maybe("sibilance", liveTraits.tone.sibilance === "elevated", "Sibilance hot — don’t skip or under-do de-ess.");
-  maybe("harshness", liveTraits.tone.harshness === "elevated", "Harshness forward — keep the wide 3k cut.");
+  maybe("harshness", liveTraits.tone.harshness === "elevated", "Harshness forward — keep the measured upper-mid cut.");
   maybe(
     "dynamics_crest",
     liveTraits.dynamics === "heavily_limited" || liveTraits.dynamics === "controlled",

@@ -1,9 +1,11 @@
 /**
- * Measurement layer — spectral, tone, dynamics, stereo.
+ * Measurement layer — spectral, tone, dynamics, stereo, tempo, pitch.
  * All values are estimates of the vocal region on a finished master, not an isolated stem.
  */
 
 import { FFT_SIZE, hannWindow, magnitudeSpectrum } from "./fft.js";
+import { estimateTempo } from "./tempo.js";
+import { estimatePitchProfile } from "./pitch.js";
 
 export const BANDS = [
   { id: "sub", label: "Sub", lo: 20, hi: 60 },
@@ -37,6 +39,38 @@ function bandPower(mag, sampleRate, lo, hi) {
 
 function bandDb(mag, sampleRate, lo, hi) {
   return db(bandPower(mag, sampleRate, lo, hi));
+}
+
+/**
+ * Peak frequency (Hz) inside a band — used to place EQ cuts per track.
+ */
+export function bandPeakHz(mag, sampleRate, lo, hi) {
+  const binHz = sampleRate / FFT_SIZE;
+  const i0 = Math.max(1, Math.floor(lo / binHz));
+  const i1 = Math.min(mag.length - 1, Math.ceil(hi / binHz));
+  let bestI = Math.round((i0 + i1) / 2);
+  let best = -1;
+  for (let i = i0; i <= i1; i++) {
+    const p = mag[i] * mag[i];
+    if (p > best) {
+      best = p;
+      bestI = i;
+    }
+  }
+  return Math.round(bestI * binHz);
+}
+
+/**
+ * Per-track EQ target centers from the measured spectrum.
+ */
+export function eqTargetsFromSpectrum(mag, sampleRate) {
+  return {
+    mudHz: bandPeakHz(mag, sampleRate, 180, 450),
+    harshHz: bandPeakHz(mag, sampleRate, 2200, 4500),
+    presenceHz: bandPeakHz(mag, sampleRate, 2800, 5500),
+    deessHz: bandPeakHz(mag, sampleRate, 4500, 9500),
+    airHz: bandPeakHz(mag, sampleRate, 9000, 14000),
+  };
 }
 
 /**
@@ -233,6 +267,9 @@ export function measureBuffer(audioBuffer) {
   const loud = loudnessProxy(mono);
   const dyn = dynamics(mono, sampleRate);
   const stereo = stereoMetrics(left, right);
+  const tempo = estimateTempo(mono, sampleRate);
+  const pitch = estimatePitchProfile(mono, sampleRate, mag);
+  const eqTargets = eqTargetsFromSpectrum(vocalMag, sampleRate);
 
   return {
     estimate: true,
@@ -252,6 +289,9 @@ export function measureBuffer(audioBuffer) {
     stereo,
     loudness: loud,
     transientIndex: transientIndex(vocalMag, sampleRate),
+    tempo,
+    pitch,
+    eqTargets,
     master: {
       peakDb: dyn.peakDb,
       rmsDb: dyn.rmsDb,
@@ -261,6 +301,8 @@ export function measureBuffer(audioBuffer) {
       sideMidRatio: stereo.sideMidRatio,
       centroidHz: spectralCentroidHz(mag, sampleRate),
       bands: spectralBalance(mag, sampleRate),
+      bpm: tempo.bpm,
+      keyLabel: pitch.keyLabel,
       streamingTarget: "Aim integrated ≈ −14 LUFS / −1 dBTP for most DSPs (verify with a real meter).",
     },
   };

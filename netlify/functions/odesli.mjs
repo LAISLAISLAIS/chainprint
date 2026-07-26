@@ -1,7 +1,7 @@
 /**
- * Server-side Spotify / streaming identity.
+ * Server-side Spotify / streaming identity + preview URL.
  * Browser can't call api.song.link from Netlify (CORS), and Spotify oEmbed
- * is title-only — so we resolve artist here.
+ * is title-only — so we resolve artist (and Spotify's ~30s preview) here.
  */
 
 const CORS = {
@@ -58,6 +58,14 @@ function identityFromSpotifyHtml(html) {
   };
 }
 
+/** Spotify's public ~30s MP3 preview when the track has one. */
+function previewFromSpotifyHtml(html) {
+  const nested = html.match(/"audioPreview"\s*:\s*\{\s*"url"\s*:\s*"(https:\/\/p\.scdn\.co\/mp3-preview\/[^"]+)"/i);
+  if (nested?.[1]) return nested[1];
+  const loose = html.match(/https:\/\/p\.scdn\.co\/mp3-preview\/[a-zA-Z0-9]+/);
+  return loose?.[0] || null;
+}
+
 async function fromOdesli(trackUrl, country) {
   const api = `https://api.song.link/v1-alpha.1/links?url=${encodeURIComponent(trackUrl)}&userCountry=${encodeURIComponent(country)}`;
   const res = await fetch(api);
@@ -98,8 +106,11 @@ async function fromSpotifyPage(trackUrl) {
   if (!res.ok) return null;
   const html = await res.text();
   const id = identityFromSpotifyHtml(html);
-  if (!id.title || !id.artist) return null;
-  return { ...id, appleId: null, source: "spotify_og" };
+  const previewUrl = previewFromSpotifyHtml(html);
+  if (!id.title || !id.artist) {
+    return previewUrl ? { title: "", artist: "", artwork: null, appleId: null, previewUrl, source: "spotify_preview" } : null;
+  }
+  return { ...id, appleId: null, previewUrl, source: "spotify_og" };
 }
 
 export async function handler(event) {
@@ -115,15 +126,26 @@ export async function handler(event) {
   const country = event.queryStringParameters?.userCountry || "US";
 
   try {
-    const odesli = await fromOdesli(trackUrl, country);
-    if (odesli) return json(200, odesli);
+    let identity = await fromOdesli(trackUrl, country);
+    let previewUrl = null;
 
+    // Always scrape Spotify for preview when we have a track URL — Odesli
+    // has identity but never preview audio.
     if (/spotify\.com/i.test(trackUrl)) {
       const spotify = await fromSpotifyPage(trackUrl);
-      if (spotify) return json(200, spotify);
+      if (spotify?.previewUrl) previewUrl = spotify.previewUrl;
+      if (!identity && spotify?.title && spotify?.artist) {
+        identity = spotify;
+      } else if (identity && spotify) {
+        if (!identity.artwork && spotify.artwork) identity.artwork = spotify.artwork;
+      }
     }
 
-    return json(404, { error: "could_not_resolve", url: trackUrl });
+    if (!identity) {
+      return json(404, { error: "could_not_resolve", url: trackUrl });
+    }
+
+    return json(200, { ...identity, previewUrl });
   } catch (err) {
     return json(502, { error: String(err?.message || err) });
   }

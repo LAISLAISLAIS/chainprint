@@ -3,8 +3,8 @@
  *
  * - Direct .mp3/.wav: fetch file
  * - Spotify / Apple Music / YouTube: identify the track, then use a legal
- *   ~30s preview when iTunes/Apple has one (DRM streaming audio cannot be
- *   decoded from those page links in-browser).
+ *   ~30s preview (Spotify CDN → iTunes → Deezer). DRM full streams cannot
+ *   be decoded from those page links in-browser.
  *
  * Never scrapes or rips full streams. Upload remains the accurate path.
  */
@@ -158,27 +158,33 @@ function isLocalHost() {
 
 /**
  * Odesli / Spotify identity endpoints.
- * Production: same-origin /api/odesli → Netlify function (no CORS).
- * Localhost: direct song.link (CORS allows localhost) + optional local function.
+ * Production: same-origin /api/odesli → Netlify function (identity + Spotify preview).
+ * Localhost: try Netlify CLI path, then direct song.link (CORS allows localhost).
  */
 function odesliRequestUrls(href) {
   const q = `url=${encodeURIComponent(href)}&userCountry=US`;
   const urls = [];
-  if (typeof location !== "undefined" && !isLocalHost()) {
-    urls.push(`${location.origin}/api/odesli?${q}`);
+  if (typeof location !== "undefined") {
+    if (!isLocalHost()) {
+      urls.push(`${location.origin}/api/odesli?${q}`);
+    } else {
+      urls.push(`${location.origin}/.netlify/functions/odesli?${q}`);
+      urls.push(`${location.origin}/api/odesli?${q}`);
+    }
   }
   urls.push(`https://api.song.link/v1-alpha.1/links?${q}`);
   return urls;
 }
 
 function parseIdentityPayload(data) {
-  // Netlify function shape: { title, artist, artwork, appleId }
+  // Netlify function shape: { title, artist, artwork, appleId, previewUrl? }
   if (data?.title && data?.artist && !data.entitiesByUniqueId) {
     return {
       title: cleanText(data.title),
       artist: cleanText(data.artist),
       artwork: data.artwork || null,
       appleId: data.appleId ? String(data.appleId) : null,
+      previewUrl: data.previewUrl || null,
     };
   }
 
@@ -213,6 +219,7 @@ function parseIdentityPayload(data) {
     artist,
     artwork: primary.thumbnailUrl || null,
     appleId,
+    previewUrl: null,
   };
 }
 
@@ -391,11 +398,79 @@ async function findItunesPreview({ title, artist, query, appleId }) {
   return ranked[0]?.r || null;
 }
 
+/**
+ * Deezer search (CORS-open). Returns iTunes-like shape when a preview exists.
+ */
+async function findDeezerPreview({ title, artist }) {
+  const cleanTitle = stripEditionTags(title);
+  const q = [artist, cleanTitle].filter(Boolean).join(" ").trim();
+  if (!q) return null;
+
+  let data;
+  try {
+    data = await fetchJson(
+      `https://api.deezer.com/search?q=${encodeURIComponent(q)}&limit=12`
+    );
+  } catch {
+    return null;
+  }
+
+  const tracks = Array.isArray(data?.data) ? data.data : [];
+  const ranked = tracks
+    .map((t) => {
+      const fake = {
+        trackName: t.title || "",
+        artistName: t.artist?.name || "",
+        previewUrl: t.preview || null,
+        artworkUrl100: t.album?.cover_medium || t.album?.cover || null,
+      };
+      return { r: fake, score: scoreMatch(fake, cleanTitle || title, artist) };
+    })
+    .filter((x) => x.r.previewUrl && x.score >= (artist ? 8 : 10))
+    .sort((x, y) => y.score - x.score);
+
+  return ranked[0]?.r || null;
+}
+
+async function findPreviewClip({ title, artist, query, appleId, spotifyPreviewUrl }) {
+  if (spotifyPreviewUrl) {
+    return {
+      previewUrl: spotifyPreviewUrl,
+      trackName: title,
+      artistName: artist,
+      artworkUrl100: null,
+      source: "spotify",
+    };
+  }
+
+  const itunes = await findItunesPreview({ title, artist, query, appleId });
+  if (itunes?.previewUrl) {
+    return { ...itunes, source: "itunes" };
+  }
+
+  const deezer = await findDeezerPreview({ title, artist });
+  if (deezer?.previewUrl) {
+    return { ...deezer, source: "deezer" };
+  }
+
+  return null;
+}
+
 async function fileFromPreviewUrl(previewUrl, filename) {
   const res = await fetch(previewUrl, { mode: "cors", credentials: "omit" });
   if (!res.ok) throw new Error(`Preview fetch failed (${res.status})`);
   const blob = await res.blob();
   return new File([blob], filename, { type: blob.type || "audio/mpeg" });
+}
+
+function previewNote(source, platform, matchedArtist, matchedTitle) {
+  if (source === "spotify") {
+    return `Identified from ${platform} · measuring Spotify’s ~30s preview. Upload the full file for a better readout.`;
+  }
+  if (source === "deezer") {
+    return `Identified from ${platform} · measuring Deezer’s ~30s preview match (“${matchedArtist} — ${matchedTitle}”). Upload the full file for a better readout.`;
+  }
+  return `Identified from ${platform} · measuring Apple’s official ~30s preview match (“${matchedArtist} — ${matchedTitle}”). Upload the full file for a better readout.`;
 }
 
 async function resolveStreaming(streaming, manualQuery = null) {
@@ -409,6 +484,7 @@ async function resolveStreaming(streaming, manualQuery = null) {
   let artist = "";
   let artwork = null;
   let appleId = streaming.platform === "apple" ? streaming.id : null;
+  let spotifyPreviewUrl = null;
 
   if (manualQuery) {
     const parts = manualQuery.split(/[-–—]/).map((s) => s.trim()).filter(Boolean);
@@ -449,13 +525,14 @@ async function resolveStreaming(streaming, manualQuery = null) {
       }
     }
   } else if (streaming.platform === "spotify") {
-    // oEmbed is title-only — resolve real artist via song.link before iTunes match
+    // oEmbed is title-only — resolve real artist (+ preview) via /api/odesli
     const linked = await songLinkIdentity(streaming.href);
     if (linked?.title && linked?.artist) {
       title = linked.title;
       artist = linked.artist;
       artwork = linked.artwork;
       if (linked.appleId) appleId = linked.appleId;
+      if (linked.previewUrl) spotifyPreviewUrl = linked.previewUrl;
     } else {
       try {
         const emb = await oEmbed("spotify", streaming.href);
@@ -530,16 +607,17 @@ async function resolveStreaming(streaming, manualQuery = null) {
     throw err;
   }
 
-  const match = await findItunesPreview({
+  const match = await findPreviewClip({
     title: normalized.title,
     artist: normalized.artist,
     query: normalized.query,
     appleId,
+    spotifyPreviewUrl,
   });
 
   if (!match?.previewUrl) {
     const err = new Error(
-      `Found “${normalized.title || "track"}”${normalized.artist ? ` by ${normalized.artist}` : ""}, but no preview audio is available. Upload the file (or a clip) to measure it — streaming apps don’t expose the full master to browsers.`
+      `No preview clip for “${normalized.title || "track"}”${normalized.artist ? ` by ${normalized.artist}` : ""}. Upload the file (or a short clip) to measure it.`
     );
     err.code = "no_preview";
     err.meta = {
@@ -554,9 +632,11 @@ async function resolveStreaming(streaming, manualQuery = null) {
 
   const matchedTitle = match.trackName || normalized.title;
   const matchedArtist = match.artistName || normalized.artist;
+  const source = match.source || "itunes";
+  const ext = /\.m4a(\?|$)/i.test(match.previewUrl) ? "m4a" : "mp3";
   const file = await fileFromPreviewUrl(
     match.previewUrl,
-    `${matchedArtist} - ${matchedTitle} (preview).m4a`.replace(/[\\/:*?"<>|]/g, "")
+    `${matchedArtist} - ${matchedTitle} (preview).${ext}`.replace(/[\\/:*?"<>|]/g, "")
   );
   file._chainprintOrigin = "preview";
 
@@ -568,12 +648,12 @@ async function resolveStreaming(streaming, manualQuery = null) {
       artist: normalized.artist,
       query: normalized.query,
       preview: true,
-      previewSource: "itunes",
+      previewSource: source,
       matchedTitle,
       matchedArtist,
       artwork: match.artworkUrl100 || artwork,
       originalUrl: streaming.href,
-      note: `Identified from ${streaming.platform} · measuring Apple’s official ~30s preview match (“${matchedArtist} — ${matchedTitle}”). Upload the full file for a better readout.`,
+      note: previewNote(source, streaming.platform, matchedArtist, matchedTitle),
     },
   };
 }
