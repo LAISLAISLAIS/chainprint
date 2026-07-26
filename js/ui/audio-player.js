@@ -7,11 +7,26 @@ let audio = null;
 let objectUrl = null;
 /** @type {string | null} */
 let currentKey = null;
-/** @type {Set<(s: { playing: boolean, key: string | null }) => void>} */
+let volume = 0.85;
+let muted = false;
+/** @type {Set<(s: { playing: boolean, key: string | null, volume: number, muted: boolean }) => void>} */
 const listeners = new Set();
 
+function applyVolume() {
+  if (audio) audio.volume = muted ? 0 : volume;
+}
+
+function snapshot() {
+  return {
+    playing: Boolean(audio && !audio.paused),
+    key: currentKey,
+    volume,
+    muted,
+  };
+}
+
 function notify() {
-  const state = { playing: Boolean(audio && !audio.paused), key: currentKey };
+  const state = snapshot();
   listeners.forEach((fn) => fn(state));
 }
 
@@ -43,6 +58,7 @@ export async function playAudio(source, key = "default") {
 
   if (currentKey === key && audio && audio.paused) {
     try {
+      applyVolume();
       await audio.play();
       notify();
       return { playing: true, key };
@@ -56,6 +72,7 @@ export async function playAudio(source, key = "default") {
   audio = new Audio();
   audio.preload = "auto";
   currentKey = key;
+  applyVolume();
 
   if (typeof source === "string") {
     audio.src = source;
@@ -96,8 +113,36 @@ export function playingKey() {
   return audio && !audio.paused ? currentKey : null;
 }
 
+/** @param {number} value 0–1 */
+export function setVolume(value) {
+  volume = Math.max(0, Math.min(1, Number(value) || 0));
+  if (volume > 0 && muted) muted = false;
+  applyVolume();
+  notify();
+  return volume;
+}
+
+export function getVolume() {
+  return volume;
+}
+
+export function setMuted(on) {
+  muted = Boolean(on);
+  applyVolume();
+  notify();
+  return muted;
+}
+
+export function toggleMute() {
+  return setMuted(!muted);
+}
+
+export function isMuted() {
+  return muted;
+}
+
 export function subscribePlayback(fn) {
   listeners.add(fn);
-  fn({ playing: Boolean(audio && !audio.paused), key: currentKey });
+  fn(snapshot());
   return () => listeners.delete(fn);
 }

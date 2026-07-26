@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Analyze · CHAINPRINT</title>
   <meta name="description" content="Upload a reference mix. Reverse-engineer the vocal and get a full chain for your DAW." />
   <link rel="icon" href="../assets/mark.svg" type="image/svg+xml" />
@@ -48,7 +48,7 @@
         <div class="source-block">
           <div class="dropzone compact" data-dropzone role="button" tabindex="0">
             <span class="drop-main">Drop a mix</span>
-            <span class="drop-hint">or click · add another anytime · WAV MP3 FLAC</span>
+            <span class="drop-hint">or tap · WAV MP3 FLAC</span>
             <input type="file" data-file accept="audio/*,.wav,.mp3,.flac,.aiff,.m4a" hidden />
           </div>
 
@@ -126,7 +126,6 @@
           </div>
 
           <div class="analyze-progress compact hidden" data-progress aria-live="polite">
-            <div class="analyze-alive" data-analyze-mark aria-hidden="true"></div>
             <div class="analyze-progress-head">
               <span class="analyze-progress-label" data-progress-label>Working…</span>
               <span class="analyze-progress-pct" data-progress-pct>0%</span>

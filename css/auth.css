@@ -42,6 +42,46 @@
   }
 }
 
+@media (max-width: 560px) {
+  .auth-page {
+    padding: 20px 16px calc(28px + env(safe-area-inset-bottom, 0));
+    padding-top: calc(20px + env(safe-area-inset-top, 0));
+    align-content: start;
+    place-items: stretch center;
+  }
+
+  .auth-shell {
+    width: min(400px, 100%);
+    gap: 16px;
+  }
+
+  .auth-card {
+    padding: 24px 18px 22px;
+  }
+
+  .auth-card h1 {
+    font-size: clamp(1.4rem, 6vw, 1.55rem);
+  }
+
+  .auth-form input {
+    font-size: 16px;
+    min-height: 48px;
+  }
+
+  .auth-submit {
+    min-height: 48px;
+  }
+
+  .oauth-row {
+    grid-template-columns: 1fr;
+  }
+
+  .oauth-btn {
+    min-height: 48px;
+    justify-content: center;
+  }
+}
+
 .auth-card h1 {
   font-family: var(--font-brand);
   font-size: 1.65rem;

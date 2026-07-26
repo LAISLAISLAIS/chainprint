@@ -51,7 +51,6 @@ const trackArt = document.querySelector("[data-track-art]");
 const trackTitle = document.querySelector("[data-track-title]");
 const trackMeta = document.querySelector("[data-track-meta]");
 const trackPlayBtn = document.querySelector("[data-track-play]");
-const analyzeMarkRoot = document.querySelector("[data-analyze-mark]");
 const identityRow = document.querySelector("[data-identity]");
 const identityInput = document.querySelector("[data-identity-input]");
 const identityGo = document.querySelector("[data-identity-go]");
@@ -110,8 +109,6 @@ let stages = [];
 let stageIndex = 0;
 /** @type {'chain' | 'signature' | 'design' | 'master' | 'why'} */
 let activeView = "chain";
-/** @type {(() => void) | null} */
-let unmountAnalyzeMark = null;
 /** @type {(() => void) | null} */
 let unmountHeroMark = null;
 
@@ -282,13 +279,7 @@ function setProgress(on, { label = "", progress = 0, stage = "" } = {}) {
   document.body.classList.toggle("is-analyzing", on);
   document.querySelector("[data-workspace]")?.classList.toggle("is-analyzing", on);
 
-  if (on) {
-    if (!unmountAnalyzeMark && analyzeMarkRoot) {
-      unmountAnalyzeMark = mountChainMark(analyzeMarkRoot, { variant: "cycle" });
-    }
-  } else {
-    unmountAnalyzeMark?.();
-    unmountAnalyzeMark = null;
+  if (!on) {
     unmountHeroMark?.();
     unmountHeroMark = null;
     if (progressFill) progressFill.style.width = "0%";

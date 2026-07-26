@@ -163,6 +163,51 @@
   background: #666;
 }
 
+@media (max-width: 720px) {
+  .rack-bar {
+    padding: 10px 12px;
+  }
+
+  .rack-name {
+    font-size: 0.84rem;
+  }
+
+  .rack-body {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .rack-dials {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rack-dial {
+    padding: 10px;
+  }
+
+  .rack-dial-val {
+    font-size: 0.84rem;
+  }
+
+  .rack-howto {
+    padding: 0 12px 12px;
+  }
+
+  .rack-copy li {
+    font-size: 0.86rem;
+  }
+
+  .pro-pick {
+    padding: 10px 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .rack-dials {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Pro affiliate cards */
 .pro-picks {
   margin-top: 4px;

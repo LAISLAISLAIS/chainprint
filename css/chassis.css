@@ -36,6 +36,11 @@
   padding: 0;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 html,
 body {
   min-height: 100%;
@@ -205,23 +210,25 @@ body > * {
   letter-spacing: 0.02em;
 }
 
-/* Live playback soundwave — bottom left */
+/* Live playback dock — bottom left */
 .playback-pulse {
   position: fixed;
   left: 16px;
   bottom: 16px;
   z-index: 80;
-  display: grid;
-  place-items: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: auto;
+  height: 40px;
+  padding: 0 12px 0 10px;
+  border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(8, 8, 8, 0.72);
+  background: rgba(8, 8, 8, 0.78);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   opacity: 0;
-  transform: translateY(8px) scale(0.92);
+  transform: translateY(8px) scale(0.96);
   pointer-events: none;
   transition:
     opacity 0.28s var(--ease-out),
@@ -231,6 +238,7 @@ body > * {
 .playback-pulse.is-live {
   opacity: 1;
   transform: translateY(0) scale(1);
+  pointer-events: auto;
 }
 
 .playback-pulse-wave {
@@ -239,6 +247,8 @@ body > * {
   justify-content: center;
   gap: 2px;
   height: 14px;
+  width: 18px;
+  flex-shrink: 0;
 }
 
 .playback-pulse-wave i {
@@ -252,6 +262,12 @@ body > * {
 
 .playback-pulse.is-live .playback-pulse-wave i {
   animation: playback-bar 0.85s ease-in-out infinite;
+}
+
+.playback-pulse.is-live.is-muted .playback-pulse-wave i {
+  animation: none;
+  height: 30%;
+  opacity: 0.35;
 }
 
 .playback-pulse.is-live .playback-pulse-wave i:nth-child(1) {
@@ -291,6 +307,111 @@ body > * {
   }
 }
 
+.playback-mute {
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #e8e8e8;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.playback-mute:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.playback-mute-icon {
+  width: 14px;
+  height: 12px;
+  position: relative;
+  display: block;
+  background:
+    linear-gradient(currentColor, currentColor) 0 3px / 3px 6px no-repeat,
+    linear-gradient(currentColor, currentColor) 3px 1px / 4px 10px no-repeat;
+  border-radius: 0 1px 1px 0;
+}
+
+.playback-mute-icon::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 1px;
+  width: 6px;
+  height: 10px;
+  border: 1.5px solid currentColor;
+  border-left: none;
+  border-radius: 0 6px 6px 0;
+  opacity: 0.85;
+}
+
+.playback-pulse.is-muted .playback-mute-icon::after {
+  opacity: 0;
+}
+
+.playback-pulse.is-muted .playback-mute-icon::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 14px;
+  height: 1.5px;
+  background: currentColor;
+  transform: rotate(-32deg);
+  border-radius: 1px;
+}
+
+.playback-vol {
+  display: flex;
+  align-items: center;
+  width: 88px;
+  margin: 0;
+}
+
+.playback-vol-range {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  outline: none;
+  cursor: pointer;
+}
+
+.playback-vol-range::-webkit-slider-thumb {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #f2f2f2;
+  border: none;
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+}
+
+.playback-vol-range::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #f2f2f2;
+  border: none;
+  cursor: pointer;
+}
+
+.playback-vol-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .playback-pulse {
     transition: opacity 0.2s ease;
@@ -305,10 +426,21 @@ body > * {
 
 @media (max-width: 640px) {
   .playback-pulse {
-    left: 12px;
-    bottom: 12px;
+    left: max(12px, env(safe-area-inset-left, 0px));
+    bottom: max(12px, env(safe-area-inset-bottom, 0px));
+    height: 42px;
+    gap: 8px;
+    padding: 0 12px 0 10px;
+  }
+
+  .playback-vol {
+    width: 72px;
+  }
+
+  .playback-mute {
     width: 32px;
     height: 32px;
   }
 }
+
 

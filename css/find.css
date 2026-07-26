@@ -383,20 +383,90 @@
 
 @media (max-width: 560px) {
   .find-page {
-    padding: 16px 18px 40px;
+    padding: 14px 16px calc(36px + env(safe-area-inset-bottom, 0));
+    padding-top: calc(14px + env(safe-area-inset-top, 0));
+  }
+
+  .find-nav {
+    flex-wrap: wrap;
+    gap: 10px 12px;
+    margin-bottom: 28px;
+  }
+
+  .find-main {
+    padding-top: 2vh;
+    gap: 14px;
+  }
+
+  .find-head h1 {
+    font-size: clamp(1.55rem, 7vw, 1.9rem);
+  }
+
+  .find-head p {
+    font-size: 0.94rem;
+    max-width: 20rem;
+    margin-inline: auto;
+  }
+
+  .find-drop {
+    min-height: 120px;
+    padding: 24px 16px;
   }
 
   .find-grid {
     grid-template-columns: 1fr;
-    gap: 20px;
+    gap: 18px;
   }
 
   .find-link {
     grid-template-columns: 1fr;
   }
 
-  .find-nav {
-    flex-wrap: wrap;
+  .find-link input {
+    font-size: 16px;
+    min-height: 48px;
+  }
+
+  .find-link .btn-primary {
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+  }
+
+  .find-results {
+    padding: 22px 16px 20px;
+  }
+
+  .find-results-head {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    text-align: center;
+  }
+
+  .find-play {
+    justify-content: center;
+    min-height: 44px;
+    width: 100%;
+  }
+
+  .find-value {
+    font-size: clamp(1.45rem, 6vw, 1.75rem);
+  }
+
+  .find-drop.is-busy .find-alive .logo-hero--cycle {
+    --mark-w: 112px;
+  }
+}
+
+@media (max-width: 380px) {
+  .find-page {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .find-nav .logo-word {
+    font-size: 0.92rem;
   }
 }
 

@@ -147,7 +147,7 @@
   }
 }
 
-/* Analyzing — chain links cycle colors */
+/* Analyzing — chain links cycle colors smoothly through the spectrum */
 .logo-hero--cycle {
   --mark-w: 120px;
   width: var(--mark-w);
@@ -163,43 +163,37 @@
 
 .logo-hero--cycle .chain-stroke {
   stroke-width: 3.5;
-  opacity: 1;
-  animation: chain-color-cycle 2.4s linear infinite;
+  stroke: hsl(0, 42%, 78%);
+  opacity: 0.85;
+  animation: chain-hue-flow 4.8s linear infinite;
 }
 
 .logo-hero--cycle .chain-link--1 .chain-stroke { animation-delay: 0s; }
-.logo-hero--cycle .chain-link--2 .chain-stroke { animation-delay: 0.2s; }
-.logo-hero--cycle .chain-link--3 .chain-stroke { animation-delay: 0.4s; }
-.logo-hero--cycle .chain-link--4 .chain-stroke { animation-delay: 0.6s; }
-.logo-hero--cycle .chain-link--5 .chain-stroke { animation-delay: 0.8s; }
+.logo-hero--cycle .chain-link--2 .chain-stroke { animation-delay: -0.96s; }
+.logo-hero--cycle .chain-link--3 .chain-stroke { animation-delay: -1.92s; }
+.logo-hero--cycle .chain-link--4 .chain-stroke { animation-delay: -2.88s; }
+.logo-hero--cycle .chain-link--5 .chain-stroke { animation-delay: -3.84s; }
 
-@keyframes chain-color-cycle {
+/* Hue 0→360 interpolates continuously — no hard color jumps */
+@keyframes chain-hue-flow {
   0% {
-    stroke: #f4f4f4;
-    opacity: 0.55;
+    stroke: hsl(0, 46%, 78%);
+    opacity: 0.72;
   }
-  16% {
-    stroke: #7ec8b8;
-    opacity: 1;
-  }
-  33% {
-    stroke: #e8c56a;
-    opacity: 1;
+  25% {
+    stroke: hsl(90, 46%, 74%);
+    opacity: 0.95;
   }
   50% {
-    stroke: #e29a8e;
+    stroke: hsl(180, 48%, 72%);
     opacity: 1;
   }
-  66% {
-    stroke: #8eb0e0;
-    opacity: 1;
-  }
-  83% {
-    stroke: #c4a8e0;
-    opacity: 0.9;
+  75% {
+    stroke: hsl(270, 44%, 76%);
+    opacity: 0.95;
   }
   100% {
-    stroke: #f4f4f4;
-    opacity: 0.55;
+    stroke: hsl(360, 46%, 78%);
+    opacity: 0.72;
   }
 }

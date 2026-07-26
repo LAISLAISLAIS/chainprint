@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>CHAINPRINT</title>
   <meta name="description" content="Reverse-engineer any vocal mix and recreate the chain in your DAW." />
   <link rel="icon" href="assets/mark.svg" type="image/svg+xml" />
@@ -233,14 +233,76 @@
     }
 
     @media (max-width: 560px) {
-      .landing { padding: 16px 18px 24px; }
-      .hero { padding: 8vh 0 12vh; }
-      .logo-hero { --mark-w: 128px; margin-bottom: 24px; }
+      .landing {
+        padding: 14px 16px calc(20px + env(safe-area-inset-bottom, 0));
+        padding-top: calc(14px + env(safe-area-inset-top, 0));
+      }
+
+      .landing-nav {
+        gap: 10px;
+      }
+
+      .landing-nav .logo-word {
+        font-size: 0.95rem;
+      }
+
+      .landing .nav-links a,
+      .landing .account-menu-trigger,
+      .landing .nav-cta {
+        font-size: 0.8rem !important;
+        padding: 8px 11px !important;
+        min-height: 40px;
+      }
+
+      .hero {
+        padding: 6vh 0 10vh;
+        align-content: center;
+      }
+
+      .logo-hero {
+        --mark-w: min(128px, 42vw);
+        margin-bottom: 22px;
+      }
+
+      .hero-brand {
+        font-size: clamp(2.6rem, 14vw, 3.6rem);
+        margin-bottom: 16px;
+      }
+
       .hero-line {
-        margin-bottom: 34px;
+        margin-bottom: 30px;
         white-space: normal;
-        max-width: 18rem;
+        max-width: 17rem;
         text-wrap: balance;
+        font-size: 1rem;
+      }
+
+      .landing .btn-primary {
+        width: min(100%, 18rem);
+        min-height: 48px;
+        justify-content: center;
+      }
+
+      .cta-row {
+        width: 100%;
+        gap: 14px;
+      }
+
+      .cta-login {
+        min-height: 40px;
+        display: inline-flex;
+        align-items: center;
+      }
+    }
+
+    @media (max-width: 380px) {
+      .landing {
+        padding-left: 14px;
+        padding-right: 14px;
+      }
+
+      .landing-nav .nav-links {
+        gap: 4px;
       }
     }
   </style>
