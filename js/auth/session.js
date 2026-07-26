@@ -22,6 +22,10 @@ const SESSION_KEY_V1 = "chainprint.session.v1";
  * @property {string} email
  * @property {string} username
  * @property {string} name
+ * @property {string | null} [displayName]
+ * @property {string | null} [avatarUrl]
+ * @property {'vocal' | 'instrumental' | 'full'} [defaultTarget]
+ * @property {'standard' | 'deep'} [defaultMode]
  * @property {string | null} [passwordHash]
  * @property {AuthProvider} provider
  * @property {string | null} providerUserId
@@ -62,11 +66,24 @@ function readCachedAccount() {
 /** @param {Account} account */
 function publicAccount(account) {
   const { passwordHash, ...rest } = account;
+  const username = rest.username || rest.name || rest.email?.split("@")[0] || "user";
   return {
     ...rest,
-    username: rest.username || rest.name || rest.email?.split("@")[0] || "user",
-    name: rest.name || rest.username || rest.email?.split("@")[0] || "Account",
+    username,
+    name: rest.displayName || rest.name || username,
+    displayName: rest.displayName || null,
+    avatarUrl: rest.avatarUrl || null,
+    defaultTarget: normalizeTarget(rest.defaultTarget),
+    defaultMode: normalizeMode(rest.defaultMode),
   };
+}
+
+function normalizeTarget(t) {
+  return t === "instrumental" || t === "full" ? t : "vocal";
+}
+
+function normalizeMode(m) {
+  return m === "deep" ? "deep" : "standard";
 }
 
 /** Pull forward accounts created before username / v2 storage. */
@@ -182,6 +199,10 @@ function newFreeAccount({
     email,
     username: uname,
     name: uname,
+    displayName: null,
+    avatarUrl: null,
+    defaultTarget: /** @type {'vocal'} */ ("vocal"),
+    defaultMode: /** @type {'standard'} */ ("standard"),
     passwordHash,
     provider,
     providerUserId,
@@ -194,11 +215,16 @@ function newFreeAccount({
 
 function mapProfileRow(user, profile) {
   const username = profile?.username || user.user_metadata?.username || user.email?.split("@")[0] || "user";
+  const displayName = profile?.display_name || null;
   return publicAccount({
     id: user.id,
     email: profile?.email || user.email || "",
     username,
-    name: username,
+    name: displayName || username,
+    displayName,
+    avatarUrl: profile?.avatar_url || null,
+    defaultTarget: normalizeTarget(profile?.default_target),
+    defaultMode: normalizeMode(profile?.default_mode),
     passwordHash: null,
     provider: /** @type {AuthProvider} */ (profile?.provider || "password"),
     providerUserId: null,
@@ -264,7 +290,7 @@ export function getSession() {
       cacheAccount(null);
       return null;
     }
-    return cacheAccount(account);
+    return cacheAccount(publicAccount(account));
   } catch {
     cacheAccount(null);
     return null;
@@ -391,7 +417,24 @@ export async function updateAccount(patch) {
   const session = getSession();
   if (!session) return null;
 
-  const optimistic = publicAccount({ ...session, ...patch, passwordHash: null });
+  const next = { ...session, ...patch, passwordHash: null };
+  if (patch.displayName !== undefined) {
+    const dn = String(patch.displayName || "").trim().slice(0, 40);
+    next.displayName = dn || null;
+    next.name = dn || next.username;
+  }
+  if (patch.defaultTarget != null) next.defaultTarget = normalizeTarget(patch.defaultTarget);
+  if (patch.defaultMode != null) next.defaultMode = normalizeMode(patch.defaultMode);
+  if (patch.username != null) {
+    const check = validateUsername(patch.username);
+    if (!check.ok) {
+      throw Object.assign(new Error(check.message), { code: "invalid_username" });
+    }
+    next.username = check.normalized;
+    if (!next.displayName) next.name = check.normalized;
+  }
+
+  const optimistic = publicAccount(next);
   cacheAccount(optimistic);
 
   if (isSupabaseConfigured()) {
@@ -401,9 +444,37 @@ export async function updateAccount(patch) {
     if (patch.plan != null) row.plan = patch.plan;
     if (patch.analysesUsed != null) row.analyses_used = patch.analysesUsed;
     if (patch.analysesIncluded != null) row.analyses_included = patch.analysesIncluded;
+    if (patch.username != null) row.username = optimistic.username;
+    if (patch.displayName !== undefined) row.display_name = optimistic.displayName;
+    if (patch.avatarUrl !== undefined) row.avatar_url = optimistic.avatarUrl;
+    if (patch.defaultTarget != null) row.default_target = optimistic.defaultTarget;
+    if (patch.defaultMode != null) row.default_mode = optimistic.defaultMode;
+
+    if (patch.username != null && patch.username !== session.username) {
+      const { data: taken, error: takenErr } = await supabase.rpc("username_taken", {
+        u: optimistic.username,
+      });
+      if (!takenErr && taken) {
+        cacheAccount(session);
+        throw Object.assign(new Error("That username is taken. Try another."), {
+          code: "username_taken",
+        });
+      }
+    }
+
     if (Object.keys(row).length) {
       const { error } = await supabase.from("profiles").update(row).eq("id", session.id);
-      if (error) console.warn("[auth] updateAccount", error);
+      if (error) {
+        cacheAccount(session);
+        if (/unique|duplicate/i.test(error.message || "")) {
+          throw Object.assign(new Error("That username is taken. Try another."), {
+            code: "username_taken",
+          });
+        }
+        throw Object.assign(new Error(error.message || "Couldn’t save settings."), {
+          code: "update_failed",
+        });
+      }
     }
     return optimistic;
   }
@@ -411,10 +482,124 @@ export async function updateAccount(patch) {
   const users = readUsers();
   const account = users[session.email];
   if (!account) return null;
-  Object.assign(account, patch);
+  if (patch.username != null && patch.username !== session.username) {
+    if (findByUsername(users, optimistic.username) && findByUsername(users, optimistic.username).email !== session.email) {
+      cacheAccount(session);
+      throw Object.assign(new Error("That username is taken. Try another."), {
+        code: "username_taken",
+      });
+    }
+  }
+  Object.assign(account, {
+    username: optimistic.username,
+    name: optimistic.name,
+    displayName: optimistic.displayName,
+    avatarUrl: optimistic.avatarUrl,
+    defaultTarget: optimistic.defaultTarget,
+    defaultMode: optimistic.defaultMode,
+    plan: optimistic.plan,
+    analysesUsed: optimistic.analysesUsed,
+    analysesIncluded: optimistic.analysesIncluded,
+  });
   users[session.email] = account;
   writeUsers(users);
   return cacheAccount(account);
+}
+
+/**
+ * Upload / replace profile photo. Uses Storage when available, else data URL on profile.
+ * @param {File} file
+ */
+export async function updateAvatar(file) {
+  const session = getSession();
+  if (!session) throw Object.assign(new Error("Sign in to update your photo."), { code: "auth" });
+
+  const { compressAvatar } = await import("./avatar.js");
+  const { dataUrl, blob } = await compressAvatar(file);
+  let avatarUrl = dataUrl;
+
+  if (isSupabaseConfigured()) {
+    const supabase = await getSupabase();
+    if (supabase) {
+      const path = `${session.id}/avatar.jpg`;
+      const { error: upErr } = await supabase.storage.from("avatars").upload(path, blob, {
+        upsert: true,
+        contentType: "image/jpeg",
+        cacheControl: "3600",
+      });
+      if (!upErr) {
+        const { data } = supabase.storage.from("avatars").getPublicUrl(path);
+        avatarUrl = `${data.publicUrl}?t=${Date.now()}`;
+      }
+      // If bucket missing / policy fail, fall back to data URL on the profile row
+    }
+  }
+
+  return updateAccount({ avatarUrl });
+}
+
+/** Remove profile photo. */
+export async function clearAvatar() {
+  const session = getSession();
+  if (!session) return null;
+
+  if (isSupabaseConfigured()) {
+    const supabase = await getSupabase();
+    if (supabase) {
+      await supabase.storage.from("avatars").remove([`${session.id}/avatar.jpg`]);
+    }
+  }
+  return updateAccount({ avatarUrl: null });
+}
+
+/**
+ * Change password for password-provider accounts.
+ * @param {{ currentPassword: string, newPassword: string }} input
+ */
+export async function changePassword({ currentPassword, newPassword }) {
+  const session = getSession();
+  if (!session) throw Object.assign(new Error("Sign in first."), { code: "auth" });
+  if (session.provider !== "password") {
+    throw Object.assign(new Error("This account uses social sign-in — change the password with that provider."), {
+      code: "oauth_only",
+    });
+  }
+
+  const pass = validatePassword(newPassword);
+  if (!pass.ok) throw Object.assign(new Error(pass.message), { code: "weak_password" });
+
+  if (isSupabaseConfigured()) {
+    const supabase = await getSupabase();
+    if (!supabase) throw new Error("Database is not configured.");
+    const { error: signErr } = await supabase.auth.signInWithPassword({
+      email: session.email,
+      password: currentPassword,
+    });
+    if (signErr) {
+      throw Object.assign(new Error("Current password is incorrect."), { code: "bad_password" });
+    }
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) {
+      throw Object.assign(new Error(error.message || "Couldn’t update password."), {
+        code: "update_failed",
+      });
+    }
+    return true;
+  }
+
+  const users = readUsers();
+  const account = users[session.email];
+  if (!account?.passwordHash) {
+    throw Object.assign(new Error("No password on this account."), { code: "oauth_only" });
+  }
+  const currentHash = await hashPassword(currentPassword);
+  if (currentHash !== account.passwordHash) {
+    throw Object.assign(new Error("Current password is incorrect."), { code: "bad_password" });
+  }
+  account.passwordHash = await hashPassword(newPassword);
+  users[session.email] = account;
+  writeUsers(users);
+  return true;
 }
 
 /* ——— Local store ——— */

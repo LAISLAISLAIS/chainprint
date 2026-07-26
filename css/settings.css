@@ -1,0 +1,246 @@
+/* Account settings */
+
+.settings-page {
+  min-height: 100vh;
+  padding: 28px 20px 64px;
+  padding-top: calc(28px + env(safe-area-inset-top, 0));
+  padding-bottom: calc(64px + env(safe-area-inset-bottom, 0));
+  background:
+    radial-gradient(ellipse 55% 36% at 50% 0%, rgba(255, 255, 255, 0.04) 0%, transparent 58%),
+    transparent;
+}
+
+.settings-shell {
+  width: min(560px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 16px;
+}
+
+.settings-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.settings-top-nav {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 0.86rem;
+}
+
+.settings-top-nav > a {
+  color: var(--silkscreen);
+  text-decoration: none;
+}
+
+.settings-top-nav > a:hover {
+  color: var(--readout);
+}
+
+.settings-title {
+  font-family: var(--font-brand);
+  font-size: clamp(1.55rem, 4vw, 1.9rem);
+  font-weight: 750;
+  letter-spacing: -0.035em;
+  color: var(--brand);
+  margin: 0;
+}
+
+.settings-lede {
+  margin: -6px 0 8px;
+  font-size: 0.94rem;
+  color: var(--silkscreen);
+  line-height: 1.45;
+}
+
+.settings-card {
+  padding: 24px 22px 22px;
+  display: grid;
+  gap: 16px;
+}
+
+.settings-card h2 {
+  font-family: var(--font-brand);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--readout);
+  margin: 0;
+}
+
+.settings-section-lede {
+  margin: -8px 0 0;
+  font-size: 0.84rem;
+  color: var(--silkscreen);
+  line-height: 1.4;
+}
+
+.settings-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.settings-avatar {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.settings-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.settings-avatar [data-avatar-fallback] {
+  font-family: var(--font-brand);
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.03em;
+  color: var(--brand);
+}
+
+.settings-avatar-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.settings-file-btn {
+  cursor: pointer;
+  min-height: 40px;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.settings-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #6e6e6e;
+  line-height: 1.4;
+}
+
+.settings-form {
+  display: grid;
+  gap: 14px;
+}
+
+.settings-form .field label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--silkscreen);
+}
+
+.settings-form input,
+.settings-form select {
+  appearance: none;
+  width: 100%;
+  background: rgba(0, 0, 0, 0.4);
+  color: var(--readout);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 12px 14px;
+  transition: border-color 0.15s ease;
+}
+
+.settings-form select {
+  background-image: linear-gradient(45deg, transparent 50%, #8a8a8a 50%),
+    linear-gradient(135deg, #8a8a8a 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+  padding-right: 36px;
+}
+
+.settings-form input:focus,
+.settings-form select:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.38);
+  box-shadow: var(--focus-ring);
+}
+
+.settings-form input[readonly] {
+  opacity: 0.7;
+  cursor: default;
+}
+
+.settings-status {
+  min-height: 1.2em;
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.4;
+  color: var(--silkscreen);
+}
+
+.settings-status.is-error {
+  color: #ffb4b4;
+}
+
+.settings-status.is-ok {
+  color: #8ecfc0;
+}
+
+.settings-plan-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin: 0;
+}
+
+.settings-plan-grid dt {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--silkscreen);
+  margin-bottom: 4px;
+}
+
+.settings-plan-grid dd {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 650;
+  color: var(--brand);
+  letter-spacing: -0.02em;
+}
+
+@media (max-width: 560px) {
+  .settings-page {
+    padding: 18px 14px 48px;
+  }
+
+  .settings-card {
+    padding: 20px 16px 18px;
+  }
+
+  .settings-plan-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-form input,
+  .settings-form select {
+    font-size: 16px;
+    min-height: 48px;
+  }
+}

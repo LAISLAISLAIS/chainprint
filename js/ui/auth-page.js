@@ -43,6 +43,8 @@ function safeNext(path) {
     "/find/": "../find/",
     "/calibration": "../calibration/",
     "/calibration/": "../calibration/",
+    "/settings": "../settings/",
+    "/settings/": "../settings/",
     analyze: "../analyze/",
     "analyze/": "../analyze/",
     find: "../find/",

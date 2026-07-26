@@ -148,6 +148,7 @@ await initAuth();
 mountAuthNav(document.querySelector("[data-auth-nav]"), {
   authHref: "../auth/",
   next: "/analyze/",
+  settingsHref: "../settings/",
 });
 
 mountPlaybackPulse();
@@ -297,8 +298,17 @@ modeDeepBtn?.addEventListener("click", () => setMode("deep"));
 targetVocalBtn?.addEventListener("click", () => setTarget("vocal"));
 targetInstrumentalBtn?.addEventListener("click", () => setTarget("instrumental"));
 targetFullBtn?.addEventListener("click", () => setTarget("full"));
-setMode(canUseMode("deep").ok ? "deep" : "standard");
-setTarget("vocal");
+
+{
+  const prefs = getSession();
+  const preferredMode = prefs?.defaultMode === "deep" && canUseMode("deep", prefs).ok ? "deep" : "standard";
+  const preferredTarget =
+    prefs?.defaultTarget === "instrumental" || prefs?.defaultTarget === "full"
+      ? prefs.defaultTarget
+      : "vocal";
+  setMode(preferredMode);
+  setTarget(preferredTarget);
+}
 
 stemVocalInput?.addEventListener("change", () => {
   stemVocalFile = stemVocalInput.files?.[0] || null;

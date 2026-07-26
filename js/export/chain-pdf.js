@@ -64,14 +64,6 @@ export async function downloadChainPdf(advice, meta = {}) {
     logging: false,
     width: sheet.offsetWidth,
     height: sheet.offsetHeight,
-    onclone: (_doc, el) => {
-      // Keep SVG type pills crisp; avoid CSS text metrics html2canvas mangling
-      el.querySelectorAll("svg.xp-type").forEach((node) => {
-        node.setAttribute("shape-rendering", "geometricPrecision");
-        node.style.display = "block";
-        node.style.transform = "none";
-      });
-    },
   });
 
   // Landscape letter — one page, fill width

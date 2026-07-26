@@ -17,33 +17,15 @@ function stepLines(step) {
   return [];
 }
 
-/** SVG pill — html2canvas centers SVG text far more reliably than CSS flex/line-height */
-function typePill(raw) {
-  const label = String(raw || "Step")
-    .trim()
-    .toUpperCase()
-    .slice(0, 18);
-  const charW = 5.85;
-  const padX = 11;
-  const w = Math.max(42, Math.ceil(label.length * charW + padX * 2));
-  const h = 20;
-  // Capitals sit optically mid-box around y≈13.2 for 9px bold in a 20px pill
-  const textY = 13.2;
-  return `<svg class="xp-type" xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">
-      <rect width="${w}" height="${h}" rx="${h / 2}" fill="#f0f0f0"/>
-      <text x="${(w / 2).toFixed(1)}" y="${textY}" text-anchor="middle"
-        fill="#0a0a0a" font-family="DM Sans, Helvetica, Arial, sans-serif"
-        font-size="9" font-weight="700" letter-spacing="0.45">${esc(label)}</text>
-    </svg>`;
-}
-
 function stepCard(step, index, kind) {
   const n = kind === "send" ? `S${index + 1}` : String(index + 1).padStart(2, "0");
   const lines = stepLines(step)
     .slice(0, 4)
     .map((line) => `<li>${esc(line)}</li>`)
     .join("");
-  const typeLabel = step.type || (kind === "send" ? "Send" : "Insert");
+  const typeLabel = String(step.type || (kind === "send" ? "Send" : "Insert"))
+    .trim()
+    .toUpperCase();
 
   return `
     <article class="xp-step">
@@ -53,7 +35,7 @@ function stepCard(step, index, kind) {
           <h3>${esc(step.title)}</h3>
           <p>${esc(step.plugin)}</p>
         </div>
-        ${typePill(typeLabel)}
+        <span class="xp-type">${esc(typeLabel)}</span>
       </div>
       ${lines ? `<ul class="xp-lines">${lines}</ul>` : ""}
     </article>`;
@@ -312,11 +294,20 @@ export const EXPORT_SHEET_CSS = `
 
   .xp-type {
     display: block;
-    width: auto;
-    height: 20px;
-    flex-shrink: 0;
+    margin: 2px 0 0;
+    padding: 0;
+    border: none;
+    background: none;
+    color: #8a8a8a;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.3;
+    white-space: nowrap;
+    text-align: right;
     align-self: start;
-    overflow: visible;
   }
 
   .xp-lines {

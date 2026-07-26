@@ -11,6 +11,7 @@ import { mountPlaybackPulse } from "./playback-pulse.js";
 mountAuthNav(document.querySelector("[data-auth-nav]"), {
   authHref: "../auth/",
   next: "/find/",
+  settingsHref: "../settings/",
 });
 
 mountPlaybackPulse();

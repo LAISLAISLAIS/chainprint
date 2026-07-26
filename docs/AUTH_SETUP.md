@@ -2,9 +2,10 @@
 
 ## Launch checklist
 1. Set `DEV_UNLOCK_PRO = false` in `js/auth/quota.js` (already off for production builds).
-2. Create a Supabase project and run both SQL migrations in order:
+2. Create a Supabase project and run SQL migrations in order:
    - `supabase/migrations/001_profiles.sql`
    - `supabase/migrations/002_profile_on_signup.sql` (trigger so profiles are created even before email confirm)
+   - `supabase/migrations/003_profile_settings.sql` (avatar, display name, studio defaults + optional Storage bucket)
 3. Put Project URL + anon key in `js/auth/config.js` (or inject at deploy).
 4. Auth → Email enabled; optionally disable “Confirm email” while testing.
 5. Match password policy: min 8, upper, number, symbol.
@@ -14,6 +15,9 @@ Until keys are set, accounts stay in **this browser only**.
 
 ### “violates row-level security policy for table profiles”
 Run `002_profile_on_signup.sql`. The client cannot insert a profile when signup returns no session (email confirmation on). The trigger creates the row as `security definer` instead.
+
+### Settings / avatars
+Account menu → **Settings** (`/settings/`). Photos upload to the `avatars` Storage bucket when `003` has been applied; otherwise a compressed data URL is stored on `profiles.avatar_url`.
 
 ## Notes
 - Quota updates from the client are a soft gate until you add a privileged `consume_analysis` RPC.

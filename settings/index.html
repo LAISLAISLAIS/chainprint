@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Settings | Chainprint</title>
+  <meta name="description" content="Manage your Chainprint profile, photo, and studio defaults." />
+  <meta name="robots" content="noindex, nofollow" />
+  <link rel="canonical" href="https://chainprint.app/settings/" />
+  <meta name="theme-color" content="#000000" />
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="../assets/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png" sizes="180x180" />
+  <link rel="manifest" href="../site.webmanifest" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" />
+  <link rel="stylesheet" href="../css/chassis.css" />
+  <link rel="stylesheet" href="../css/logo.css" />
+  <link rel="stylesheet" href="../css/auth.css" />
+  <link rel="stylesheet" href="../css/settings.css" />
+</head>
+<body>
+  <div class="settings-page">
+    <div class="settings-shell">
+      <header class="settings-top">
+        <a class="logo" href="../" aria-label="Chainprint home">
+          <span class="logo-mark" aria-hidden="true"></span>
+          <span class="logo-word">Chainprint</span>
+        </a>
+        <nav class="settings-top-nav" aria-label="Account">
+          <a href="../analyze/">Studio</a>
+          <span class="nav-auth" data-auth-nav></span>
+        </nav>
+      </header>
+
+      <h1 class="settings-title">Settings</h1>
+      <p class="settings-lede">Profile, photo, and how the studio opens for you.</p>
+
+      <section class="unit settings-card" data-settings-profile>
+        <h2>Profile</h2>
+        <div class="settings-avatar-row">
+          <div class="settings-avatar" data-avatar-preview aria-hidden="true">
+            <img data-avatar-img alt="" hidden />
+            <span data-avatar-fallback>?</span>
+          </div>
+          <div class="settings-avatar-actions">
+            <label class="btn btn-ghost settings-file-btn">
+              Change photo
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/*" data-avatar-input hidden />
+            </label>
+            <button type="button" class="btn btn-ghost" data-avatar-clear>Remove</button>
+            <p class="settings-hint">Square crop works best. Max ~8 MB — we compress it.</p>
+          </div>
+        </div>
+
+        <form class="settings-form" data-profile-form>
+          <div class="field">
+            <label for="display-name">Display name</label>
+            <input id="display-name" name="displayName" type="text" maxlength="40" placeholder="How you appear in the app" autocomplete="nickname" />
+          </div>
+          <div class="field">
+            <label for="username">Username</label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              minlength="3"
+              maxlength="24"
+              pattern="[A-Za-z0-9_]{3,24}"
+              spellcheck="false"
+              autocomplete="username"
+              required
+            />
+          </div>
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" readonly />
+          </div>
+          <p class="settings-status" data-profile-status role="status"></p>
+          <button class="btn btn-primary" type="submit" data-profile-save>Save profile</button>
+        </form>
+      </section>
+
+      <section class="unit settings-card" data-settings-studio>
+        <h2>Studio defaults</h2>
+        <p class="settings-section-lede">Applied when you open Analyze (you can still change per session).</p>
+        <form class="settings-form" data-studio-form>
+          <div class="field">
+            <label for="default-target">Default mix target</label>
+            <select id="default-target" name="defaultTarget">
+              <option value="vocal">Vocal</option>
+              <option value="instrumental">Instrumental</option>
+              <option value="full">Full mix</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="default-mode">Default analysis mode</label>
+            <select id="default-mode" name="defaultMode">
+              <option value="standard">Standard</option>
+              <option value="deep">Deep (Pro)</option>
+            </select>
+          </div>
+          <p class="settings-status" data-studio-status role="status"></p>
+          <button class="btn btn-primary" type="submit" data-studio-save>Save defaults</button>
+        </form>
+      </section>
+
+      <section class="unit settings-card" data-settings-plan>
+        <h2>Plan</h2>
+        <dl class="settings-plan-grid">
+          <div>
+            <dt>Current plan</dt>
+            <dd data-plan-label>—</dd>
+          </div>
+          <div>
+            <dt>Analyses left</dt>
+            <dd data-plan-left>—</dd>
+          </div>
+        </dl>
+        <p class="settings-hint" data-plan-note></p>
+      </section>
+
+      <section class="unit settings-card" data-settings-password hidden>
+        <h2>Password</h2>
+        <form class="settings-form" data-password-form>
+          <div class="field">
+            <label for="current-password">Current password</label>
+            <input id="current-password" name="currentPassword" type="password" autocomplete="current-password" required />
+          </div>
+          <div class="field">
+            <label for="new-password">New password</label>
+            <input id="new-password" name="newPassword" type="password" autocomplete="new-password" required minlength="8" />
+            <ul class="password-reqs" data-password-reqs hidden aria-live="polite">
+              <li data-req="length">At least 8 characters</li>
+              <li data-req="upper">1 uppercase letter</li>
+              <li data-req="number">1 number</li>
+              <li data-req="symbol">1 symbol (!@#$…)</li>
+            </ul>
+          </div>
+          <p class="settings-status" data-password-status role="status"></p>
+          <button class="btn btn-primary" type="submit">Update password</button>
+        </form>
+      </section>
+    </div>
+  </div>
+  <script type="module" src="../js/ui/settings-page.js"></script>
+</body>
+</html>
