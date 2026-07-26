@@ -71,6 +71,12 @@ function syncPasswordReqs(value) {
   });
 }
 
+function setPasswordReqsVisible(on) {
+  if (!requirements) return;
+  requirements.hidden = !on;
+  requirements.classList.toggle("is-open", on);
+}
+
 function setMode(m) {
   const isLogin = m === "login";
   document.title = isLogin ? "Log in · Chainprint" : "Sign up · Chainprint";
@@ -96,12 +102,11 @@ function setMode(m) {
   }
   if (passwordInput) {
     passwordInput.autocomplete = isLogin ? "current-password" : "new-password";
-    passwordInput.placeholder = isLogin
-      ? "Your password"
-      : "8+ chars, upper, number, symbol";
+    passwordInput.placeholder = isLogin ? "Your password" : "Create a password";
     passwordInput.minLength = isLogin ? 1 : 8;
   }
-  if (requirements) requirements.hidden = isLogin;
+  // Never show password rules on login; signup shows them while creating a password
+  setPasswordReqsVisible(false);
   if (submitBtn) submitBtn.textContent = isLogin ? "Log in" : "Sign up with email";
   if (switchEl) {
     switchEl.innerHTML = isLogin
@@ -119,7 +124,7 @@ function showError(msg) {
 if (dbNote) {
   if (!isSupabaseConfigured()) {
     dbNote.textContent =
-      "Accounts are saved in this browser until Supabase is connected (see js/auth/config.js).";
+      "Accounts stay on this device until the cloud database is connected. Signing up on your phone won’t see a desktop account yet.";
     dbNote.classList.remove("hidden");
   } else {
     dbNote.classList.add("hidden");
@@ -143,10 +148,29 @@ if (socialNote) {
 }
 
 setMode(mode);
-syncPasswordReqs(passwordInput?.value || "");
+
+passwordInput?.addEventListener("focus", () => {
+  if (mode !== "signup") return;
+  setPasswordReqsVisible(true);
+  syncPasswordReqs(passwordInput.value || "");
+});
 
 passwordInput?.addEventListener("input", () => {
+  if (mode !== "signup") {
+    setPasswordReqsVisible(false);
+    return;
+  }
+  setPasswordReqsVisible(true);
   syncPasswordReqs(passwordInput.value);
+});
+
+passwordInput?.addEventListener("blur", () => {
+  if (mode !== "signup") {
+    setPasswordReqsVisible(false);
+    return;
+  }
+  // Keep checklist open if they started typing so they can finish the password
+  if (!passwordInput.value) setPasswordReqsVisible(false);
 });
 
 document.querySelectorAll("[data-social]").forEach((btn) => {

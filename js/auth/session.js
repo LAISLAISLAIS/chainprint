@@ -10,6 +10,8 @@ import { validatePassword, validateUsername, looksLikeEmail } from "./validation
 const USERS_KEY = "chainprint.users.v2";
 const SESSION_KEY = "chainprint.session.v2";
 const ACCOUNT_CACHE_KEY = "chainprint.account.v2";
+const USERS_KEY_V1 = "chainprint.users.v1";
+const SESSION_KEY_V1 = "chainprint.session.v1";
 
 /** @typedef {'free' | 'pro'} PlanId */
 /** @typedef {'password' | 'google' | 'apple'} AuthProvider */
@@ -32,6 +34,7 @@ const ACCOUNT_CACHE_KEY = "chainprint.account.v2";
 /** @type {Account | null} */
 let memoryAccount = null;
 let initialized = false;
+let migrated = false;
 
 function cacheAccount(account) {
   memoryAccount = account ? publicAccount(account) : null;
@@ -65,7 +68,84 @@ function publicAccount(account) {
   };
 }
 
+/** Pull forward accounts created before username / v2 storage. */
+function migrateLegacyUsers() {
+  if (migrated) return;
+  migrated = true;
+
+  try {
+    const existing = localStorage.getItem(USERS_KEY);
+    if (existing && existing !== "{}") {
+      // Still adopt session if only session stayed on v1
+      if (!localStorage.getItem(SESSION_KEY)) {
+        const oldSession = localStorage.getItem(SESSION_KEY_V1);
+        if (oldSession) localStorage.setItem(SESSION_KEY, oldSession);
+      }
+      return;
+    }
+
+    const raw = localStorage.getItem(USERS_KEY_V1);
+    if (!raw) return;
+    const oldUsers = JSON.parse(raw);
+    if (!oldUsers || typeof oldUsers !== "object") return;
+
+    const users = {};
+    const usedNames = new Set();
+
+    for (const [emailKey, account] of Object.entries(oldUsers)) {
+      if (!account || typeof account !== "object") continue;
+      const email = String(account.email || emailKey || "")
+        .trim()
+        .toLowerCase();
+      if (!email) continue;
+
+      let base =
+        String(account.username || "")
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9_]/g, "") ||
+        String(account.name || "")
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9_]/g, "") ||
+        email.split("@")[0].replace(/[^a-z0-9_]/g, "") ||
+        "user";
+      if (base.length < 3) base = `${base}123`.slice(0, 24);
+      base = base.slice(0, 24);
+
+      let username = base;
+      let n = 0;
+      while (usedNames.has(username)) {
+        n += 1;
+        const suffix = String(n);
+        username = `${base.slice(0, Math.max(1, 24 - suffix.length))}${suffix}`;
+      }
+      usedNames.add(username);
+
+      users[email] = {
+        ...account,
+        email,
+        username,
+        name: username,
+        plan: account.plan || "free",
+        analysesUsed: Number(account.analysesUsed || 0),
+        analysesIncluded: account.analysesIncluded ?? null,
+      };
+    }
+
+    localStorage.setItem(USERS_KEY, JSON.stringify(users));
+
+    const oldSession = localStorage.getItem(SESSION_KEY_V1);
+    if (oldSession && !localStorage.getItem(SESSION_KEY)) {
+      localStorage.setItem(SESSION_KEY, oldSession);
+    }
+  } catch (err) {
+    console.warn("[auth] legacy migrate failed", err);
+  }
+}
+
 function readUsers() {
+  migrateLegacyUsers();
   try {
     return JSON.parse(localStorage.getItem(USERS_KEY) || "{}");
   } catch {
@@ -366,9 +446,14 @@ async function loginLocal({ identifier, password }) {
   }
 
   if (!account) {
-    throw Object.assign(new Error("No account found for that email or username."), {
-      code: "not_found",
-    });
+    throw Object.assign(
+      new Error(
+        isSupabaseConfigured()
+          ? "No account found for that email or username."
+          : "No account found in this browser. Create an account here, or use the same browser where you signed up (accounts aren’t synced yet)."
+      ),
+      { code: "not_found" }
+    );
   }
   if (!account.passwordHash) {
     throw Object.assign(

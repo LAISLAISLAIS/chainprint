@@ -428,7 +428,7 @@ body > * {
 
 .playback-dock-chrome {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   min-height: 22px;
@@ -437,10 +437,6 @@ body > * {
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   margin-bottom: 2px;
   touch-action: none;
-}
-
-.playback-dock:not(.has-queue) .playback-dock-chrome {
-  grid-template-columns: auto auto minmax(0, 1fr) auto;
 }
 
 .playback-dock.is-dragging .playback-dock-chrome {
@@ -463,15 +459,6 @@ body > * {
   background: #d0d0d0;
 }
 
-.playback-dock-drag-hint {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #7a7a7a;
-  line-height: 1;
-}
-
 .playback-dock-title {
   margin: 0;
   min-width: 0;
@@ -486,8 +473,8 @@ body > * {
 
 .playback-dock-close {
   appearance: none;
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -496,6 +483,7 @@ body > * {
   display: grid;
   place-items: center;
   padding: 0;
+  flex-shrink: 0;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
@@ -917,7 +905,7 @@ body > * {
   }
 
   .playback-dock.has-queue .playback-dock-chrome {
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
   }
 
   .playback-dock-title-btn {

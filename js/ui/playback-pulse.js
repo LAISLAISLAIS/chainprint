@@ -52,7 +52,6 @@ export function mountPlaybackPulse(parent = document.body) {
       <span class="playback-dock-grip" aria-hidden="true">
         <i></i><i></i><i></i><i></i><i></i><i></i>
       </span>
-      <span class="playback-dock-drag-hint">Drag</span>
       <button type="button" class="playback-dock-title-btn" data-player-expand-title>
         <p class="playback-dock-title" data-player-title>Reference</p>
       </button>
@@ -183,7 +182,8 @@ export function mountPlaybackPulse(parent = document.body) {
     const tracks = getPlaybackTracks();
     const multi = tracks.length > 1;
     el.classList.toggle("has-queue", multi);
-    if (expandBtn) expandBtn.hidden = !multi;
+    // Queue opens via title tap — keep close as the only chrome action on the right
+    if (expandBtn) expandBtn.hidden = true;
     if (!multi && expanded) setExpanded(false);
     else if (expanded) renderQueue();
   }
