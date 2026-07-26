@@ -4098,8 +4098,18 @@
     height: auto;
     /* svh, not dvh — dvh reflows every frame while the mobile URL bar animates */
     min-height: 100svh;
-    overflow: auto;
-    overflow-x: clip;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: none;
+    scrollbar-width: none;
+    background: #000;
+  }
+
+  .studio-body::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
   }
 
   .studio {
@@ -4110,37 +4120,59 @@
     min-height: 100svh;
     grid-template-rows: auto 1fr;
     max-width: 100%;
-    overflow-x: clip;
+    /* Do NOT set overflow here — it breaks position:sticky on the header */
+    overflow: visible;
   }
 
   .studio-top {
     position: sticky;
     top: 0;
-    grid-template-columns: 1fr auto;
-    grid-template-rows: 48px auto;
+    z-index: 60;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: 48px 44px;
     height: auto;
     padding-top: env(safe-area-inset-top, 0);
-    /* No backdrop blur on the sticky header — repaints every scroll frame on mobile */
-    background: #060606;
+    background: #000;
+    border-bottom: 1px solid var(--studio-rule);
+    /* Isolate so nested sticky children can't escape and scramble layout */
+    transform: translateZ(0);
+  }
+
+  /* Cover rubber-band / overscroll so no page bg peeks above the sticky bar */
+  .studio-top::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 100%;
+    height: 120vh;
+    background: #000;
+    pointer-events: none;
   }
 
   .studio-brand {
+    grid-column: 1;
+    grid-row: 1;
     border-right: none;
     padding: 0 var(--studio-gutter);
     min-width: 0;
+  }
+
+  .studio-top-end {
+    grid-column: 2;
+    grid-row: 1;
+    padding: 0 var(--studio-gutter) 0 0;
+    min-width: 0;
+    align-self: center;
   }
 
   .studio-logo .logo-word {
     font-size: var(--text-md);
   }
 
-  .studio-top-end {
-    padding: 0 var(--studio-gutter);
-    min-width: 0;
-  }
-
   .studio-tabs {
     grid-column: 1 / -1;
+    grid-row: 2;
     justify-self: stretch;
     width: 100%;
     overflow-x: auto;
@@ -4149,7 +4181,7 @@
     border-top: 1px solid var(--studio-rule);
     height: 44px;
     padding: 0;
-    mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 16px), transparent);
+    mask-image: none;
   }
 
   .studio-tabs::-webkit-scrollbar {
@@ -4186,12 +4218,12 @@
   }
 
   .studio.is-source-collapsed .studio-grid {
-    grid-template-rows: 44px 1fr;
+    /* Collapse control lives in the header — don't leave a dead bar */
+    grid-template-rows: 1fr;
   }
 
   .studio.is-source-collapsed .studio-source {
-    max-height: 44px;
-    flex-direction: row;
+    display: none;
   }
 
   .studio.is-source-collapsed .studio-brand {
@@ -4297,7 +4329,19 @@
     min-height: 55vh;
     padding-bottom: calc(18px + env(safe-area-inset-bottom, 0));
     max-width: 100%;
-    overflow-x: clip;
+    overflow-x: hidden;
+  }
+
+  .studio .account-menu-trigger {
+    max-width: 9.5rem;
+    height: 34px;
+    padding: 0 10px 0 3px;
+  }
+
+  .studio .account-trigger-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .studio-panel {
@@ -4398,20 +4442,39 @@
   }
 
   .chain-workspace {
-    min-height: 60vh;
+    min-height: 0;
+    /* Stages first: browse without scrolling past export chrome every time */
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "rail"
+      "nav"
+      "focus"
+      "chrome";
   }
 
   .stage-rail-shell {
-    top: auto;
     position: relative;
+    top: auto;
+    z-index: 8;
+    background: #080808;
+    border-bottom: 1px solid var(--studio-rule);
   }
 
   .stage-rail-wrap {
     flex-direction: row;
-    flex-wrap: wrap;
-    gap: 4px 2px;
-    padding: 10px var(--studio-gutter) 12px;
-    overflow: visible;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 6px;
+    padding: 10px var(--studio-gutter);
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    overscroll-behavior-x: contain;
+  }
+
+  .stage-rail-wrap::-webkit-scrollbar {
+    display: none;
   }
 
   .stage-rail {
@@ -4420,27 +4483,52 @@
 
   .stage-rail-divider {
     width: 1px;
-    height: 1.25rem;
-    margin: 0 6px;
+    height: 1.4rem;
+    margin: 0 4px;
+    flex-shrink: 0;
   }
 
   .stage-chip {
-    padding: 8px 11px 8px 7px;
-    min-height: 44px;
-    gap: 8px;
+    padding: 7px 10px 7px 7px;
+    min-height: 40px;
+    gap: 7px;
   }
 
   .stage-chip-n {
-    width: 1.65rem;
-    height: 1.65rem;
+    width: 1.5rem;
+    height: 1.5rem;
+  }
+
+  .stage-chip-type {
+    display: none;
+  }
+
+  .stage-chip-title {
+    max-width: 8.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .stage-chip::after {
     display: none;
   }
 
+  .stage-nav {
+    position: relative;
+    z-index: 7;
+    padding: 8px var(--studio-gutter);
+    gap: 10px;
+    border-bottom: 1px solid var(--studio-rule);
+    background: #050505;
+  }
+
+  .stage-nav-btn {
+    min-height: 40px;
+    padding: 8px 12px;
+  }
+
   .stage-focus {
-    padding: 16px var(--studio-gutter) 14px;
+    padding: 16px var(--studio-gutter) calc(28px + var(--playback-dock-space, 0px));
     align-content: start;
   }
 
@@ -4466,19 +4554,6 @@
 
   .stage-focus .step-title {
     font-size: var(--text-xl);
-  }
-
-  .stage-nav {
-    padding: 10px var(--studio-gutter) calc(12px + env(safe-area-inset-bottom, 0));
-    gap: 12px;
-    position: sticky;
-    bottom: 0;
-    background: linear-gradient(180deg, transparent, #050505 28%);
-  }
-
-  .stage-nav-btn {
-    min-height: 44px;
-    padding: 10px 12px;
   }
 
   .stage-focus .plugin-face .rack-dials {

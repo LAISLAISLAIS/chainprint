@@ -351,27 +351,40 @@ body > * {
   bottom: 16px;
   z-index: 80;
   display: grid;
-  gap: 8px;
+  gap: 0;
   width: min(320px, calc(100vw - 24px));
-  padding: 10px 12px 12px;
+  padding: 0;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(10, 10, 10, 0.9);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  box-shadow:
-    0 14px 36px rgba(0, 0, 0, 0.45),
-    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
+  background: transparent;
+  box-shadow: none;
   opacity: 0;
   transform: translateY(4px);
   pointer-events: none;
   transition:
     opacity 0.2s ease-out,
-    transform 0.2s ease-out,
-    box-shadow 0.15s ease;
+    transform 0.2s ease-out;
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
+}
+
+.playback-dock-backdrop {
+  display: none;
+}
+
+.playback-dock-panel {
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(10, 10, 10, 0.92);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(255, 255, 255, 0.03) inset;
 }
 
 .playback-dock.is-live,
@@ -382,12 +395,16 @@ body > * {
 }
 
 .playback-dock.is-dragging {
+  box-shadow: none;
+  cursor: grabbing;
+  transform: none;
+  transition: none;
+}
+
+.playback-dock.is-dragging .playback-dock-panel {
   box-shadow:
     0 22px 48px rgba(0, 0, 0, 0.55),
     0 0 0 1px rgba(255, 255, 255, 0.14) inset;
-  cursor: grabbing;
-  transform: none;
-  transition: box-shadow 0.15s ease;
 }
 
 .playback-dock-title-btn {
@@ -448,8 +465,9 @@ body > * {
   padding-bottom: 8px;
   margin-bottom: 4px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  max-height: min(42vh, 280px);
+  max-height: min(36vh, 240px);
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .playback-dock-sheet[hidden] {
@@ -657,7 +675,7 @@ body > * {
 
 .playback-dock-main {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
 }
@@ -1006,17 +1024,10 @@ body > * {
     width: 100%;
     max-width: none;
     margin: 0;
-    border-radius: 18px 18px 0 0;
-    border-left: none;
-    border-right: none;
-    border-bottom: none;
-    padding:
-      10px 14px
-      calc(10px + env(safe-area-inset-bottom, 0px));
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    background: rgba(10, 10, 10, 0.97);
-    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
     transform: translateY(110%);
     touch-action: manipulation;
   }
@@ -1028,7 +1039,45 @@ body > * {
 
   .playback-dock.is-dragging {
     transform: translateY(0);
-    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.45);
+  }
+
+  .playback-dock-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    border: none;
+    padding: 0;
+    margin: 0;
+    background: rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .playback-dock.is-expanded .playback-dock-backdrop {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .playback-dock-backdrop[hidden] {
+    display: none !important;
+  }
+
+  .playback-dock-panel {
+    position: relative;
+    z-index: 1;
+    border-radius: 16px 16px 0 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    padding:
+      10px 14px
+      calc(10px + env(safe-area-inset-bottom, 0px));
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: #0a0a0a;
+    box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.5);
   }
 
   .playback-dock-grip,
@@ -1058,40 +1107,32 @@ body > * {
   }
 
   .playback-dock-play {
-    width: 34px;
-    height: 34px;
+    width: 36px;
+    height: 36px;
   }
 
+  /* Slim bar: mute lives next to seek; hide the old foot row */
   .playback-dock-foot {
-    display: flex;
-    padding-top: 4px;
-    gap: 8px;
-    align-items: center;
-  }
-
-  .playback-dock-foot .playback-pulse-wave {
     display: none;
   }
 
   .playback-mute {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
   }
 
-  .playback-vol {
-    width: min(140px, 100%);
-    flex: 1;
-  }
-
-  /* Colored analyzer bars on mobile */
-  .playback-dock.is-playing .playback-pulse-wave i {
-    animation:
-      playback-bar 0.85s ease-in-out infinite,
-      playback-wave-color 3.6s linear infinite;
+  .playback-dock-sheet {
+    max-height: min(40vh, 260px);
+    margin-bottom: 6px;
+    padding-bottom: 10px;
   }
 
   body.has-playback-dock {
-    --playback-dock-space: calc(118px + env(safe-area-inset-bottom, 0px));
+    --playback-dock-space: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+
+  body.has-playback-dock.has-playback-expanded {
+    --playback-dock-space: calc(min(52vh, 340px) + env(safe-area-inset-bottom, 0px));
   }
 
   body.has-playback-dock.studio-body {
@@ -1099,8 +1140,7 @@ body > * {
   }
 
   body.has-playback-dock .stage-nav {
-    bottom: var(--playback-dock-space) !important;
-    padding-bottom: 12px;
+    bottom: auto !important;
   }
 
   /* Dock owns transport once open — don’t stack a second play on each row */

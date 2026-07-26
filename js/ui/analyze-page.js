@@ -1088,6 +1088,10 @@ function applyEntryToStudio(entry) {
     renderInstruments(null);
     return;
   }
+  // On mobile, tuck the reference rail so Chain stages are immediately reachable
+  if (typeof window !== "undefined" && window.matchMedia("(max-width: 960px)").matches) {
+    setSourceCollapsed(true);
+  }
   const { result } = entry;
   lastAdvice = result.advice || null;
   if (result.target) analysisTarget = result.target;
@@ -1985,7 +1989,8 @@ function selectStage(index) {
   renderFocus();
   updateStageRailMore();
   const activeChip = document.querySelector(`[data-stage-index="${stageIndex}"]`);
-  activeChip?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+  // Keep the chip strip in place — only nudge the active chip into the horizontal viewport
+  activeChip?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
 }
 
 function canScrollMoreRight(el) {

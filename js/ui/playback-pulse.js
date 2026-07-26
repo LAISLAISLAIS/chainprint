@@ -39,72 +39,75 @@ export function mountPlaybackPulse(parent = document.body) {
   el.setAttribute("role", "region");
   el.setAttribute("aria-label", "Reference player");
   el.innerHTML = `
-    <div class="playback-dock-sheet" data-player-sheet hidden>
-      <div class="playback-dock-sheet-head">
-        <span>Tracks</span>
-        <button type="button" class="playback-dock-sheet-close" data-player-collapse aria-label="Collapse">
+    <button type="button" class="playback-dock-backdrop" data-player-backdrop aria-label="Collapse tracks" tabindex="-1"></button>
+    <div class="playback-dock-panel">
+      <div class="playback-dock-sheet" data-player-sheet hidden>
+        <div class="playback-dock-sheet-head">
+          <span>Tracks</span>
+          <button type="button" class="playback-dock-sheet-close" data-player-collapse aria-label="Collapse tracks">
+            <span aria-hidden="true"></span>
+          </button>
+        </div>
+        <ul class="playback-dock-queue" data-player-queue></ul>
+      </div>
+      <div class="playback-dock-chrome" data-player-drag>
+        <span class="playback-dock-grip" aria-hidden="true">
+          <i></i><i></i><i></i><i></i><i></i><i></i>
+        </span>
+        <button type="button" class="playback-dock-title-btn" data-player-expand-title>
+          <p class="playback-dock-title" data-player-title>Reference</p>
+          <span class="playback-dock-queue-hint" data-player-queue-hint hidden>
+            <span data-player-queue-count></span>
+            <i class="playback-dock-queue-chev" aria-hidden="true"></i>
+          </span>
+        </button>
+        <button type="button" class="playback-dock-close" data-player-close aria-label="Close player">
           <span aria-hidden="true"></span>
         </button>
       </div>
-      <ul class="playback-dock-queue" data-player-queue></ul>
-    </div>
-    <div class="playback-dock-chrome" data-player-drag>
-      <span class="playback-dock-grip" aria-hidden="true">
-        <i></i><i></i><i></i><i></i><i></i><i></i>
-      </span>
-      <button type="button" class="playback-dock-title-btn" data-player-expand-title>
-        <p class="playback-dock-title" data-player-title>Reference</p>
-        <span class="playback-dock-queue-hint" data-player-queue-hint hidden>
-          <span data-player-queue-count></span>
-          <i class="playback-dock-queue-chev" aria-hidden="true"></i>
-        </span>
-      </button>
-      <button type="button" class="playback-dock-close" data-player-close aria-label="Close player">
-        <span aria-hidden="true"></span>
-      </button>
-    </div>
-    <div class="playback-dock-main">
-      <button type="button" class="playback-dock-play" data-player-play aria-label="Play">
-        <span class="playback-dock-play-icon" aria-hidden="true"></span>
-      </button>
-      <div class="playback-dock-timeline">
-        <span class="playback-dock-time" data-player-current>0:00</span>
-        <label class="playback-dock-seek">
-          <span class="visually-hidden">Seek</span>
+      <div class="playback-dock-main">
+        <button type="button" class="playback-dock-play" data-player-play aria-label="Play">
+          <span class="playback-dock-play-icon" aria-hidden="true"></span>
+        </button>
+        <div class="playback-dock-timeline">
+          <span class="playback-dock-time" data-player-current>0:00</span>
+          <label class="playback-dock-seek">
+            <span class="visually-hidden">Seek</span>
+            <input
+              type="range"
+              class="playback-dock-seek-range"
+              data-player-seek
+              min="0"
+              max="1000"
+              step="1"
+              value="0"
+              aria-label="Seek"
+            />
+          </label>
+          <span class="playback-dock-time" data-player-duration>0:00</span>
+        </div>
+        <button type="button" class="playback-mute" data-playback-mute aria-label="Mute">
+          <span class="playback-mute-icon" aria-hidden="true"></span>
+        </button>
+      </div>
+      <div class="playback-dock-foot">
+        <span class="playback-pulse-wave" aria-hidden="true">${Array.from(
+          { length: BARS },
+          () => "<i></i>"
+        ).join("")}</span>
+        <label class="playback-vol">
           <input
             type="range"
-            class="playback-dock-seek-range"
-            data-player-seek
+            class="playback-vol-range"
+            data-playback-volume
             min="0"
-            max="1000"
-            step="1"
-            value="0"
-            aria-label="Seek"
+            max="1"
+            step="0.01"
+            value="${getVolume()}"
+            aria-label="Playback volume"
           />
         </label>
-        <span class="playback-dock-time" data-player-duration>0:00</span>
       </div>
-    </div>
-    <div class="playback-dock-foot">
-      <span class="playback-pulse-wave" aria-hidden="true">${Array.from(
-        { length: BARS },
-        () => "<i></i>"
-      ).join("")}</span>
-      <button type="button" class="playback-mute" data-playback-mute aria-label="Mute">
-        <span class="playback-mute-icon" aria-hidden="true"></span>
-      </button>
-      <label class="playback-vol">
-        <input
-          type="range"
-          class="playback-vol-range"
-          data-playback-volume
-          min="0"
-          max="1"
-          step="0.01"
-          value="${getVolume()}"
-          aria-label="Playback volume"
-        />
-      </label>
     </div>
   `;
 
@@ -123,6 +126,7 @@ export function mountPlaybackPulse(parent = document.body) {
   const closeBtn = el.querySelector("[data-player-close]");
   const dragHandle = el.querySelector("[data-player-drag]");
   const collapseBtn = el.querySelector("[data-player-collapse]");
+  const backdrop = el.querySelector("[data-player-backdrop]");
   const sheet = el.querySelector("[data-player-sheet]");
   const queueEl = el.querySelector("[data-player-queue]");
 
@@ -155,11 +159,13 @@ export function mountPlaybackPulse(parent = document.body) {
   function setExpanded(on) {
     expanded = Boolean(on) && getPlaybackTracks().length > 1;
     el.classList.toggle("is-expanded", expanded);
+    document.body.classList.toggle("has-playback-expanded", expanded && el.classList.contains("is-live"));
     if (sheet) sheet.hidden = !expanded;
+    if (backdrop) backdrop.hidden = !expanded;
     if (titleBtn) {
       titleBtn.setAttribute("aria-expanded", expanded ? "true" : "false");
     }
-    renderQueue();
+    if (expanded) renderQueue();
   }
 
   function renderQueue() {
@@ -210,6 +216,12 @@ export function mountPlaybackPulse(parent = document.body) {
     el.classList.toggle("is-muted", state.muted || state.volume <= 0.001);
     document.body.classList.toggle("has-playback-dock", state.active);
     document.body.classList.toggle("is-playing", state.playing);
+    if (!state.active) {
+      setExpanded(false);
+      document.body.classList.remove("has-playback-expanded");
+    } else {
+      document.body.classList.toggle("has-playback-expanded", expanded);
+    }
 
     if (titleEl) titleEl.textContent = state.title || "Reference";
 
@@ -319,7 +331,19 @@ export function mountPlaybackPulse(parent = document.body) {
     setExpanded(false);
   });
 
+  backdrop?.addEventListener("click", (e) => {
+    e.preventDefault();
+    setExpanded(false);
+  });
+
   titleBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (getPlaybackTracks().length > 1) setExpanded(!expanded);
+  });
+
+  // Tap the queue chip specifically even if title text steals the hit
+  queueHint?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (getPlaybackTracks().length > 1) setExpanded(!expanded);
@@ -411,7 +435,7 @@ export function mountPlaybackPulse(parent = document.body) {
   return () => {
     unsubPlay();
     unsubList();
-    document.body.classList.remove("is-playing", "has-playback-dock");
+    document.body.classList.remove("is-playing", "has-playback-dock", "has-playback-expanded");
     window.removeEventListener("resize", onResize);
     mobileMq.removeEventListener?.("change", onMqChange);
     mobileMq.removeListener?.(onMqChange);
