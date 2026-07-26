@@ -4242,7 +4242,7 @@
     border-right: none;
     border-bottom: 1px solid var(--studio-rule);
     border-top: none;
-    max-height: min(38vh, 320px);
+    max-height: none;
     width: 100%;
     max-width: 100%;
     min-width: 0;
@@ -4269,12 +4269,18 @@
     display: none !important;
   }
 
-  /* Ignore collapsed state on mobile — always show upload + library */
+  /* Track list lives in the player sheet — not the rail on every tab */
+  .library-panel,
+  .blend-panel {
+    display: none !important;
+  }
+
+  /* Ignore collapsed state on mobile — always show upload + paste link */
   .studio.is-source-collapsed .studio-source {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    max-height: min(38vh, 320px);
+    max-height: none;
     min-height: 0;
     width: 100%;
     padding: 0;

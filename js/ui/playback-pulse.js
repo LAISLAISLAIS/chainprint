@@ -17,6 +17,7 @@ import {
 import {
   getPlaybackTracks,
   subscribePlaylist,
+  requestPlaybackTrackSelect,
 } from "./playback-playlist.js";
 
 const BARS = 5;
@@ -157,6 +158,7 @@ export function mountPlaybackPulse(parent = document.body) {
   }
 
   function setExpanded(on) {
+    // Multi-track queue only — single track stays a compact transport bar
     expanded = Boolean(on) && getPlaybackTracks().length > 1;
     el.classList.toggle("is-expanded", expanded);
     document.body.classList.toggle("has-playback-expanded", expanded && el.classList.contains("is-live"));
@@ -220,6 +222,7 @@ export function mountPlaybackPulse(parent = document.body) {
       setExpanded(false);
       document.body.classList.remove("has-playback-expanded");
     } else {
+      // Stay collapsed unless the user opened the track sheet
       document.body.classList.toggle("has-playback-expanded", expanded);
     }
 
@@ -271,6 +274,7 @@ export function mountPlaybackPulse(parent = document.body) {
   async function playTrackId(id) {
     const track = getPlaybackTracks().find((t) => t.id === id);
     if (!track) return;
+    requestPlaybackTrackSelect(id);
     try {
       await playAudio(track.file, track.id, { title: track.title });
       if (isMobile()) setExpanded(false);

@@ -28,7 +28,7 @@ import { renderPluginFace } from "./plugin-visuals.js";
 import { mountChainMark } from "./chain-mark.js";
 import { playAudio, stopAudio, subscribePlayback, playingKey, setChainFx, setChainPreview, isChainPreview } from "./audio-player.js";
 import { mountPlaybackPulse } from "./playback-pulse.js";
-import { setPlaybackTrackProvider, notifyPlaylist } from "./playback-playlist.js";
+import { setPlaybackTrackProvider, notifyPlaylist, setPlaybackTrackSelectHandler } from "./playback-playlist.js";
 import { compareMixes } from "../match.js";
 import { bindReadoutExplainers, readoutCardHtml } from "./readout-glossary.js";
 import { glyphHtml, meterLevelForReadout } from "./studio-glyphs.js";
@@ -163,6 +163,13 @@ setPlaybackTrackProvider(() => {
     }
   }
   return tracks;
+});
+
+setPlaybackTrackSelectHandler((id) => {
+  if (!id || String(id).endsWith(":dry")) return;
+  if (library.get(id) && library.active()?.id !== id) {
+    selectLibraryEntry(id);
+  }
 });
 let blendWeight = 0.5;
 /** When set, successful analysis updates this library id instead of adding */

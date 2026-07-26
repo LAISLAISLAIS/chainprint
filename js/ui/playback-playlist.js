@@ -36,3 +36,20 @@ export function notifyPlaylist() {
   const tracks = getPlaybackTracks();
   listeners.forEach((fn) => fn(tracks));
 }
+
+/** @type {((id: string) => void) | null} */
+let selectHandler = null;
+
+/** Optional: studio selects the matching library entry when a queue track is chosen. */
+export function setPlaybackTrackSelectHandler(fn) {
+  selectHandler = typeof fn === "function" ? fn : null;
+}
+
+export function requestPlaybackTrackSelect(id) {
+  if (!id || !selectHandler) return;
+  try {
+    selectHandler(id);
+  } catch {
+    /* ignore */
+  }
+}
