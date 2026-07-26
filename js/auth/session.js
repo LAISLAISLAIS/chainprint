@@ -299,15 +299,18 @@ export function getSession() {
 
 /** Drop persisted Supabase auth keys so a failed/hung signOut can't revive the session. */
 function clearSupabaseAuthStorage() {
-  try {
-    const doomed = [];
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && /^sb-[\w-]+-auth-token/.test(key)) doomed.push(key);
+  for (const store of [localStorage, sessionStorage]) {
+    try {
+      const doomed = [];
+      for (let i = 0; i < store.length; i++) {
+        const key = store.key(i);
+        if (!key) continue;
+        if (key.startsWith("sb-") && key.includes("auth")) doomed.push(key);
+      }
+      for (const key of doomed) store.removeItem(key);
+    } catch {
+      /* ignore */
     }
-    for (const key of doomed) localStorage.removeItem(key);
-  } catch {
-    /* ignore */
   }
 }
 
@@ -317,18 +320,19 @@ export async function logout() {
   localStorage.removeItem(SESSION_KEY_V1);
   localStorage.removeItem(ACCOUNT_CACHE_KEY);
   initPromise = null;
+  // Wipe tokens first so a mid-flight getSession can't revive the user
+  clearSupabaseAuthStorage();
 
   if (!isSupabaseConfigured()) return;
 
   try {
     const supabase = await getSupabase();
-    // `local` clears storage even when the network/revoke call fails or hangs
     await Promise.race([
       supabase?.auth.signOut({ scope: "local" }) ?? Promise.resolve(),
-      new Promise((resolve) => setTimeout(resolve, 2000)),
+      new Promise((resolve) => setTimeout(resolve, 1500)),
     ]);
   } catch {
-    /* ignore — still wipe storage below */
+    /* ignore — storage already cleared */
   }
   clearSupabaseAuthStorage();
   cacheAccount(null);

@@ -15,7 +15,8 @@ export async function mountAuthNav(root, opts = {}) {
   await initAuth();
 
   const authHref = opts.authHref || "../auth/";
-  const logoutHref = opts.logoutHref || `${authHref}?mode=login`;
+  const logoutHref =
+    opts.logoutHref || `${authHref}?mode=login&signed_out=1`;
   const settingsHref = opts.settingsHref || "../settings/";
   const account = getSession();
 
@@ -48,7 +49,7 @@ export async function mountAuthNav(root, opts = {}) {
         <p class="account-plan">${escapeHtml(account.email)}</p>
         <p class="account-plan">${escapeHtml(plan.label)} · ${escapeHtml(leftLabel)}</p>
         <a class="account-menu-link" href="${settingsHref}">Settings</a>
-        <button type="button" data-logout>Log out</button>
+        <a class="account-menu-link account-menu-logout" href="${escapeHtml(logoutHref)}" data-logout>Log out</a>
       </div>
     </div>
   `;
@@ -69,19 +70,18 @@ export async function mountAuthNav(root, opts = {}) {
     setOpen(Boolean(panel?.hidden));
   });
 
-  logoutBtn?.addEventListener("click", async (e) => {
+  logoutBtn?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    logoutBtn.disabled = true;
-    try {
-      await Promise.race([
-        logout(),
-        new Promise((resolve) => setTimeout(resolve, 2500)),
-      ]);
-    } catch {
-      /* still leave the page */
-    }
-    location.assign(logoutHref);
+    const dest = logoutBtn.getAttribute("href") || logoutHref;
+    let navigated = false;
+    const go = () => {
+      if (navigated) return;
+      navigated = true;
+      location.assign(dest);
+    };
+    void logout().finally(go);
+    setTimeout(go, 600);
   });
 
   document.addEventListener("click", (e) => {

@@ -566,7 +566,8 @@
   border-color: var(--panel-edge-strong);
 }
 
-.account-menu-panel button {
+.account-menu-panel button,
+.account-menu-logout {
   margin-top: 8px;
   width: 100%;
   appearance: none;
@@ -579,10 +580,16 @@
   padding: 8px 10px;
   border-radius: var(--radius-btn);
   cursor: pointer;
+  box-sizing: border-box;
+  text-align: center;
+  text-decoration: none !important;
+  display: block;
 }
 
-.account-menu-panel button:hover {
+.account-menu-panel button:hover,
+.account-menu-logout:hover {
   border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 /* Analyze gates */

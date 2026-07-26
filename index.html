@@ -86,10 +86,10 @@
     .landing-nav,
     .hero {
       position: relative;
-      z-index: 2;
     }
 
     .landing-nav {
+      z-index: 20;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -97,6 +97,17 @@
       width: min(1120px, 100%);
       margin: 0 auto;
       min-width: 0;
+      overflow: visible;
+    }
+
+    .landing-nav .nav-links,
+    .landing-nav .nav-auth,
+    .landing-nav .account-menu {
+      overflow: visible;
+    }
+
+    .hero {
+      z-index: 1;
     }
 
     .landing-nav .logo {
@@ -525,6 +536,7 @@
     await initAuth();
     mountAuthNav(document.querySelector("[data-auth-nav]"), {
       authHref: "auth/",
+      logoutHref: "auth/?mode=login&signed_out=1",
       next: "/analyze/",
       settingsHref: "settings/",
     });

@@ -2,7 +2,7 @@
  * Signup / login page.
  */
 
-import { getSession, initAuth, login, signup } from "../auth/session.js";
+import { getSession, initAuth, login, signup, logout } from "../auth/session.js";
 import { signInWithProvider, socialStatus } from "../auth/oauth.js";
 import { validatePassword } from "../auth/validation.js";
 import { isSupabaseConfigured } from "../auth/config.js";
@@ -30,7 +30,10 @@ const dbNote = document.querySelector("[data-db-note]");
 
 await initAuth();
 
-if (getSession()) {
+// After an explicit logout, never bounce a leftover session back into the app
+if (params.get("signed_out") === "1") {
+  if (getSession()) await logout();
+} else if (getSession()) {
   location.replace(next);
 }
 
