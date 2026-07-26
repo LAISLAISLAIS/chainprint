@@ -2,11 +2,11 @@
  * Resolve a reference URL into audio the browser can measure.
  *
  * - Direct .mp3/.wav: fetch file
- * - Spotify / Apple Music / YouTube: identify the track, then use a legal
- *   ~30s preview (Spotify CDN → iTunes → Deezer). DRM full streams cannot
- *   be decoded from those page links in-browser.
+ * - Spotify / Apple Music / YouTube / SoundCloud: identify the track, then use a
+ *   legal clip (Spotify CDN → iTunes → Deezer → SoundCloud ~30–45s Range).
+ *   DRM full streams cannot be decoded from those page links in-browser.
  *
- * Never scrapes or rips full streams. Upload remains the accurate path.
+ * Never scrapes or rips full masters. Upload remains the accurate path.
  */
 
 const AUDIO_EXT = /\.(wav|wave|mp3|mpeg|ogg|oga|flac|aiff|aif|m4a|aac|opus)(\?|#|$)/i;
@@ -83,6 +83,20 @@ export function parseStreamingLink(raw) {
     const shorts = path.match(/\/shorts\/([a-zA-Z0-9_-]+)/);
     if (shorts) id = shorts[1];
     if (id) return { platform: "youtube", id, href: url.href };
+  }
+
+  if (host === "soundcloud.com" || host.endsWith(".soundcloud.com")) {
+    const parts = path.split("/").filter(Boolean);
+    // soundcloud.com/{user}/{track-slug} — not sets/likes/etc.
+    if (parts.length >= 2 && !["you", "discover", "search", "charts", "pages"].includes(parts[0])) {
+      return { platform: "soundcloud", id: parts.slice(0, 2).join("/"), href: url.href };
+    }
+    return {
+      platform: "soundcloud",
+      href: url.href,
+      unsupported: "page",
+      message: "Paste a SoundCloud track link (artist/track), not a search or profile page.",
+    };
   }
 
   return null;
@@ -432,6 +446,50 @@ async function findDeezerPreview({ title, artist }) {
   return ranked[0]?.r || null;
 }
 
+function soundcloudRequestUrls({ title, artist, query, url }) {
+  const params = new URLSearchParams();
+  if (url) params.set("url", url);
+  if (title) params.set("title", title);
+  if (artist) params.set("artist", artist);
+  if (query && !title) params.set("q", query);
+  else if (title || artist) params.set("q", [artist, title].filter(Boolean).join(" "));
+  const q = params.toString();
+  const urls = [];
+  if (typeof location !== "undefined") {
+    if (!isLocalHost()) {
+      urls.push(`${location.origin}/api/soundcloud?${q}`);
+    } else {
+      urls.push(`${location.origin}/.netlify/functions/soundcloud?${q}`);
+      urls.push(`${location.origin}/api/soundcloud?${q}`);
+    }
+  }
+  return urls;
+}
+
+/**
+ * SoundCloud via Netlify function (api-v2 has no browser CORS).
+ */
+async function findSoundCloudPreview({ title, artist, query, url }) {
+  for (const endpoint of soundcloudRequestUrls({ title, artist, query, url })) {
+    try {
+      const data = await fetchJson(endpoint);
+      if (data?.previewUrl) {
+        return {
+          trackName: data.title || title,
+          artistName: data.artist || artist,
+          previewUrl: data.previewUrl,
+          artworkUrl100: data.artwork || null,
+          source: "soundcloud",
+          durationMs: data.durationMs || null,
+        };
+      }
+    } catch {
+      /* try next */
+    }
+  }
+  return null;
+}
+
 async function findPreviewClip({ title, artist, query, appleId, spotifyPreviewUrl }) {
   if (spotifyPreviewUrl) {
     return {
@@ -453,12 +511,22 @@ async function findPreviewClip({ title, artist, query, appleId, spotifyPreviewUr
     return { ...deezer, source: "deezer" };
   }
 
+  const soundcloud = await findSoundCloudPreview({ title, artist, query });
+  if (soundcloud?.previewUrl) {
+    return soundcloud;
+  }
+
   return null;
 }
 
-async function fileFromPreviewUrl(previewUrl, filename) {
-  const res = await fetch(previewUrl, { mode: "cors", credentials: "omit" });
-  if (!res.ok) throw new Error(`Preview fetch failed (${res.status})`);
+/** ~45s at 128 kbps — keep SoundCloud clips short for analysis. */
+const SOUNDCLOUD_CLIP_BYTES = 720000;
+
+async function fileFromPreviewUrl(previewUrl, filename, opts = {}) {
+  const headers = {};
+  if (opts.maxBytes) headers.Range = `bytes=0-${opts.maxBytes - 1}`;
+  const res = await fetch(previewUrl, { mode: "cors", credentials: "omit", headers });
+  if (!res.ok && res.status !== 206) throw new Error(`Preview fetch failed (${res.status})`);
   const blob = await res.blob();
   return new File([blob], filename, { type: blob.type || "audio/mpeg" });
 }
@@ -469,6 +537,9 @@ function previewNote(source, platform, matchedArtist, matchedTitle) {
   }
   if (source === "deezer") {
     return `Identified from ${platform} · measuring Deezer’s ~30s preview match (“${matchedArtist} — ${matchedTitle}”). Upload the full file for a better readout.`;
+  }
+  if (source === "soundcloud") {
+    return `Identified from ${platform} · measuring a short SoundCloud clip (“${matchedArtist} — ${matchedTitle}”). Upload the full file you own for a better readout.`;
   }
   return `Identified from ${platform} · measuring Apple’s official ~30s preview match (“${matchedArtist} — ${matchedTitle}”). Upload the full file for a better readout.`;
 }
@@ -588,6 +659,40 @@ async function resolveStreaming(streaming, manualQuery = null) {
       };
       throw err;
     }
+  } else if (streaming.platform === "soundcloud" && !manualQuery) {
+    const sc = await findSoundCloudPreview({ url: streaming.href });
+    if (sc?.previewUrl) {
+      const matchedTitle = sc.trackName || "track";
+      const matchedArtist = sc.artistName || "";
+      const file = await fileFromPreviewUrl(
+        sc.previewUrl,
+        `${matchedArtist} - ${matchedTitle} (soundcloud).mp3`.replace(/[\\/:*?"<>|]/g, ""),
+        { maxBytes: SOUNDCLOUD_CLIP_BYTES }
+      );
+      file._chainprintOrigin = "preview";
+      return {
+        file,
+        meta: {
+          platform: "soundcloud",
+          title: matchedTitle,
+          artist: matchedArtist,
+          query: `${matchedTitle} ${matchedArtist}`,
+          preview: true,
+          previewSource: "soundcloud",
+          matchedTitle,
+          matchedArtist,
+          artwork: sc.artworkUrl100 || null,
+          originalUrl: streaming.href,
+          note: previewNote("soundcloud", "soundcloud", matchedArtist, matchedTitle),
+        },
+      };
+    }
+    const err = new Error(
+      "Couldn’t stream that SoundCloud track (private, geo-blocked, or no progressive audio). Upload the file instead."
+    );
+    err.code = "no_preview";
+    err.meta = { platform: "soundcloud", originalUrl: streaming.href };
+    throw err;
   }
 
   // Apple album link without song id
@@ -636,7 +741,8 @@ async function resolveStreaming(streaming, manualQuery = null) {
   const ext = /\.m4a(\?|$)/i.test(match.previewUrl) ? "m4a" : "mp3";
   const file = await fileFromPreviewUrl(
     match.previewUrl,
-    `${matchedArtist} - ${matchedTitle} (preview).${ext}`.replace(/[\\/:*?"<>|]/g, "")
+    `${matchedArtist} - ${matchedTitle} (preview).${ext}`.replace(/[\\/:*?"<>|]/g, ""),
+    source === "soundcloud" ? { maxBytes: SOUNDCLOUD_CLIP_BYTES } : {}
   );
   file._chainprintOrigin = "preview";
 
@@ -676,7 +782,7 @@ async function resolveDirect(classified) {
   }
   const type = res.headers.get("content-type") || "";
   if (type && !type.startsWith("audio/") && !type.includes("octet-stream") && !classified.looksLikeAudio) {
-    const err = new Error("That URL doesn’t look like audio. Use a Spotify / Apple / YouTube track link, a direct .mp3, or upload.");
+    const err = new Error("That URL doesn’t look like audio. Use a Spotify / Apple / YouTube / SoundCloud track link, a direct .mp3, or upload.");
     err.code = "not_audio";
     throw err;
   }

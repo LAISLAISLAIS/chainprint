@@ -55,8 +55,11 @@ export function dialFromReadout(readout, traits) {
   const targets = readout.eqTargets || {};
   const f0 = readout.pitch?.f0Hz;
   const register = readout.pitch?.register || traits.pitch?.register || "mid";
-  const bpm = readout.tempo?.bpm || traits.tempo?.bpm || null;
-  const feel = readout.tempo?.feel || traits.tempo?.feel || null;
+  const bpmRaw = readout.tempo?.bpm || traits.tempo?.bpm || null;
+  const bpmReliable = readout.tempo?.reliable ?? traits.tempo?.reliable ?? false;
+  const bpm = bpmReliable ? bpmRaw : null;
+  const feel = bpm ? readout.tempo?.feel || traits.tempo?.feel || null : null;
+  const keyReliable = readout.pitch?.keyReliable ?? false;
 
   // Continuous cuts — every song gets a unique amount from its indices
   const mudCut = clamp(1.1 + (mud - -4) * 0.42, 0.3, 5.8);
@@ -66,9 +69,11 @@ export function dialFromReadout(readout, traits) {
   const airShelf = clamp(-0.18 * (air - -13), -3.8, 3.6);
   const presenceDb = clamp(1.9 - Math.max(0, harsh + 7) * 0.32 - Math.max(0, sib + 4) * 0.12, 0, 3.2);
 
-  // HPF tracks vocal register + mud weight
+  // HPF tracks vocal register + mud weight (only trust measured F0 when reliable)
   let hpfHz = register === "low" ? 68 : register === "high" ? 105 : 85;
-  if (Number.isFinite(f0)) hpfHz = clamp(52 + f0 * 0.2, 55, 125);
+  if (Number.isFinite(f0) && readout.pitch?.f0Reliable) {
+    hpfHz = clamp(52 + f0 * 0.2, 55, 125);
+  }
   hpfHz = clamp(hpfHz + Math.max(0, mud + 2) * 3.5, 55, 130);
 
   const mudHz = round0(clamp(targets.mudHz || 320, 200, 420));
@@ -162,10 +167,11 @@ export function dialFromReadout(readout, traits) {
     verbSize,
     useMod,
     preDelayMs,
-    bpm,
+    bpm: bpmRaw,
+    bpmReliable,
     delayLabel: delay.label,
     delayMs: delay.ms,
-    keyLabel: readout.pitch?.keyLabel || null,
+    keyLabel: keyReliable ? readout.pitch?.keyLabel || null : null,
     register,
   };
 }
@@ -424,9 +430,9 @@ export function buildVocalChain(readout, traits, _daw = "universal") {
     title: "Delay send",
     plugin: plugs.delay,
     dials: dials(
-      d.bpm && d.delayMs
+      d.bpmReliable && d.bpm && d.delayMs
         ? ["Time", `${d.delayLabel} · ${d.delayMs} ms @ ${d.bpm} BPM`]
-        : ["Time", `${d.delayLabel || "1/8 or dotted 1/8"} · low feedback (15–25%)`],
+        : ["Time", `${d.delayLabel || "1/8 or dotted 1/8"} · set to song tempo in your DAW`],
       ["Feedback", "15–25%"],
       ["Filter", "Low-pass the return ~4–5 kHz"],
       ["Move", "Ride send on phrase ends — not 100% wet on the lead"],
@@ -434,20 +440,20 @@ export function buildVocalChain(readout, traits, _daw = "universal") {
     ),
     visual: {
       kind: "delay",
-      time: d.bpm && d.delayMs ? `${d.delayLabel} (${d.delayMs} ms)` : d.delayLabel || "1/8",
+      time: d.bpmReliable && d.bpm && d.delayMs ? `${d.delayLabel} (${d.delayMs} ms)` : d.delayLabel || "1/8",
       feedbackPct: 20,
       lowpassHz: 4500,
     },
     copy: [
-      d.bpm && d.delayMs
+      d.bpmReliable && d.bpm && d.delayMs
         ? `Time: ${d.delayLabel} = ${d.delayMs} ms at ${d.bpm} BPM`
-        : `Time: ${d.delayLabel || "1/8 or dotted 1/8"}`,
+        : `Time: ${d.delayLabel || "1/8 or dotted 1/8"} — confirm BPM in your DAW`,
       "Feedback 15–25%",
       "Low-pass the return around 4–5 kHz",
       "Send on phrase ends — not always on",
     ],
-    why: d.bpm
-      ? `Delay is tempo-synced to the measured ~${d.bpm} BPM pulse — verify against your DAW grid.`
+    why: d.bpmReliable && d.bpm
+      ? `Delay is tempo-synced to the measured ~${d.bpm} BPM pulse — still A/B against your grid.`
       : "Pros put space on sends. Delay creates depth and width without smearing the dry lead.",
     how: "HPF/LPF the return hard. Bright delay tails compete with S’s and air.",
   }));

@@ -93,12 +93,16 @@ export function formatReadoutConsole(result) {
 
   if (r.tempo?.bpm) {
     lines.push(
-      `TEMPO     ${r.tempo.bpm} BPM${r.tempo.feel ? ` · ${r.tempo.feel}` : ""} · conf ${r.tempo.confidence ?? "—"}`
+      `TEMPO     ${r.tempo.bpm} BPM${r.tempo.feel ? ` · ${r.tempo.feel}` : ""} · conf ${r.tempo.confidence ?? "—"}${
+        r.tempo.reliable ? " · reliable" : " · VERIFY"
+      }`
     );
   }
-  if (r.pitch?.keyLabel || r.pitch?.f0Hz) {
+  if (r.pitch) {
     lines.push(
-      `PITCH     ${r.pitch.keyLabel || "key?"} · F0 ${r.pitch.f0Hz != null ? `${r.pitch.f0Hz.toFixed(1)} Hz` : "—"} (${r.pitch.register || "?"})`
+      `PITCH     key ${r.pitch.keyLabel || "ambiguous"}${
+        r.pitch.keyReliable ? "" : " (unreliable)"
+      } · F0 ${r.pitch.f0Hz != null ? `${r.pitch.f0Hz.toFixed(1)} Hz` : "—"} (${r.pitch.register || "?"})`
     );
   }
   if (r.eqTargets) {

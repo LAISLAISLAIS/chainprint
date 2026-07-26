@@ -25,8 +25,8 @@ export function deepenTraits(readout, traits) {
   const monoCompat = corr > 0.85 ? "mono_safe" : corr < 0.45 ? "wide_risk" : "stereo_ok";
 
   // Sound-design lane from space + tone + tempo feel
-  const bpm = readout.tempo?.bpm;
-  const feel = readout.tempo?.feel;
+  const bpm = readout.tempo?.reliable ? readout.tempo.bpm : null;
+  const feel = readout.tempo?.reliable ? readout.tempo.feel : null;
   let designLane = "polished_lead";
   if (side > 0.28 && air === "elevated") designLane = "atmospheric";
   else if (crest < 7 && sib === "elevated") designLane = "aggressive_pop";
@@ -63,10 +63,10 @@ export function deepenTraits(readout, traits) {
   if (mud === "elevated") {
     summary.push("Deep: low-mid weight suggests a parallel ‘body’ bus or multiband tame before additive air.");
   }
-  if (readout.tempo?.bpm) {
+  if (readout.tempo?.bpm && readout.tempo.reliable) {
     summary.push(`Deep tempo sync: ~${readout.tempo.bpm} BPM for throws / granular lengths.`);
   }
-  if (readout.pitch?.keyLabel) {
+  if (readout.pitch?.keyLabel && readout.pitch.keyReliable) {
     summary.push(`Deep pitch lane: scale center ≈ ${readout.pitch.keyLabel}.`);
   }
 
@@ -82,8 +82,8 @@ export function deepenTraits(readout, traits) {
       lufsProxy: lufs,
       transientIndex: ti,
       sideMidRatio: side,
-      bpm: readout.tempo?.bpm ?? null,
-      keyLabel: readout.pitch?.keyLabel ?? null,
+      bpm: readout.tempo?.reliable ? readout.tempo.bpm ?? null : null,
+      keyLabel: readout.pitch?.keyReliable ? readout.pitch.keyLabel ?? null : null,
       register: readout.pitch?.register ?? null,
     },
     summary,
@@ -128,10 +128,10 @@ export function buildMasterAnalysis(readout, traits) {
     notes.push("Atmospheric refs often print wetter — don’t over-limit or you’ll squash the ambient bloom.");
   }
 
-  if (readout.tempo?.bpm) {
+  if (readout.tempo?.bpm && readout.tempo.reliable) {
     notes.push(`Tempo estimate ≈ ${readout.tempo.bpm} BPM — useful for delay throws on the master bus FX.`);
   }
-  if (readout.pitch?.keyLabel) {
+  if (readout.pitch?.keyLabel && readout.pitch.keyReliable) {
     notes.push(`Tonal center ≈ ${readout.pitch.keyLabel} — keep master EQ musical around that key.`);
   }
 
@@ -220,8 +220,8 @@ export function buildMasterAnalysis(readout, traits) {
       correlation: corr,
       sideMidRatio: side,
       centroidHz: m.centroidHz,
-      bpm: m.bpm ?? readout.tempo?.bpm ?? null,
-      keyLabel: m.keyLabel ?? readout.pitch?.keyLabel ?? null,
+      bpm: m.bpm ?? (readout.tempo?.reliable ? readout.tempo?.bpm : null) ?? null,
+      keyLabel: m.keyLabel ?? (readout.pitch?.keyReliable ? readout.pitch?.keyLabel : null) ?? null,
     },
     notes,
     steps,
@@ -316,8 +316,8 @@ export function deepVocalExtras(readout, traits) {
     affiliates: affiliatesForRole("multiband"),
   });
 
-  const keyLabel = readout.pitch?.keyLabel || traits.deep?.keyLabel;
-  const f0 = readout.pitch?.f0Hz;
+  const keyLabel = (readout.pitch?.keyReliable && readout.pitch?.keyLabel) || (traits.deep?.keyLabel);
+  const f0 = readout.pitch?.f0Reliable ? readout.pitch?.f0Hz : null;
   extras.push({
     role: "pitch",
     type: "Pitch",

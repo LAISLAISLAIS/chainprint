@@ -1,5 +1,6 @@
-# Identity API → serverless function (song.link is blocked by CORS in the browser)
+# Identity / preview APIs → serverless functions (upstream APIs block browser CORS)
 /api/odesli  /.netlify/functions/odesli  200
+/api/soundcloud  /.netlify/functions/soundcloud  200
 
 /analyze  /analyze/  301
 /auth  /auth/  301

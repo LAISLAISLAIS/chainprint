@@ -57,30 +57,36 @@ export function characterize(readout) {
     bpm: readout.tempo?.bpm ?? null,
     confidence: readout.tempo?.confidence ?? 0,
     feel: readout.tempo?.feel ?? null,
+    reliable: Boolean(readout.tempo?.reliable),
   };
   const pitch = {
     f0Hz: readout.pitch?.f0Hz ?? null,
     keyLabel: readout.pitch?.keyLabel ?? null,
     register: readout.pitch?.register ?? "unknown",
     noteName: readout.pitch?.noteName ?? null,
+    keyReliable: Boolean(readout.pitch?.keyReliable),
+    f0Reliable: Boolean(readout.pitch?.f0Reliable),
+    keyConfidence: readout.pitch?.keyConfidence ?? 0,
   };
 
   const summary = [];
-  if (tempo.bpm) {
-    summary.push(
-      `Pulse ≈ ${tempo.bpm} BPM${tempo.feel ? ` (${tempo.feel})` : ""}${
-        tempo.confidence < 0.35 ? " · low confidence" : ""
-      }.`
-    );
+  if (tempo.bpm && tempo.reliable) {
+    summary.push(`Pulse ≈ ${tempo.bpm} BPM (${tempo.feel || "tempo"}).`);
+  } else if (tempo.bpm) {
+    summary.push(`Possible BPM ~${tempo.bpm} (low confidence) — verify before tempo-sync.`);
   }
-  if (pitch.keyLabel) {
+  if (pitch.keyLabel && pitch.keyReliable) {
     summary.push(
-      `Tonal center ≈ ${pitch.keyLabel}${
-        pitch.f0Hz ? ` · lead register ~${pitch.f0Hz.toFixed(0)} Hz (${pitch.register})` : ""
+      `Key ≈ ${pitch.keyLabel}${
+        pitch.f0Hz && pitch.f0Reliable ? ` · lead ~${pitch.f0Hz.toFixed(0)} Hz (${pitch.register})` : ""
       }.`
     );
-  } else if (pitch.f0Hz) {
-    summary.push(`Lead register ~${pitch.f0Hz.toFixed(0)} Hz (${pitch.register}).`);
+  } else if (pitch.f0Hz && pitch.f0Reliable) {
+    summary.push(`Lead register ~${pitch.f0Hz.toFixed(0)} Hz (${pitch.register}) — key not locked.`);
+  } else if (readout.pitch?.keyRunnerUp) {
+    summary.push(
+      `Key ambiguous (${readout.pitch.keyCandidates?.[0]?.label || "?"} vs ${readout.pitch.keyRunnerUp}) — set scale manually.`
+    );
   }
 
   // Continuous-aware notes (not only elevated/recessed)

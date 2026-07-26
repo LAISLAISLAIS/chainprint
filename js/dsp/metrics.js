@@ -42,22 +42,43 @@ function bandDb(mag, sampleRate, lo, hi) {
 }
 
 /**
- * Peak frequency (Hz) inside a band — used to place EQ cuts per track.
+ * Peak frequency (Hz) inside a band — local maximum with parabolic refine.
+ * Avoids always latching the band edge when energy slopes.
  */
 export function bandPeakHz(mag, sampleRate, lo, hi) {
   const binHz = sampleRate / FFT_SIZE;
-  const i0 = Math.max(1, Math.floor(lo / binHz));
-  const i1 = Math.min(mag.length - 1, Math.ceil(hi / binHz));
+  const i0 = Math.max(2, Math.floor(lo / binHz));
+  const i1 = Math.min(mag.length - 2, Math.ceil(hi / binHz));
+  if (i1 <= i0) return Math.round((lo + hi) / 2);
+
   let bestI = Math.round((i0 + i1) / 2);
   let best = -1;
   for (let i = i0; i <= i1; i++) {
-    const p = mag[i] * mag[i];
+    // Prefer true local peaks
+    const isPeak = mag[i] >= mag[i - 1] && mag[i] >= mag[i + 1];
+    const p = mag[i] * mag[i] * (isPeak ? 1.35 : 0.85);
     if (p > best) {
       best = p;
       bestI = i;
     }
   }
-  return Math.round(bestI * binHz);
+
+  // Parabolic interpolation around best bin
+  let delta = 0;
+  if (bestI > 0 && bestI < mag.length - 1) {
+    const y0 = mag[bestI - 1];
+    const y1 = mag[bestI];
+    const y2 = mag[bestI + 1];
+    const denom = 2 * (2 * y1 - y0 - y2);
+    if (Math.abs(denom) > 1e-12) delta = (y0 - y2) / denom;
+  }
+
+  const hz = (bestI + delta) * binHz;
+  return Math.round(clamp(hz, lo, hi));
+}
+
+function clamp(n, lo, hi) {
+  return Math.max(lo, Math.min(hi, n));
 }
 
 /**
@@ -301,8 +322,8 @@ export function measureBuffer(audioBuffer) {
       sideMidRatio: stereo.sideMidRatio,
       centroidHz: spectralCentroidHz(mag, sampleRate),
       bands: spectralBalance(mag, sampleRate),
-      bpm: tempo.bpm,
-      keyLabel: pitch.keyLabel,
+      bpm: tempo.reliable ? tempo.bpm : null,
+      keyLabel: pitch.keyReliable ? pitch.keyLabel : null,
       streamingTarget: "Aim integrated ≈ −14 LUFS / −1 dBTP for most DSPs (verify with a real meter).",
     },
   };

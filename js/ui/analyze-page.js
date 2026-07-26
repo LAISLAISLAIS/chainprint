@@ -546,17 +546,25 @@ function renderReadouts(readout, traits) {
     items.push([
       "BPM",
       `${readout.tempo.bpm}`,
-      readout.tempo.feel || (readout.tempo.confidence < 0.35 ? "low conf." : "pulse"),
+      readout.tempo.reliable
+        ? readout.tempo.feel || "pulse"
+        : `low conf. ${Math.round((readout.tempo.confidence || 0) * 100)}%`,
     ]);
   }
-  if (readout.pitch?.keyLabel) {
-    items.push(["Key", readout.pitch.keyLabel, readout.pitch.register || "estimate"]);
+  if (readout.pitch?.keyLabel && readout.pitch.keyReliable) {
+    items.push(["Key", readout.pitch.keyLabel, `conf ${Math.round((readout.pitch.keyConfidence || 0) * 100)}%`]);
+  } else if (readout.pitch?.keyCandidates?.[0]) {
+    items.push([
+      "Key?",
+      readout.pitch.keyCandidates[0].label,
+      `ambiguous vs ${readout.pitch.keyRunnerUp || "—"}`,
+    ]);
   }
-  if (readout.pitch?.f0Hz) {
+  if (readout.pitch?.f0Hz && (readout.pitch.f0Reliable || readout.pitch.voicedFrames > 4)) {
     items.push([
       "F0",
       `${readout.pitch.f0Hz.toFixed(0)} Hz`,
-      readout.pitch.noteName || "register",
+      readout.pitch.noteName || readout.pitch.register || "register",
     ]);
   }
   items.push(
