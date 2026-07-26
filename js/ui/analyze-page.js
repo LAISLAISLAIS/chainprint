@@ -613,6 +613,25 @@ function stepView(delta) {
   if (next) setView(next);
 }
 
+function panelForView(view) {
+  return document.querySelector(`[data-panel="${view}"]`);
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function clearSwipeStyles(el) {
+  if (!el) return;
+  el.style.transform = "";
+  el.style.opacity = "";
+  el.style.transition = "";
+  el.style.zIndex = "";
+  el.style.pointerEvents = "";
+  el.style.willChange = "";
+  el.classList.remove("is-swipe-peer", "is-swipe-dragging", "is-swipe-settling");
+}
+
 function setView(view) {
   if (!lastAdvice && view !== "chain") return;
   activeView = view;
@@ -625,7 +644,9 @@ function setView(view) {
     const on = panel.getAttribute("data-panel") === view;
     panel.classList.toggle("is-active", on);
     panel.classList.toggle("is-entering", on);
+    if (!on) clearSwipeStyles(panel);
   });
+  document.querySelector(".studio-main")?.classList.remove("is-tab-swiping");
   document
     .querySelector(`[data-view="${view}"]`)
     ?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
@@ -2202,59 +2223,181 @@ shareChainBtn?.addEventListener("click", async () => {
 stagePrev?.addEventListener("click", () => selectStage(stageIndex - 1));
 stageNext?.addEventListener("click", () => selectStage(stageIndex + 1));
 
-/* Horizontal swipe on the plugin card — same path as Next / Prev */
+/* Plugin stages — finger-follow + settle (center of card; edges are for tabs) */
 (() => {
   if (!stageFocus) return;
-  const THRESH = 56;
+  const EDGE = 32;
   let startX = 0;
   let startY = 0;
+  let startT = 0;
   let tracking = false;
+  let axis = null; // "x" | "y" | null
   let pointerId = null;
+  let lastX = 0;
+  let animating = false;
 
   const ignoreTarget = (t) =>
     t instanceof Element &&
     Boolean(t.closest("a, button, input, textarea, select, label, [data-no-swipe]"));
 
-  stageFocus.addEventListener("pointerdown", (e) => {
-    if (e.pointerType === "mouse" && e.button !== 0) return;
-    if (ignoreTarget(e.target)) return;
-    // Left/right edges belong to tab swipe
-    if (e.clientX <= 32 || e.clientX >= window.innerWidth - 32) return;
-    tracking = true;
-    pointerId = e.pointerId;
-    startX = e.clientX;
-    startY = e.clientY;
-  });
+  const card = () => stageFocus.querySelector(".chain-step");
 
-  const endSwipe = (e) => {
-    if (!tracking || (pointerId != null && e.pointerId !== pointerId)) return;
-    tracking = false;
-    pointerId = null;
-    if (!stages.length || activeView !== "chain") return;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    if (Math.abs(dx) < THRESH || Math.abs(dx) < Math.abs(dy) * 1.2) return;
-    if (dx < 0) selectStage(stageIndex + 1);
-    else selectStage(stageIndex - 1);
+  const rubber = (dx) => {
+    const atStart = stageIndex <= 0;
+    const atEnd = stageIndex >= stages.length - 1;
+    if ((dx > 0 && atStart) || (dx < 0 && atEnd)) return dx * 0.22;
+    return dx;
   };
 
-  stageFocus.addEventListener("pointerup", endSwipe);
-  stageFocus.addEventListener("pointercancel", () => {
+  const resetCard = (el) => {
+    if (!el) return;
+    el.style.transition = "";
+    el.style.transform = "";
+    el.style.opacity = "";
+  };
+
+  stageFocus.addEventListener(
+    "pointerdown",
+    (e) => {
+      if (animating) return;
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      if (ignoreTarget(e.target)) return;
+      if (e.clientX <= EDGE || e.clientX >= window.innerWidth - EDGE) return;
+      if (!stages.length || activeView !== "chain") return;
+      tracking = true;
+      axis = null;
+      pointerId = e.pointerId;
+      startX = lastX = e.clientX;
+      startY = e.clientY;
+      startT = performance.now();
+      const el = card();
+      if (el) {
+        el.style.transition = "none";
+        el.style.willChange = "transform";
+      }
+    },
+    { passive: true }
+  );
+
+  stageFocus.addEventListener(
+    "pointermove",
+    (e) => {
+      if (!tracking || e.pointerId !== pointerId) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (!axis) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+        axis = Math.abs(dx) > Math.abs(dy) * 1.1 ? "x" : "y";
+        if (axis === "y") {
+          tracking = false;
+          resetCard(card());
+          return;
+        }
+        stageFocus.classList.add("is-h-dragging");
+        try {
+          stageFocus.setPointerCapture(pointerId);
+        } catch {
+          /* ignore */
+        }
+      }
+      if (axis !== "x") return;
+      lastX = e.clientX;
+      const el = card();
+      if (!el) return;
+      const x = rubber(dx);
+      const fade = 1 - Math.min(0.35, Math.abs(x) / 420);
+      el.style.transform = `translate3d(${x}px,0,0)`;
+      el.style.opacity = String(fade);
+    },
+    { passive: true }
+  );
+
+  const endGesture = (e) => {
+    if (!tracking || (pointerId != null && e.pointerId !== pointerId)) return;
+    const dx = (e.clientX || lastX) - startX;
+    const dy = (e.clientY || startY) - startY;
+    const wasX = axis === "x";
     tracking = false;
+    axis = null;
     pointerId = null;
-  });
+    stageFocus.classList.remove("is-h-dragging");
+    const el = card();
+    if (!wasX || !el || !stages.length || activeView !== "chain") {
+      resetCard(el);
+      return;
+    }
+
+    const dt = Math.max(1, performance.now() - startT);
+    const vx = dx / dt;
+    const width = stageFocus.getBoundingClientRect().width || window.innerWidth;
+    const commit =
+      (Math.abs(dx) > Math.min(72, width * 0.18) || Math.abs(vx) > 0.55) &&
+      Math.abs(dx) > Math.abs(dy) * 0.85;
+    const dir = dx < 0 ? 1 : -1; // 1 = next
+    const can = dir > 0 ? stageIndex < stages.length - 1 : stageIndex > 0;
+
+    if (!commit || !can || prefersReducedMotion()) {
+      el.style.transition = "transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease";
+      el.style.transform = "translate3d(0,0,0)";
+      el.style.opacity = "1";
+      const back = () => {
+        el.removeEventListener("transitionend", back);
+        resetCard(el);
+      };
+      el.addEventListener("transitionend", back);
+      window.setTimeout(back, 400);
+      return;
+    }
+
+    animating = true;
+    el.style.transition = "transform 0.3s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.28s ease";
+    el.style.transform = `translate3d(${dir > 0 ? "-110%" : "110%"},0,0)`;
+    el.style.opacity = "0.25";
+
+    const afterOut = () => {
+      el.removeEventListener("transitionend", afterOut);
+      selectStage(stageIndex + dir);
+      const next = card();
+      animating = false;
+      if (!next || prefersReducedMotion()) return;
+      next.style.transition = "none";
+      next.style.transform = `translate3d(${dir > 0 ? "64%" : "-64%"},0,0)`;
+      next.style.opacity = "0.45";
+      void next.offsetWidth;
+      next.style.transition = "transform 0.36s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.32s ease";
+      next.style.transform = "translate3d(0,0,0)";
+      next.style.opacity = "1";
+      const clear = () => {
+        next.removeEventListener("transitionend", clear);
+        resetCard(next);
+      };
+      next.addEventListener("transitionend", clear);
+      window.setTimeout(clear, 450);
+    };
+    el.addEventListener("transitionend", afterOut);
+    window.setTimeout(afterOut, 360);
+  };
+
+  stageFocus.addEventListener("pointerup", endGesture);
+  stageFocus.addEventListener("pointercancel", endGesture);
 })();
 
-/* Swipe between studio tabs — content areas, or left/right screen edges */
+/* Tabs — finger-follow with adjacent panel peek + settle */
 (() => {
   const root = workspace || document.querySelector(".studio");
-  if (!root) return;
-  const THRESH = 64;
-  const EDGE = 32;
+  const main = document.querySelector(".studio-main");
+  if (!root || !main) return;
+
+  const EDGE = 28;
   let startX = 0;
   let startY = 0;
+  let startT = 0;
   let tracking = false;
+  let axis = null;
   let pointerId = null;
+  let lastX = 0;
+  let peerView = null;
+  let animating = false;
 
   const blocked = (t) =>
     t instanceof Element &&
@@ -2264,41 +2407,196 @@ stageNext?.addEventListener("click", () => selectStage(stageIndex + 1));
       )
     );
 
-  root.addEventListener("pointerdown", (e) => {
-    if (e.pointerType === "mouse" && e.button !== 0) return;
-    if (!(e.target instanceof Element)) return;
-    const x = e.clientX;
-    const atEdge = x <= EDGE || x >= window.innerWidth - EDGE;
-    const inStageCard = Boolean(e.target.closest("[data-stage-focus]"));
-    // Edges work anywhere (incl. over plugins); elsewhere skip the plugin card + controls
-    if (!atEdge) {
-      if (inStageCard || blocked(e.target)) return;
-      if (!e.target.closest(".studio-main")) return;
-    } else if (e.target.closest("a, input, textarea, select, label, .playback-dock")) {
-      return;
-    }
-    tracking = true;
-    pointerId = e.pointerId;
-    startX = e.clientX;
-    startY = e.clientY;
-  });
-
-  const endSwipe = (e) => {
-    if (!tracking || (pointerId != null && e.pointerId !== pointerId)) return;
-    tracking = false;
-    pointerId = null;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    if (Math.abs(dx) < THRESH || Math.abs(dx) < Math.abs(dy) * 1.25) return;
-    // Swipe left → next tab; swipe right → previous
-    stepView(dx < 0 ? 1 : -1);
+  const cleanupDrag = () => {
+    main.classList.remove("is-tab-swiping", "is-h-dragging");
+    panels.forEach((p) => {
+      if (p.classList.contains("is-swipe-peer") && !p.classList.contains("is-active")) {
+        clearSwipeStyles(p);
+        p.classList.remove("is-active");
+      } else if (p.classList.contains("is-swipe-dragging")) {
+        p.style.transition = "";
+        p.style.transform = "";
+        p.style.opacity = "";
+        p.classList.remove("is-swipe-dragging", "is-swipe-settling");
+      }
+    });
+    peerView = null;
   };
 
-  root.addEventListener("pointerup", endSwipe);
-  root.addEventListener("pointercancel", () => {
+  const viewsAround = () => {
+    const views = enabledViews();
+    const i = views.indexOf(activeView);
+    return {
+      views,
+      i,
+      prev: i > 0 ? views[i - 1] : null,
+      next: i >= 0 && i < views.length - 1 ? views[i + 1] : null,
+    };
+  };
+
+  root.addEventListener(
+    "pointerdown",
+    (e) => {
+      if (animating) return;
+      if (e.pointerType === "mouse" && e.button !== 0) return;
+      if (!(e.target instanceof Element)) return;
+      const x = e.clientX;
+      const atEdge = x <= EDGE || x >= window.innerWidth - EDGE;
+      const inStageCard = Boolean(e.target.closest("[data-stage-focus]"));
+      if (!atEdge) {
+        if (inStageCard || blocked(e.target)) return;
+        if (!e.target.closest(".studio-main")) return;
+      } else if (e.target.closest("a, input, textarea, select, label, .playback-dock")) {
+        return;
+      }
+      if (enabledViews().length < 2) return;
+      tracking = true;
+      axis = null;
+      pointerId = e.pointerId;
+      startX = lastX = e.clientX;
+      startY = e.clientY;
+      startT = performance.now();
+      peerView = null;
+    },
+    { passive: true }
+  );
+
+  root.addEventListener(
+    "pointermove",
+    (e) => {
+      if (!tracking || e.pointerId !== pointerId) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (!axis) {
+        if (Math.abs(dx) < 10 && Math.abs(dy) < 10) return;
+        axis = Math.abs(dx) > Math.abs(dy) * 1.15 ? "x" : "y";
+        if (axis === "y") {
+          tracking = false;
+          cleanupDrag();
+          return;
+        }
+        main.classList.add("is-tab-swiping", "is-h-dragging");
+        try {
+          root.setPointerCapture?.(pointerId);
+        } catch {
+          /* ignore */
+        }
+      }
+      if (axis !== "x") return;
+      lastX = e.clientX;
+
+      const { prev, next } = viewsAround();
+      const cur = panelForView(activeView);
+      if (!cur) return;
+
+      let target = null;
+      let shift = dx;
+      if (dx < 0 && next) target = next;
+      else if (dx > 0 && prev) target = prev;
+      else shift = dx * 0.22; // rubber band past ends
+
+      if (target !== peerView) {
+        if (peerView) {
+          const old = panelForView(peerView);
+          if (old && old !== cur) {
+            clearSwipeStyles(old);
+            old.classList.remove("is-active");
+          }
+        }
+        peerView = target;
+        if (peerView) {
+          const peer = panelForView(peerView);
+          if (peer) {
+            peer.classList.add("is-active", "is-swipe-peer", "is-swipe-dragging");
+            peer.style.transition = "none";
+            peer.style.pointerEvents = "none";
+            peer.style.zIndex = "1";
+          }
+        }
+      }
+
+      cur.classList.add("is-swipe-dragging");
+      cur.style.transition = "none";
+      cur.style.zIndex = "2";
+      cur.style.transform = `translate3d(${shift}px,0,0)`;
+
+      if (peerView) {
+        const peer = panelForView(peerView);
+        const width = main.getBoundingClientRect().width || window.innerWidth;
+        if (peer) {
+          const incoming = dx < 0 ? width + shift : -width + shift;
+          peer.style.transform = `translate3d(${incoming}px,0,0)`;
+        }
+      }
+    },
+    { passive: true }
+  );
+
+  const endGesture = (e) => {
+    if (!tracking || (pointerId != null && e.pointerId !== pointerId)) return;
+    const dx = (e.clientX || lastX) - startX;
+    const wasX = axis === "x";
     tracking = false;
+    axis = null;
     pointerId = null;
-  });
+    main.classList.remove("is-h-dragging");
+
+    if (!wasX) {
+      cleanupDrag();
+      return;
+    }
+
+    const dt = Math.max(1, performance.now() - startT);
+    const vx = dx / dt;
+    const width = main.getBoundingClientRect().width || window.innerWidth;
+    const { prev, next } = viewsAround();
+    const commit =
+      Math.abs(dx) > Math.min(56, width * 0.16) || Math.abs(vx) > 0.5;
+    const goingNext = dx < 0;
+    const target = goingNext ? next : prev;
+
+    const cur = panelForView(activeView);
+    const peer = peerView ? panelForView(peerView) : null;
+
+    if (!commit || !target || prefersReducedMotion()) {
+      // Spring back
+      if (cur) {
+        cur.style.transition = "transform 0.34s cubic-bezier(0.22, 1, 0.36, 1)";
+        cur.style.transform = "translate3d(0,0,0)";
+      }
+      if (peer) {
+        peer.style.transition = "transform 0.34s cubic-bezier(0.22, 1, 0.36, 1)";
+        peer.style.transform = `translate3d(${dx < 0 ? width : -width}px,0,0)`;
+      }
+      window.setTimeout(() => cleanupDrag(), 360);
+      return;
+    }
+
+    animating = true;
+    const dir = goingNext ? 1 : -1;
+    const ease = "transform 0.36s cubic-bezier(0.22, 1, 0.36, 1)";
+    if (cur) {
+      cur.style.transition = ease;
+      cur.style.transform = `translate3d(${dir > 0 ? -width : width}px,0,0)`;
+    }
+    if (peer) {
+      peer.style.transition = ease;
+      peer.style.transform = "translate3d(0,0,0)";
+    }
+
+    const finish = () => {
+      animating = false;
+      clearSwipeStyles(cur);
+      clearSwipeStyles(peer);
+      main.classList.remove("is-tab-swiping");
+      peerView = null;
+      setView(target);
+    };
+    window.setTimeout(finish, 380);
+  };
+
+  root.addEventListener("pointerup", endGesture);
+  root.addEventListener("pointercancel", endGesture);
 })();
 
 document.addEventListener("keydown", (e) => {

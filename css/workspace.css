@@ -1733,6 +1733,38 @@
   display: grid;
 }
 
+/* Finger-follow tab swipe: stack current + peek peer */
+.studio-main.is-tab-swiping {
+  overflow: hidden;
+  touch-action: none;
+}
+
+.studio-main.is-tab-swiping > .studio-panel.is-active {
+  grid-area: 1 / 1;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+.studio-panel.is-swipe-dragging,
+.stage-focus .chain-step {
+  backface-visibility: hidden;
+}
+
+.stage-focus.is-h-dragging {
+  touch-action: none;
+  overflow: hidden;
+}
+
+.stage-focus.is-h-dragging .chain-step {
+  will-change: transform;
+  pointer-events: none;
+}
+
 .studio-panel {
   display: none;
   min-height: 0;
@@ -4418,6 +4450,17 @@
     min-height: 55vh;
     padding-bottom: calc(18px + env(safe-area-inset-bottom, 0));
     overflow-x: hidden;
+  }
+
+  .studio-main.is-tab-swiping {
+    overflow: hidden;
+  }
+
+  .studio-main.is-tab-swiping > .studio-panel.is-active {
+    display: block;
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
   }
 
   .studio-panel {
