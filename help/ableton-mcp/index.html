@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Ableton MCP — Mix Chainprint chains in Live</title>
+  <meta name="description" content="Install ChainprintMCP, connect Claude or Cursor, and apply shared mix chains directly inside Ableton Live." />
+  <meta name="robots" content="index, follow" />
+  <link rel="canonical" href="https://chainprint.app/help/ableton-mcp/" />
+  <meta name="theme-color" content="#000000" />
+  <link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="../../assets/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="../../assets/apple-touch-icon.png" sizes="180x180" />
+  <link rel="manifest" href="../../site.webmanifest" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Chainprint" />
+  <meta property="og:title" content="Ableton MCP · Chainprint" />
+  <meta property="og:description" content="Apply Chainprint mix chains directly inside Ableton Live via Claude or Cursor." />
+  <meta property="og:url" content="https://chainprint.app/help/ableton-mcp/" />
+  <meta property="og:image" content="https://chainprint.app/assets/og-image.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" />
+  <link rel="stylesheet" href="../../css/chassis.css" />
+  <link rel="stylesheet" href="../../css/logo.css" />
+  <link rel="stylesheet" href="../../css/auth.css" />
+  <link rel="stylesheet" href="../../css/site-pages.css" />
+</head>
+<body>
+  <div class="site-page">
+    <header class="site-top">
+      <a class="logo" href="../../" aria-label="Chainprint home">
+        <span class="logo-mark" aria-hidden="true"></span>
+        <span class="logo-word">Chainprint</span>
+      </a>
+      <nav class="site-nav" aria-label="Site">
+        <a href="../">Help</a>
+        <a href="../../analyze/">Studio</a>
+        <a href="../../tools/">Tools</a>
+      </nav>
+    </header>
+
+    <main class="site-main">
+      <header class="site-hero">
+        <p class="site-kicker">Ableton · MCP</p>
+        <h1>Mix Chainprint chains inside Live</h1>
+        <p class="site-lede">
+          <code>chainprint-mcp</code> is a Model Context Protocol server. Point Claude Desktop or Cursor
+          at a share link and it loads stock Ableton devices — EQ Eight, Compressor, Saturator, Limiter,
+          Delay, Reverb — dialed from your Chainprint analysis.
+        </p>
+      </header>
+
+      <section class="site-section" id="install">
+        <h2>1. Install the Remote Script</h2>
+        <div class="help-block">
+          <p>Requires <a href="https://docs.astral.sh/uv/">uv</a> (provides <code>uvx</code>) and Ableton Live 11/12.</p>
+          <pre class="help-code"><code>uvx chainprint-mcp install</code></pre>
+          <p>Then restart Live and open <strong>Settings → Link, Tempo &amp; MIDI</strong>:</p>
+          <ul>
+            <li>Set a Control Surface row to <strong>ChainprintMCP</strong></li>
+            <li>Leave Input and Output as <strong>None</strong></li>
+          </ul>
+          <p>
+            The script listens on <code>127.0.0.1:9877</code>. If another Ableton MCP is already using that
+            port, quit it first or set <code>CHAINPRINT_ABLETON_PORT</code> on both sides.
+          </p>
+        </div>
+      </section>
+
+      <section class="site-section" id="client">
+        <h2>2. Add the MCP server to your AI client</h2>
+        <div class="help-block">
+          <h3>Claude Desktop</h3>
+          <p>Edit your <code>claude_desktop_config.json</code>:</p>
+          <pre class="help-code"><code>{
+  "mcpServers": {
+    "chainprint": {
+      "command": "uvx",
+      "args": ["chainprint-mcp"]
+    }
+  }
+}</code></pre>
+          <h3>Cursor</h3>
+          <p>Add the same block under MCP servers in Cursor settings, then reload MCP.</p>
+        </div>
+      </section>
+
+      <section class="site-section" id="mix">
+        <h2>3. Mix from a share link</h2>
+        <div class="help-block">
+          <ol>
+            <li>Analyze a reference in the <a href="../../analyze/">studio</a> and create a share link.</li>
+            <li>Open Live with your dry vocal (or bed) on a track.</li>
+            <li>In Claude/Cursor, paste the link and ask to apply it — or use the <code>mix_to_reference</code> prompt.</li>
+          </ol>
+          <p>Typical tool flow:</p>
+          <pre class="help-code"><code>connect_status → load_chain → get_session_tracks → apply_chain → gain_stage</code></pre>
+        </div>
+      </section>
+
+      <section class="site-section" id="troubleshoot">
+        <h2>Troubleshooting</h2>
+        <div class="help-block">
+          <h3>ChainprintMCP missing from Control Surface list</h3>
+          <p>
+            The folder must be named exactly <code>ChainprintMCP</code> inside
+            <code>User Library/Remote Scripts</code>. Live only rescans at startup — fully quit and reopen.
+          </p>
+          <h3>connect_status fails</h3>
+          <ul>
+            <li>Confirm the Control Surface is set to ChainprintMCP.</li>
+            <li>Check nothing else owns port 9877 (<code>lsof -i :9877</code>).</li>
+            <li>Re-run <code>uvx chainprint-mcp install</code> after upgrading the package.</li>
+          </ul>
+          <h3>Devices load but parameters look wrong</h3>
+          <p>
+            Live renames parameters across versions. Use <code>list_device_parameters</code> on the device,
+            then <code>set_device_parameter</code> with the exact name. EQ Eight band names vary — the agent
+            can fuzzy-match.
+          </p>
+        </div>
+      </section>
+
+      <section class="site-section" id="honesty">
+        <h2>Honesty</h2>
+        <div class="help-block">
+          <p>
+            Chainprint is a measured reconstruction, not a dump of the original plugin stack. The MCP
+            applies a strong stock starting point; finish by ear. De-ess uses Multiband Dynamics as an
+            approximation — there is no stock Ableton de-esser.
+          </p>
+        </div>
+      </section>
+
+      <div class="site-cta-row">
+        <a class="btn btn-primary" href="../../analyze/">Open studio</a>
+        <a class="btn btn-ghost" href="../">Back to help</a>
+      </div>
+    </main>
+
+    <footer class="site-foot">
+      <a href="../../">Home</a>
+      <span aria-hidden="true">·</span>
+      <a href="../">Help</a>
+      <span aria-hidden="true">·</span>
+      <a href="../../privacy/">Privacy</a>
+      <span aria-hidden="true">·</span>
+      <a href="../../terms/">Terms</a>
+    </footer>
+  </div>
+</body>
+</html>

@@ -114,6 +114,26 @@ function render(row) {
   loading?.classList.add("hidden");
   errorBox?.classList.add("hidden");
   card?.classList.remove("hidden");
+
+  const mcpBlock = document.querySelector("[data-share-mcp]");
+  const mcpUrl = document.querySelector("[data-share-mcp-url]");
+  const mcpCopy = document.querySelector("[data-share-mcp-copy]");
+  if (mcpBlock && mcpUrl) {
+    const shareLink = `${location.origin}/c/?id=${encodeURIComponent(new URLSearchParams(location.search).get("id") || "")}`;
+    mcpUrl.value = shareLink;
+    mcpBlock.hidden = false;
+    mcpCopy?.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(shareLink);
+        mcpCopy.textContent = "Copied";
+        setTimeout(() => {
+          if (mcpCopy) mcpCopy.textContent = "Copy";
+        }, 1600);
+      } catch {
+        mcpUrl.select();
+      }
+    });
+  }
 }
 
 async function init() {

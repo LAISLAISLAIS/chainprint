@@ -50,6 +50,11 @@
   status = 301
 
 [[redirects]]
+  from = "/help/ableton-mcp"
+  to = "/help/ableton-mcp/"
+  status = 301
+
+[[redirects]]
   from = "/c"
   to = "/c/"
   status = 301

@@ -18,3 +18,10 @@ Thumbs.db
 *.aiff
 *.m4a
 calibration/exports/
+
+# Python
+mcp/**/__pycache__/
+mcp/**/*.pyc
+mcp/**/*.egg-info/
+mcp/dist/
+mcp/.pytest_cache/

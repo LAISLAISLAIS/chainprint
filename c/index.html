@@ -75,6 +75,39 @@
           </div>
           <a class="share-cta-btn is-solid" href="../auth/?mode=signup&next=/analyze/">Try Chainprint free</a>
         </footer>
+
+        <section class="share-mcp" data-share-mcp hidden>
+          <header class="share-mcp-head">
+            <h2>Mix in Ableton with AI</h2>
+            <p>
+              Paste this share link into Claude Desktop or Cursor with
+              <a href="../help/ableton-mcp/">chainprint-mcp</a> installed — it loads stock Live devices and dials them in.
+            </p>
+          </header>
+          <label class="share-mcp-field">
+            <span class="share-mcp-label">Share link</span>
+            <div class="share-mcp-row">
+              <input type="text" readonly data-share-mcp-url value="" />
+              <button type="button" class="share-cta-btn" data-share-mcp-copy>Copy</button>
+            </div>
+          </label>
+          <details class="share-mcp-config">
+            <summary>MCP client config</summary>
+            <pre class="share-mcp-code"><code>{
+  "mcpServers": {
+    "chainprint": {
+      "command": "uvx",
+      "args": ["chainprint-mcp"]
+    }
+  }
+}</code></pre>
+            <p class="share-mcp-hint">
+              Then run <code>uvx chainprint-mcp install</code>, restart Ableton, and set Control Surface to
+              <strong>ChainprintMCP</strong>. Full steps in
+              <a href="../help/ableton-mcp/">Ableton MCP help</a>.
+            </p>
+          </details>
+        </section>
       </article>
     </div>
   </div>

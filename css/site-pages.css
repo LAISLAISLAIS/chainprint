@@ -436,6 +436,24 @@ a.tool-card:hover {
   color: var(--teal-bright);
 }
 
+.help-code {
+  margin: 12px 0;
+  padding: 14px 16px;
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #050505;
+  font-family: var(--font-mono, ui-monospace, monospace);
+  font-size: var(--text-sm);
+  color: #e4e4e4;
+  line-height: 1.5;
+}
+
+.help-code code {
+  font: inherit;
+  white-space: pre;
+}
+
 .help-toc {
   display: flex;
   flex-wrap: wrap;

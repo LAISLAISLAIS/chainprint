@@ -1,6 +1,9 @@
 # Identity / preview APIs → serverless functions (upstream APIs block browser CORS)
 /api/odesli  /.netlify/functions/odesli  200
 /api/soundcloud  /.netlify/functions/soundcloud  200
+# Ableton MCP + public share JSON
+/api/chain/:id  /.netlify/functions/chain  200
+/api/chain  /.netlify/functions/chain  200
 
 /analyze  /analyze/  301
 /auth  /auth/  301
@@ -8,6 +11,7 @@
 /find  /find/  301
 /tools  /tools/  301
 /help  /help/  301
+/help/ableton-mcp  /help/ableton-mcp/  301
 /privacy  /privacy/  301
 /terms  /terms/  301
 /settings  /settings/  301
