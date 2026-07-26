@@ -124,7 +124,7 @@
 .find-drop.is-busy .find-alive.logo-hero--cycle,
 .find-drop.is-busy .find-alive.logo-hero,
 .find-drop.is-busy .find-alive .logo-hero--cycle {
-  --mark-w: min(148px, 56vw);
+  --mark-w: min(168px, 62vw);
   color: var(--teal, #6ec4b4);
 }
 
