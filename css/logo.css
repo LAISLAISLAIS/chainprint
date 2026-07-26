@@ -33,78 +33,13 @@
 .logo-hero {
   --mark-w: clamp(148px, 38vw, 220px);
   width: var(--mark-w);
-  height: calc(var(--mark-w) * 0.333);
+  height: calc(var(--mark-w) * 0.34);
   margin: 0 auto;
   color: #f5f5f5;
   overflow: visible;
   display: grid;
   place-items: center;
   animation: mark-rise 0.35s ease-out both;
-}
-
-.logo-hero .chain-mark-svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  color: inherit;
-}
-
-.chain-compose {
-  transform-origin: 60px 20px;
-  animation: none;
-}
-
-.chain-stroke {
-  stroke: currentColor;
-  stroke-width: 3.5;
-  fill: none;
-  opacity: 0.42;
-  animation: none;
-}
-
-.chain-stroke--mid {
-  opacity: 0.95;
-}
-
-@keyframes mark-rise {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .logo-hero {
-    animation: none;
-  }
-
-  .chain-stroke {
-    opacity: 0.55;
-  }
-
-  .chain-stroke--mid {
-    opacity: 1;
-  }
-}
-
-/*
- * Analyzing / Key·BPM busy — HTML chain with CSS color loop.
- * Fixed rem sizes (not %) so the mark can’t collapse when the host is a flex row.
- */
-.logo-hero--cycle {
-  --mark-w: clamp(148px, 32vw, 210px);
-  width: var(--mark-w) !important;
-  max-width: var(--mark-w);
-  height: calc(var(--mark-w) * 0.34) !important;
-  margin: 0 auto;
-  color: #6ec4b4;
-  display: grid !important;
-  place-items: center;
-  animation: chain-flow-breathe 2.4s ease-in-out infinite;
-  filter: drop-shadow(0 0 14px rgba(110, 196, 180, 0.4));
 }
 
 .chain-flow {
@@ -119,12 +54,14 @@
 .chain-flow-link {
   display: block;
   box-sizing: border-box;
-  border: 3.5px solid #3f8f84;
+  border: 3.5px solid #6a6a6a;
   border-radius: 999px;
   background: transparent;
   flex: 0 0 auto;
-  animation: chain-flow-color 1.5s ease-in-out infinite;
-  animation-delay: calc(var(--i, 0) * -0.3s);
+  animation-duration: 1.6s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-delay: calc(var(--i, 0) * -0.32s);
 }
 
 .chain-flow-link--v {
@@ -139,6 +76,72 @@
   height: 14px;
   margin-inline: -3px;
   z-index: 2;
+}
+
+@keyframes mark-rise {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/*
+ * Landing hero — white / gray pulse (same motion as analyzing, colder palette).
+ */
+.logo-hero--pulse {
+  color: #f5f5f5;
+  animation:
+    mark-rise 0.45s ease-out both,
+    chain-flow-breathe 2.8s ease-in-out 0.45s infinite;
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.18));
+}
+
+.logo-hero--pulse .chain-flow-link {
+  border-color: #6a6a6a;
+  animation-name: chain-flow-color-white;
+}
+
+@keyframes chain-flow-color-white {
+  0%,
+  100% {
+    border-color: #2e2e2e;
+    opacity: 0.62;
+  }
+  25% {
+    border-color: #6e6e6e;
+    opacity: 0.85;
+  }
+  50% {
+    border-color: #d8d8d8;
+    opacity: 1;
+  }
+  75% {
+    border-color: #ffffff;
+    opacity: 1;
+  }
+}
+
+/*
+ * Analyzing / Key·BPM busy — teal palette.
+ */
+.logo-hero--cycle {
+  --mark-w: clamp(148px, 32vw, 210px);
+  width: var(--mark-w) !important;
+  max-width: var(--mark-w);
+  height: calc(var(--mark-w) * 0.34) !important;
+  margin: 0 auto;
+  color: #6ec4b4;
+  display: grid !important;
+  place-items: center;
+  animation: chain-flow-breathe 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 14px rgba(110, 196, 180, 0.4));
+}
+
+.logo-hero--cycle .chain-flow-link {
+  border-color: #3f8f84;
+  animation-name: chain-flow-color;
 }
 
 @keyframes chain-flow-color {
@@ -175,12 +178,20 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .logo-hero,
+  .logo-hero--pulse,
   .logo-hero--cycle {
     animation: none;
     filter: none;
   }
 
-  .chain-flow-link {
+  .logo-hero--pulse .chain-flow-link {
+    animation: none;
+    border-color: #d0d0d0;
+    opacity: 0.92;
+  }
+
+  .logo-hero--cycle .chain-flow-link {
     animation: none;
     border-color: #6ec4b4;
     opacity: 0.92;

@@ -195,7 +195,13 @@
 
     .logo-hero {
       margin-bottom: 32px;
-      animation: hero-in 1.15s var(--ease-out) both;
+    }
+
+    /* Keep landing entrance, then hand off to the white pulse loop in logo.css */
+    .logo-hero.logo-hero--pulse {
+      animation:
+        hero-in 1.15s var(--ease-out) both,
+        chain-flow-breathe 2.8s ease-in-out 1.15s infinite;
     }
 
     .hero-brand {
@@ -326,7 +332,8 @@
       .hero-brand,
       .hero-line,
       .cta-row,
-      .logo-hero {
+      .logo-hero,
+      .logo-hero.logo-hero--pulse {
         animation: none;
       }
 
