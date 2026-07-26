@@ -1649,9 +1649,9 @@
 }
 
 .studio.is-analyzing [data-analyze-hero] {
-  --mark-w: clamp(148px, 28vw, 200px);
-  margin-bottom: 18px;
-  color: var(--teal);
+  --mark-w: clamp(160px, 30vw, 220px);
+  margin-bottom: 20px;
+  color: var(--teal, #6ec4b4);
 }
 
 @keyframes analyze-main-breathe {

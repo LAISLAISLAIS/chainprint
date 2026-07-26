@@ -93,122 +93,43 @@
 }
 
 /*
- * Analyzing / Key·BPM busy — palette gradient flow (teal family only).
- * Stroke color + opacity only — no hue-rotate filters (smooth + on-brand).
+ * Analyzing / Key·BPM busy — JS drives palette + gradient;
+ * CSS only sizes the mark and keeps strokes thick enough to read.
  */
 .logo-hero--cycle {
   --mark-w: 120px;
-  --chain-a: var(--teal-dim, #3f8f84);
-  --chain-b: var(--teal, #6ec4b4);
-  --chain-c: var(--teal-bright, #8ed9cb);
-  --chain-d: #b7ebe1;
   width: var(--mark-w);
   height: calc(var(--mark-w) * 0.333);
   margin: 0 auto;
-  color: var(--chain-b);
+  color: var(--teal, #6ec4b4);
   animation: none;
   transform: translateZ(0);
-}
-
-.logo-hero--cycle .chain-compose {
-  animation: chain-cycle-breathe 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
-  transform-origin: 60px 20px;
-  transform: translateZ(0);
+  filter: drop-shadow(0 0 10px rgba(110, 196, 180, 0.35));
 }
 
 .logo-hero--cycle .chain-mark-svg {
-  animation: none;
-  filter: none;
-  color: inherit;
-}
-
-.logo-hero--cycle .chain-link {
-  animation: none;
-  filter: none;
+  overflow: visible;
 }
 
 .logo-hero--cycle .chain-stroke {
-  stroke: var(--chain-b);
-  stroke-width: 3.5;
+  stroke-width: 3.75;
   fill: none;
-  opacity: 0.85;
-  animation: chain-palette-flow 4.8s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  /* stroke/opacity set by JS each frame */
 }
 
-.logo-hero--cycle .chain-link--1 .chain-stroke {
-  animation-delay: 0s;
-}
-.logo-hero--cycle .chain-link--2 .chain-stroke {
-  animation-delay: -0.96s;
-}
-.logo-hero--cycle .chain-link--3 .chain-stroke {
-  animation-delay: -1.92s;
-}
-.logo-hero--cycle .chain-link--4 .chain-stroke {
-  animation-delay: -2.88s;
-}
-.logo-hero--cycle .chain-link--5 .chain-stroke {
-  animation-delay: -3.84s;
-}
-
-@keyframes chain-palette-flow {
-  0%,
-  100% {
-    stroke: #3f8f84;
-    opacity: 0.55;
-  }
-  25% {
-    stroke: #6ec4b4;
-    opacity: 0.9;
-  }
-  50% {
-    stroke: #8ed9cb;
-    opacity: 1;
-  }
-  75% {
-    stroke: #b7ebe1;
-    opacity: 0.82;
-  }
-}
-
-@keyframes chain-cycle-breathe {
-  0%,
-  100% {
-    opacity: 0.92;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.02);
-  }
+.logo-hero--cycle .chain-compose {
+  transform-origin: 60px 20px;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .logo-hero--cycle {
-    animation: none !important;
     filter: none;
     color: var(--teal, #6ec4b4);
-  }
-
-  .logo-hero--cycle .chain-stroke {
-    animation: none !important;
-    stroke: var(--teal, #6ec4b4);
-    opacity: 0.92;
-  }
-
-  .logo-hero--cycle .chain-link,
-  .logo-hero--cycle .chain-compose {
-    animation: none !important;
-    filter: none;
   }
 }
 
 @media (max-width: 640px) {
-  .logo-hero--cycle .chain-stroke {
-    animation-duration: 5.4s;
-  }
-
-  .logo-hero--cycle .chain-compose {
-    animation-duration: 3.6s;
+  .logo-hero--cycle {
+    filter: drop-shadow(0 0 8px rgba(110, 196, 180, 0.28));
   }
 }
