@@ -594,6 +594,25 @@ stemInstrumentalInput?.addEventListener("change", () => {
   schedulePersist();
 });
 
+function enabledViews() {
+  return [...viewTabs]
+    .map((tab) => tab.getAttribute("data-view"))
+    .filter((v) => {
+      if (!v) return false;
+      const tab = document.querySelector(`[data-view="${v}"]`);
+      return tab && !tab.disabled;
+    });
+}
+
+function stepView(delta) {
+  const views = enabledViews();
+  if (views.length < 2) return;
+  const i = views.indexOf(activeView);
+  if (i < 0) return;
+  const next = views[i + delta];
+  if (next) setView(next);
+}
+
 function setView(view) {
   if (!lastAdvice && view !== "chain") return;
   activeView = view;
@@ -607,6 +626,9 @@ function setView(view) {
     panel.classList.toggle("is-active", on);
     panel.classList.toggle("is-entering", on);
   });
+  document
+    .querySelector(`[data-view="${view}"]`)
+    ?.scrollIntoView({ inline: "center", block: "nearest", behavior: "smooth" });
 }
 
 function readoutHtml(key, value, sub, i = 0) {
@@ -2196,6 +2218,8 @@ stageNext?.addEventListener("click", () => selectStage(stageIndex + 1));
   stageFocus.addEventListener("pointerdown", (e) => {
     if (e.pointerType === "mouse" && e.button !== 0) return;
     if (ignoreTarget(e.target)) return;
+    // Left/right edges belong to tab swipe
+    if (e.clientX <= 32 || e.clientX >= window.innerWidth - 32) return;
     tracking = true;
     pointerId = e.pointerId;
     startX = e.clientX;
@@ -2216,6 +2240,62 @@ stageNext?.addEventListener("click", () => selectStage(stageIndex + 1));
 
   stageFocus.addEventListener("pointerup", endSwipe);
   stageFocus.addEventListener("pointercancel", () => {
+    tracking = false;
+    pointerId = null;
+  });
+})();
+
+/* Swipe between studio tabs — content areas, or left/right screen edges */
+(() => {
+  const root = workspace || document.querySelector(".studio");
+  if (!root) return;
+  const THRESH = 64;
+  const EDGE = 32;
+  let startX = 0;
+  let startY = 0;
+  let tracking = false;
+  let pointerId = null;
+
+  const blocked = (t) =>
+    t instanceof Element &&
+    Boolean(
+      t.closest(
+        "a, button, input, textarea, select, label, [data-no-swipe], .playback-dock, [data-stage-rail-shell], [data-stage-rail-scroll], .stage-rail-shell"
+      )
+    );
+
+  root.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (!(e.target instanceof Element)) return;
+    const x = e.clientX;
+    const atEdge = x <= EDGE || x >= window.innerWidth - EDGE;
+    const inStageCard = Boolean(e.target.closest("[data-stage-focus]"));
+    // Edges work anywhere (incl. over plugins); elsewhere skip the plugin card + controls
+    if (!atEdge) {
+      if (inStageCard || blocked(e.target)) return;
+      if (!e.target.closest(".studio-main")) return;
+    } else if (e.target.closest("a, input, textarea, select, label, .playback-dock")) {
+      return;
+    }
+    tracking = true;
+    pointerId = e.pointerId;
+    startX = e.clientX;
+    startY = e.clientY;
+  });
+
+  const endSwipe = (e) => {
+    if (!tracking || (pointerId != null && e.pointerId !== pointerId)) return;
+    tracking = false;
+    pointerId = null;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if (Math.abs(dx) < THRESH || Math.abs(dx) < Math.abs(dy) * 1.25) return;
+    // Swipe left → next tab; swipe right → previous
+    stepView(dx < 0 ? 1 : -1);
+  };
+
+  root.addEventListener("pointerup", endSwipe);
+  root.addEventListener("pointercancel", () => {
     tracking = false;
     pointerId = null;
   });
