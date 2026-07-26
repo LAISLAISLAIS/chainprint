@@ -16,24 +16,25 @@
     }
 
     body.landing-body::before {
-      opacity: 0.22;
+      opacity: 0.2;
       mix-blend-mode: soft-light;
     }
 
     .landing {
-      --brand: #f4f4f4;
+      --brand: #f6f6f6;
       --silkscreen: #8a8a8a;
       --accent: #f4f4f4;
-      --accent-soft: rgba(255, 255, 255, 0.08);
+      --accent-soft: rgba(255, 255, 255, 0.07);
       min-height: 100vh;
       min-height: 100dvh;
       display: flex;
       flex-direction: column;
-      padding: 20px 24px 28px;
+      padding: 22px 28px 32px;
       position: relative;
       overflow: hidden;
       background:
-        radial-gradient(ellipse 70% 45% at 50% 38%, rgba(255, 255, 255, 0.045) 0%, transparent 60%),
+        radial-gradient(ellipse 72% 48% at 50% 42%, rgba(255, 255, 255, 0.05) 0%, transparent 62%),
+        radial-gradient(ellipse 40% 30% at 15% 85%, rgba(255, 255, 255, 0.025) 0%, transparent 55%),
         #000;
     }
 
@@ -44,9 +45,9 @@
       height: 100%;
       z-index: 0;
       pointer-events: none;
-      opacity: 0.85;
-      mask-image: radial-gradient(ellipse 65% 50% at 50% 45%, #000 15%, transparent 72%);
-      -webkit-mask-image: radial-gradient(ellipse 65% 50% at 50% 45%, #000 15%, transparent 72%);
+      opacity: 0.9;
+      mask-image: radial-gradient(ellipse 62% 48% at 50% 44%, #000 12%, transparent 74%);
+      -webkit-mask-image: radial-gradient(ellipse 62% 48% at 50% 44%, #000 12%, transparent 74%);
     }
 
     .landing-nav,
@@ -64,27 +65,30 @@
     }
 
     .landing-nav .logo-word {
-      opacity: 0.45;
-      font-weight: 600;
-      font-size: 0.9rem;
-      letter-spacing: -0.03em;
+      opacity: 0.92;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: -0.04em;
     }
 
     .landing-nav .logo-mark {
-      opacity: 0.55;
+      opacity: 0.9;
     }
 
     .landing .nav-quota {
       color: #cfcfcf;
       background: rgba(255, 255, 255, 0.06);
+      border-radius: var(--radius-btn);
     }
 
     .landing .account-menu-trigger {
       background: rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius-btn);
     }
 
     .landing .nav-links a {
       color: #9a9a9a;
+      border-radius: var(--radius-btn);
     }
 
     .landing .nav-links a:hover {
@@ -94,6 +98,7 @@
     .landing .nav-cta {
       background: #f4f4f4 !important;
       color: #0a0a0a !important;
+      border-radius: var(--radius-btn) !important;
     }
 
     .landing .nav-cta:hover {
@@ -106,41 +111,42 @@
       place-items: center;
       width: min(1120px, 100%);
       margin: 0 auto;
-      padding: 6vh 0 10vh;
+      padding: 7vh 0 11vh;
     }
 
     .hero-copy {
       text-align: center;
-      width: min(36rem, 100%);
+      width: min(40rem, 100%);
       display: flex;
       flex-direction: column;
       align-items: center;
     }
 
     .logo-hero {
-      margin-bottom: 28px;
+      margin-bottom: 32px;
+      animation: hero-in 1.15s var(--ease-out) both;
     }
 
     .hero-brand {
       font-family: var(--font-brand);
       font-weight: 800;
-      font-size: clamp(2.85rem, 10vw, 5rem);
-      letter-spacing: -0.06em;
-      line-height: 0.9;
-      color: #f7f7f7;
-      margin: 0 0 18px;
+      font-size: clamp(3rem, 11vw, 5.25rem);
+      letter-spacing: -0.065em;
+      line-height: 0.88;
+      color: #f8f8f8;
+      margin: 0 0 20px;
       animation: hero-in 1.2s var(--ease-out) 0.06s both;
     }
 
     .hero-line {
-      margin: 0 0 40px;
+      margin: 0 0 42px;
       max-width: none;
       white-space: nowrap;
-      font-size: clamp(0.88rem, 2.6vw, 1.12rem);
+      font-size: clamp(0.9rem, 2.5vw, 1.15rem);
       font-weight: 400;
-      letter-spacing: -0.01em;
-      line-height: 1.5;
-      color: #8f8f8f;
+      letter-spacing: -0.018em;
+      line-height: 1.45;
+      color: #949494;
       animation: hero-in 1.2s var(--ease-out) 0.16s both;
     }
 
@@ -148,28 +154,32 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 16px;
+      gap: 18px;
       animation: hero-in 1.2s var(--ease-out) 0.26s both;
     }
 
     .landing .btn-primary {
-      min-width: 11.5rem;
-      padding: 13px 28px;
-      border-radius: 999px;
+      min-width: 12rem;
+      padding: 14px 30px;
+      border-radius: var(--radius-btn);
       background: #f4f4f4;
       color: #0a0a0a;
-      font-weight: 600;
+      font-weight: 650;
+      letter-spacing: -0.02em;
+      transition: background 0.2s ease, transform 0.2s var(--ease-out);
     }
 
     .landing .btn-primary:hover {
       background: #fff;
+      transform: translateY(-1px);
     }
 
     .cta-login {
-      font-size: 0.88rem;
+      font-size: 0.9rem;
       color: #7a7a7a;
       text-decoration: none;
       font-weight: 500;
+      letter-spacing: -0.01em;
       transition: color 0.2s ease;
     }
 
@@ -180,7 +190,7 @@
     @keyframes hero-in {
       from {
         opacity: 0;
-        transform: translateY(10px);
+        transform: translateY(12px);
       }
       to {
         opacity: 1;
@@ -195,13 +205,22 @@
       .logo-hero {
         animation: none;
       }
+
+      .landing .btn-primary:hover {
+        transform: none;
+      }
     }
 
     @media (max-width: 560px) {
       .landing { padding: 16px 18px 24px; }
       .hero { padding: 8vh 0 12vh; }
-      .logo-hero { --mark-w: 132px; margin-bottom: 22px; }
-      .hero-line { margin-bottom: 32px; }
+      .logo-hero { --mark-w: 128px; margin-bottom: 24px; }
+      .hero-line {
+        margin-bottom: 34px;
+        white-space: normal;
+        max-width: 18rem;
+        text-wrap: balance;
+      }
     }
   </style>
 </head>

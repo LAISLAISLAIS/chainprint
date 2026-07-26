@@ -16,13 +16,13 @@
   color: var(--brand);
   -webkit-mask: url("../assets/mark.svg") center / contain no-repeat;
   mask: url("../assets/mark.svg") center / contain no-repeat;
-  opacity: 0.9;
+  opacity: 0.95;
 }
 
 .logo-word {
   font-family: var(--font-brand);
   font-weight: 700;
-  font-size: 1.02rem;
+  font-size: 1.05rem;
   letter-spacing: -0.04em;
   color: var(--brand);
 }

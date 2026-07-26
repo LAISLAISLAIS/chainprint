@@ -157,8 +157,9 @@ function isLocalHost() {
 }
 
 /**
- * Odesli/song.link endpoints. Production uses same-origin /api/odesli proxy
- * because api.song.link only CORS-allows localhost.
+ * Odesli / Spotify identity endpoints.
+ * Production: same-origin /api/odesli → Netlify function (no CORS).
+ * Localhost: direct song.link (CORS allows localhost) + optional local function.
  */
 function odesliRequestUrls(href) {
   const q = `url=${encodeURIComponent(href)}&userCountry=US`;
@@ -170,46 +171,60 @@ function odesliRequestUrls(href) {
   return urls;
 }
 
+function parseIdentityPayload(data) {
+  // Netlify function shape: { title, artist, artwork, appleId }
+  if (data?.title && data?.artist && !data.entitiesByUniqueId) {
+    return {
+      title: cleanText(data.title),
+      artist: cleanText(data.artist),
+      artwork: data.artwork || null,
+      appleId: data.appleId ? String(data.appleId) : null,
+    };
+  }
+
+  // Raw Odesli / song.link shape
+  const entities = data?.entitiesByUniqueId || {};
+  const primary = entities[data?.entityUniqueId];
+  if (!primary?.title) return null;
+
+  let appleId = null;
+  for (const key of ["itunes", "appleMusic"]) {
+    const link = data.linksByPlatform?.[key];
+    const ent = link?.entityUniqueId ? entities[link.entityUniqueId] : null;
+    if (ent?.id) {
+      appleId = String(ent.id);
+      break;
+    }
+  }
+  if (!appleId) {
+    for (const [eid, ent] of Object.entries(entities)) {
+      if (/^(ITUNES|APPLE_MUSIC)_SONG::/i.test(eid) && ent?.id) {
+        appleId = String(ent.id);
+        break;
+      }
+    }
+  }
+
+  const artist = cleanText(primary.artistName || "");
+  if (!artist) return null;
+
+  return {
+    title: cleanText(primary.title),
+    artist,
+    artwork: primary.thumbnailUrl || null,
+    appleId,
+  };
+}
+
 /**
- * Cross-service identity (Odesli / song.link). Spotify oEmbed has no artist;
- * this returns the real title + artist so iTunes previews don’t match covers.
+ * Cross-service identity. Spotify oEmbed has no artist.
  */
 async function songLinkIdentity(href) {
   for (const url of odesliRequestUrls(href)) {
     try {
       const data = await fetchJson(url);
-      const entities = data.entitiesByUniqueId || {};
-      const primary = entities[data.entityUniqueId];
-      if (!primary?.title) continue;
-
-      let appleId = null;
-      for (const key of ["itunes", "appleMusic"]) {
-        const link = data.linksByPlatform?.[key];
-        const ent = link?.entityUniqueId ? entities[link.entityUniqueId] : null;
-        if (ent?.id) {
-          appleId = String(ent.id);
-          break;
-        }
-      }
-      if (!appleId) {
-        for (const [eid, ent] of Object.entries(entities)) {
-          if (/^(ITUNES|APPLE_MUSIC)_SONG::/i.test(eid) && ent?.id) {
-            appleId = String(ent.id);
-            break;
-          }
-        }
-      }
-
-      const artist = cleanText(primary.artistName || "");
-      // Prefer a result that includes artist; otherwise keep trying mirrors
-      if (!artist) continue;
-
-      return {
-        title: cleanText(primary.title),
-        artist,
-        artwork: primary.thumbnailUrl || null,
-        appleId,
-      };
+      const parsed = parseIdentityPayload(data);
+      if (parsed?.title && parsed?.artist) return parsed;
     } catch {
       /* try next endpoint */
     }

@@ -1,14 +1,9 @@
-# Static site — no build step. Publish the repo root.
+# Static site + serverless identity lookup
 [build]
   publish = "."
+  functions = "netlify/functions"
 
-# Proxy Odesli/song.link (browser CORS blocks api.song.link from Netlify)
-[[redirects]]
-  from = "/api/odesli"
-  to = "https://api.song.link/v1-alpha.1/links"
-  status = 200
-  force = true
-
+# Prefer _redirects for /api/odesli → function; keep directory trailing slashes here
 [[redirects]]
   from = "/analyze"
   to = "/analyze/"

@@ -19,15 +19,18 @@
   justify-content: space-between;
   gap: 14px 28px;
   padding: 18px 22px;
-  background: rgba(12, 14, 18, 0.55);
+  background: rgba(10, 10, 10, 0.65);
 }
 
-.page-header .brand {
-  font-size: clamp(1.35rem, 3.5vw, 1.7rem);
+.page-header .logo-word {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
 }
 
 .page-header .label {
-  margin-top: 4px;
+  margin-top: 6px;
+  margin-left: 38px;
 }
 
 .nav-links {
@@ -42,7 +45,7 @@
   font-size: 0.82rem;
   font-weight: 500;
   padding: 8px 12px;
-  border-radius: 999px;
+  border-radius: var(--radius-btn);
   transition: color 0.15s ease, background 0.15s ease;
 }
 

@@ -4,26 +4,28 @@
 
 :root {
   --ink: #000000;
-  --chassis: #070707;
-  --panel: rgba(14, 14, 14, 0.82);
-  --panel-solid: #111111;
-  --panel-edge: rgba(255, 255, 255, 0.08);
-  --panel-edge-strong: rgba(255, 255, 255, 0.14);
-  --silkscreen: #8a8a8a;
-  --readout: #d4d4d4;
-  --brand: #f4f4f4;
-  --accent: #f0f0f0;
-  --accent-soft: rgba(255, 255, 255, 0.08);
+  --chassis: #060606;
+  --panel: rgba(12, 12, 12, 0.88);
+  --panel-solid: #0e0e0e;
+  --panel-edge: rgba(255, 255, 255, 0.09);
+  --panel-edge-strong: rgba(255, 255, 255, 0.16);
+  --silkscreen: #8c8c8c;
+  --readout: #d6d6d6;
+  --brand: #f5f5f5;
+  --accent: #f2f2f2;
+  --accent-soft: rgba(255, 255, 255, 0.07);
   --accent-dim: #9a9a9a;
   --lamp: #f0f0f0;
   --lamp-dim: #6a6a6a;
   --danger: #ff6b6b;
-  --radius: 16px;
+  --radius: 14px;
   --radius-sm: 10px;
+  --radius-btn: 12px;
   --font-ui: "DM Sans", "Segoe UI", sans-serif;
   --font-brand: "Syne", "Arial Narrow", sans-serif;
   --font-readout: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --focus-ring: 0 0 0 2px #000, 0 0 0 4px rgba(255, 255, 255, 0.45);
 }
 
 *,
@@ -46,8 +48,9 @@ body {
 
 body {
   background:
-    radial-gradient(ellipse 75% 45% at 50% -5%, rgba(255, 255, 255, 0.04) 0%, transparent 55%),
-    linear-gradient(180deg, #050505 0%, var(--chassis) 50%, #000 100%);
+    radial-gradient(ellipse 80% 50% at 50% -8%, rgba(255, 255, 255, 0.055) 0%, transparent 52%),
+    radial-gradient(ellipse 50% 35% at 80% 90%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
+    linear-gradient(180deg, #040404 0%, var(--chassis) 48%, #000 100%);
   background-attachment: fixed;
 }
 
@@ -57,9 +60,9 @@ body::before {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.2;
+  opacity: 0.18;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
-  background-size: 200px;
+  background-size: 180px;
   mix-blend-mode: soft-light;
 }
 
@@ -72,9 +75,9 @@ body > * {
   background: var(--panel);
   border: 1px solid var(--panel-edge);
   border-radius: var(--radius);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
 }
 
 .brand {
@@ -145,11 +148,11 @@ body > * {
   justify-content: center;
   gap: 8px;
   border: none;
-  border-radius: 999px;
+  border-radius: var(--radius-btn);
   font-family: var(--font-ui);
   font-size: 0.9rem;
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   padding: 12px 22px;
   cursor: pointer;
   text-decoration: none;
@@ -158,6 +161,11 @@ body > * {
     background 0.2s ease,
     color 0.2s ease,
     border-color 0.2s ease;
+}
+
+.btn:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
 }
 
 .btn:active {
@@ -189,7 +197,7 @@ body > * {
   align-items: center;
   gap: 6px;
   padding: 5px 10px;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   background: var(--accent-soft);
   color: var(--brand);
   font-size: 0.72rem;
