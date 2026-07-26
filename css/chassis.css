@@ -40,6 +40,16 @@ html {
   text-size-adjust: 100%;
 }
 
+/* Kill browser-default blue focus; use Chainprint white ring */
+:where(a, button, summary, input, select, textarea, [tabindex]:not([tabindex="-1"])):focus {
+  outline: none;
+}
+
+:where(a, button, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
 html,
 body {
   min-height: 100%;

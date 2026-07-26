@@ -171,14 +171,30 @@
             <summary>Have stems? <span class="stems-soon">Auto-separate — coming</span></summary>
             <p class="stems-hint">Optional. Analyzes your stem instead of estimating from the full master.</p>
             <label class="stem-field">
-              <span>Vocal stem</span>
-              <input type="file" data-stem-vocal accept="audio/*,.wav,.mp3,.flac,.aiff,.m4a" />
-              <span class="stem-name" data-stem-vocal-name>None</span>
+              <span class="stem-field-label">Vocal stem</span>
+              <span class="stem-picker">
+                <input
+                  type="file"
+                  class="stem-file-input"
+                  data-stem-vocal
+                  accept="audio/*,.wav,.mp3,.flac,.aiff,.m4a"
+                />
+                <span class="stem-pick-btn">Choose file</span>
+              </span>
+              <span class="stem-name" data-stem-vocal-name>No file chosen</span>
             </label>
             <label class="stem-field">
-              <span>Instrumental stem</span>
-              <input type="file" data-stem-instrumental accept="audio/*,.wav,.mp3,.flac,.aiff,.m4a" />
-              <span class="stem-name" data-stem-instrumental-name>None</span>
+              <span class="stem-field-label">Instrumental stem</span>
+              <span class="stem-picker">
+                <input
+                  type="file"
+                  class="stem-file-input"
+                  data-stem-instrumental
+                  accept="audio/*,.wav,.mp3,.flac,.aiff,.m4a"
+                />
+                <span class="stem-pick-btn">Choose file</span>
+              </span>
+              <span class="stem-name" data-stem-instrumental-name>No file chosen</span>
             </label>
           </details>
 

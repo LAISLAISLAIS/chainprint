@@ -22,7 +22,7 @@ async function loadPdfLibs() {
 
 /**
  * @param {{ chain: object }} advice
- * @param {{ trackName?: string }} [meta]
+ * @param {{ trackName?: string, keyLabel?: string, bpm?: number|string }} [meta]
  */
 export async function downloadChainPdf(advice, meta = {}) {
   const { html2canvas, jsPDF } = await loadPdfLibs();
@@ -65,18 +65,10 @@ export async function downloadChainPdf(advice, meta = {}) {
     width: sheet.offsetWidth,
     height: sheet.offsetHeight,
     onclone: (_doc, el) => {
-      // html2canvas often mis-paints flex pills — force line-box centering
-      el.querySelectorAll(".xp-type").forEach((node) => {
-        node.style.display = "inline-block";
-        node.style.height = "20px";
-        node.style.lineHeight = "20px";
-        node.style.padding = "0 10px 0 11px";
-        node.style.textAlign = "center";
-        node.style.verticalAlign = "top";
-        node.style.fontSize = "9px";
-        node.style.fontWeight = "700";
-        node.style.letterSpacing = "0.04em";
-        node.style.textTransform = "uppercase";
+      // Keep SVG type pills crisp; avoid CSS text metrics html2canvas mangling
+      el.querySelectorAll("svg.xp-type").forEach((node) => {
+        node.setAttribute("shape-rendering", "geometricPrecision");
+        node.style.display = "block";
         node.style.transform = "none";
       });
     },

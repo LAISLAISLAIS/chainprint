@@ -302,12 +302,14 @@ setTarget("vocal");
 
 stemVocalInput?.addEventListener("change", () => {
   stemVocalFile = stemVocalInput.files?.[0] || null;
-  if (stemVocalName) stemVocalName.textContent = stemVocalFile?.name || "None";
+  if (stemVocalName) stemVocalName.textContent = stemVocalFile?.name || "No file chosen";
   if (analysisTarget === "vocal") rerunActiveAnalysis();
 });
 stemInstrumentalInput?.addEventListener("change", () => {
   stemInstrumentalFile = stemInstrumentalInput.files?.[0] || null;
-  if (stemInstrumentalName) stemInstrumentalName.textContent = stemInstrumentalFile?.name || "None";
+  if (stemInstrumentalName) {
+    stemInstrumentalName.textContent = stemInstrumentalFile?.name || "No file chosen";
+  }
   if (analysisTarget === "instrumental") rerunActiveAnalysis();
 });
 
@@ -1136,7 +1138,18 @@ exportPdfBtn?.addEventListener("click", async () => {
   exportPdfBtn.textContent = "Exporting…";
   try {
     const { downloadChainPdf } = await import("../export/chain-pdf.js");
-    await downloadChainPdf(lastAdvice, { trackName: lastTrackName || undefined });
+    const readout = library.active()?.result?.readout || null;
+    const keyLabel =
+      readout?.pitch?.keyLabel ||
+      readout?.keyLabel ||
+      readout?.pitch?.keyCandidates?.[0]?.label ||
+      undefined;
+    const bpm = readout?.tempo?.bpm ?? readout?.bpm ?? undefined;
+    await downloadChainPdf(lastAdvice, {
+      trackName: lastTrackName || undefined,
+      keyLabel,
+      bpm,
+    });
   } catch (err) {
     console.error(err);
     alert(err.message || "Could not export PDF. Check your connection and try again.");

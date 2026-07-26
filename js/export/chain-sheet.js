@@ -17,12 +17,33 @@ function stepLines(step) {
   return [];
 }
 
+/** SVG pill — html2canvas centers SVG text far more reliably than CSS flex/line-height */
+function typePill(raw) {
+  const label = String(raw || "Step")
+    .trim()
+    .toUpperCase()
+    .slice(0, 18);
+  const charW = 5.85;
+  const padX = 11;
+  const w = Math.max(42, Math.ceil(label.length * charW + padX * 2));
+  const h = 20;
+  // Capitals sit optically mid-box around y≈13.2 for 9px bold in a 20px pill
+  const textY = 13.2;
+  return `<svg class="xp-type" xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" aria-hidden="true">
+      <rect width="${w}" height="${h}" rx="${h / 2}" fill="#f0f0f0"/>
+      <text x="${(w / 2).toFixed(1)}" y="${textY}" text-anchor="middle"
+        fill="#0a0a0a" font-family="DM Sans, Helvetica, Arial, sans-serif"
+        font-size="9" font-weight="700" letter-spacing="0.45">${esc(label)}</text>
+    </svg>`;
+}
+
 function stepCard(step, index, kind) {
   const n = kind === "send" ? `S${index + 1}` : String(index + 1).padStart(2, "0");
   const lines = stepLines(step)
     .slice(0, 4)
     .map((line) => `<li>${esc(line)}</li>`)
     .join("");
+  const typeLabel = step.type || (kind === "send" ? "Send" : "Insert");
 
   return `
     <article class="xp-step">
@@ -32,7 +53,7 @@ function stepCard(step, index, kind) {
           <h3>${esc(step.title)}</h3>
           <p>${esc(step.plugin)}</p>
         </div>
-        <span class="xp-type">${esc(step.type || (kind === "send" ? "Send" : "Insert"))}</span>
+        ${typePill(typeLabel)}
       </div>
       ${lines ? `<ul class="xp-lines">${lines}</ul>` : ""}
     </article>`;
@@ -47,7 +68,7 @@ const MARK_IMG_URI =
 
 /**
  * @param {{ chain: object, honesty?: string, mode?: string }} advice
- * @param {{ trackName?: string, generatedAt?: Date }} [meta]
+ * @param {{ trackName?: string, generatedAt?: Date, keyLabel?: string, bpm?: number|string }} [meta]
  */
 export function buildExportSheetHtml(advice, meta = {}) {
   const chain = advice?.chain;
@@ -68,6 +89,16 @@ export function buildExportSheetHtml(advice, meta = {}) {
     .map((i) => i.label)
     .join(" · ");
 
+  const keyLabel = meta.keyLabel ? String(meta.keyLabel).trim() : "";
+  const bpmRaw = meta.bpm != null && meta.bpm !== "" ? Number(meta.bpm) : NaN;
+  const bpmLabel = Number.isFinite(bpmRaw) ? String(Math.round(bpmRaw)) : "";
+  const musicBits = [
+    keyLabel ? `Key ${keyLabel}` : "",
+    bpmLabel ? `${bpmLabel} BPM` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   const inserts = (chain.inserts || [])
     .map((s, i) => stepCard(s, i, "insert"))
     .join("");
@@ -85,6 +116,7 @@ export function buildExportSheetHtml(advice, meta = {}) {
         <div class="xp-meta">
           <p class="xp-doc">${esc(targetLabel)}</p>
           <p class="xp-sub">${esc(modeLabel)} · ${esc(track)} · ${esc(when)}</p>
+          ${musicBits ? `<p class="xp-music">${esc(musicBits)}</p>` : ""}
           ${instruments ? `<p class="xp-sub">Sources · ${esc(instruments)}</p>` : ""}
         </div>
       </header>
@@ -192,6 +224,16 @@ export const EXPORT_SHEET_CSS = `
     line-height: 1.35;
   }
 
+  .xp-music {
+    margin: 5px 0 0;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: #e8e8e8;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+  }
+
   .xp-lede {
     margin: 14px 0 18px;
     font-size: 12px;
@@ -269,22 +311,12 @@ export const EXPORT_SHEET_CSS = `
   }
 
   .xp-type {
-    /* html2canvas centers more reliably with line-height than flex */
-    display: inline-block;
+    display: block;
+    width: auto;
     height: 20px;
-    line-height: 20px;
-    padding: 0 10px 0 11px;
-    border-radius: 999px;
-    background: #f0f0f0;
-    color: #0a0a0a;
-    font-size: 9px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    text-align: center;
-    white-space: nowrap;
-    vertical-align: top;
+    flex-shrink: 0;
     align-self: start;
+    overflow: visible;
   }
 
   .xp-lines {
