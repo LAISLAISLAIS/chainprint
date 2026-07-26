@@ -79,9 +79,19 @@ function showError(msg) {
 }
 
 const status = socialStatus();
-if (socialNote && status.demo) {
-  socialNote.textContent = "Local demo: Google / Apple sign in without Client IDs. Add IDs in js/auth/config.js for production.";
-  socialNote.classList.remove("hidden");
+if (socialNote) {
+  if (status.demo) {
+    socialNote.textContent =
+      "Local demo: Google / Apple work without Client IDs here. Production needs IDs in js/auth/config.js.";
+    socialNote.classList.remove("hidden");
+  } else if (!status.google && !status.apple) {
+    socialNote.textContent =
+      "Email signup works now. Google / Apple sign-in will unlock once OAuth Client IDs are added.";
+    socialNote.classList.remove("hidden");
+  } else if (status.google && !status.apple) {
+    socialNote.textContent = "Apple Sign In needs an Apple Developer Services ID (optional).";
+    socialNote.classList.remove("hidden");
+  }
 }
 
 setMode(mode);

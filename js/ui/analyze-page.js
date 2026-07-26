@@ -262,6 +262,10 @@ function showIdentity(on, prefill = "") {
   if (on && identityInput) {
     if (prefill) identityInput.value = prefill;
     identityInput.focus();
+    // " – Song Title" → cursor at start so they type the artist first
+    if (/^\s*[–—-]\s*/.test(prefill)) {
+      identityInput.setSelectionRange(0, 0);
+    }
   }
 }
 
@@ -1069,7 +1073,7 @@ async function runAnalysis() {
         err.meta?.title && err.meta?.artist
           ? `${err.meta.artist} – ${err.meta.title}`
           : err.meta?.title
-            ? err.meta.title
+            ? ` – ${err.meta.title}`
             : "",
     });
     setStatus("idle", needsIdentity ? "Confirm track" : "Failed");

@@ -150,46 +150,71 @@ async function oEmbed(platform, href) {
   };
 }
 
+function isLocalHost() {
+  if (typeof location === "undefined") return true;
+  const h = location.hostname;
+  return h === "localhost" || h === "127.0.0.1" || h === "[::1]";
+}
+
+/**
+ * Odesli/song.link endpoints. Production uses same-origin /api/odesli proxy
+ * because api.song.link only CORS-allows localhost.
+ */
+function odesliRequestUrls(href) {
+  const q = `url=${encodeURIComponent(href)}&userCountry=US`;
+  const urls = [];
+  if (typeof location !== "undefined" && !isLocalHost()) {
+    urls.push(`${location.origin}/api/odesli?${q}`);
+  }
+  urls.push(`https://api.song.link/v1-alpha.1/links?${q}`);
+  return urls;
+}
+
 /**
  * Cross-service identity (Odesli / song.link). Spotify oEmbed has no artist;
  * this returns the real title + artist so iTunes previews don’t match covers.
  */
 async function songLinkIdentity(href) {
-  try {
-    const data = await fetchJson(
-      `https://api.song.link/v1-alpha.1/links?url=${encodeURIComponent(href)}&userCountry=US`
-    );
-    const entities = data.entitiesByUniqueId || {};
-    const primary = entities[data.entityUniqueId];
-    if (!primary?.title) return null;
+  for (const url of odesliRequestUrls(href)) {
+    try {
+      const data = await fetchJson(url);
+      const entities = data.entitiesByUniqueId || {};
+      const primary = entities[data.entityUniqueId];
+      if (!primary?.title) continue;
 
-    let appleId = null;
-    for (const key of ["itunes", "appleMusic"]) {
-      const link = data.linksByPlatform?.[key];
-      const ent = link?.entityUniqueId ? entities[link.entityUniqueId] : null;
-      if (ent?.id) {
-        appleId = String(ent.id);
-        break;
-      }
-    }
-    if (!appleId) {
-      for (const [eid, ent] of Object.entries(entities)) {
-        if (/^(ITUNES|APPLE_MUSIC)_SONG::/i.test(eid) && ent?.id) {
+      let appleId = null;
+      for (const key of ["itunes", "appleMusic"]) {
+        const link = data.linksByPlatform?.[key];
+        const ent = link?.entityUniqueId ? entities[link.entityUniqueId] : null;
+        if (ent?.id) {
           appleId = String(ent.id);
           break;
         }
       }
-    }
+      if (!appleId) {
+        for (const [eid, ent] of Object.entries(entities)) {
+          if (/^(ITUNES|APPLE_MUSIC)_SONG::/i.test(eid) && ent?.id) {
+            appleId = String(ent.id);
+            break;
+          }
+        }
+      }
 
-    return {
-      title: cleanText(primary.title),
-      artist: cleanText(primary.artistName || ""),
-      artwork: primary.thumbnailUrl || null,
-      appleId,
-    };
-  } catch {
-    return null;
+      const artist = cleanText(primary.artistName || "");
+      // Prefer a result that includes artist; otherwise keep trying mirrors
+      if (!artist) continue;
+
+      return {
+        title: cleanText(primary.title),
+        artist,
+        artwork: primary.thumbnailUrl || null,
+        appleId,
+      };
+    } catch {
+      /* try next endpoint */
+    }
   }
+  return null;
 }
 
 function cleanText(s) {

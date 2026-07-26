@@ -1,6 +1,6 @@
 /**
  * Google + Apple sign-in.
- * Real SDKs when Client IDs are configured; localhost demo otherwise.
+ * Real SDKs when Client IDs are set in config.js; localhost demo otherwise.
  */
 
 import { authConfig } from "./config.js";
@@ -12,10 +12,13 @@ function isLocalHost() {
 }
 
 export function socialStatus() {
+  const google = Boolean(authConfig.googleClientId?.trim());
+  const apple = Boolean(authConfig.appleClientId?.trim());
   return {
-    google: Boolean(authConfig.googleClientId),
-    apple: Boolean(authConfig.appleClientId),
-    demo: isLocalHost() && (!authConfig.googleClientId || !authConfig.appleClientId),
+    google,
+    apple,
+    demo: isLocalHost() && (!google || !apple),
+    configured: google || apple,
   };
 }
 
@@ -66,19 +69,19 @@ async function demoSocial(provider) {
  */
 export async function signInWithProvider(provider) {
   if (provider === "google") {
-    if (authConfig.googleClientId) return signInWithGoogle();
+    if (authConfig.googleClientId?.trim()) return signInWithGoogle();
     if (isLocalHost()) return demoSocial("google");
     throw Object.assign(
-      new Error("Google sign-in isn’t configured yet. Add googleClientId in js/auth/config.js."),
+      new Error("Google sign-in isn’t set up yet. The site owner needs to add a Google Client ID."),
       { code: "not_configured" }
     );
   }
 
   if (provider === "apple") {
-    if (authConfig.appleClientId) return signInWithApple();
+    if (authConfig.appleClientId?.trim()) return signInWithApple();
     if (isLocalHost()) return demoSocial("apple");
     throw Object.assign(
-      new Error("Apple sign-in isn’t configured yet. Add appleClientId in js/auth/config.js."),
+      new Error("Apple sign-in isn’t set up yet. Requires an Apple Developer account + Services ID."),
       { code: "not_configured" }
     );
   }
@@ -86,75 +89,58 @@ export async function signInWithProvider(provider) {
   throw new Error("Unknown provider");
 }
 
+/**
+ * Open Google account picker directly (button click). More reliable than One Tap alone.
+ */
 async function signInWithGoogle() {
   await loadScript("https://accounts.google.com/gsi/client", "google-gsi");
 
   const google = window.google;
-  if (!google?.accounts?.id) {
+  if (!google?.accounts?.oauth2) {
     throw new Error("Google Sign-In failed to load.");
   }
 
   return new Promise((resolve, reject) => {
-    google.accounts.id.initialize({
-      client_id: authConfig.googleClientId,
-      callback: async (response) => {
+    const client = google.accounts.oauth2.initTokenClient({
+      client_id: authConfig.googleClientId.trim(),
+      scope: "email profile openid",
+      callback: async (tokenResponse) => {
         try {
-          if (!response.credential) {
-            reject(Object.assign(new Error("Google sign-in was cancelled."), { code: "cancelled" }));
+          if (tokenResponse.error) {
+            reject(
+              Object.assign(
+                new Error(tokenResponse.error_description || "Google sign-in failed."),
+                { code: "oauth" }
+              )
+            );
             return;
           }
-          const payload = parseJwt(response.credential);
+          const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
+            headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
+          });
+          if (!res.ok) throw new Error("Could not fetch Google profile.");
+          const profile = await res.json();
+          if (!profile.email) {
+            throw new Error("Google didn’t return an email for this account.");
+          }
           const account = await loginWithSocial({
             provider: "google",
-            email: payload.email,
-            name: payload.name || payload.given_name || "",
-            providerUserId: payload.sub,
+            email: profile.email,
+            name: profile.name || profile.given_name || "",
+            providerUserId: profile.sub,
           });
           resolve(account);
         } catch (err) {
           reject(err);
         }
       },
-      auto_select: false,
-      cancel_on_tap_outside: true,
+      error_callback: (err) => {
+        const msg = err?.type === "popup_closed" ? "Google sign-in was cancelled." : "Google sign-in failed.";
+        reject(Object.assign(new Error(msg), { code: "cancelled" }));
+      },
     });
 
-    // Prompt One Tap / account chooser; fallback to renderButton click path
-    google.accounts.id.prompt((notification) => {
-      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        // Popup OAuth token client as fallback
-        const client = google.accounts.oauth2.initTokenClient({
-          client_id: authConfig.googleClientId,
-          scope: "email profile openid",
-          callback: async (tokenResponse) => {
-            try {
-              if (tokenResponse.error) {
-                reject(Object.assign(new Error(tokenResponse.error_description || "Google sign-in failed."), { code: "oauth" }));
-                return;
-              }
-              const res = await fetch("https://www.googleapis.com/oauth2/v3/userinfo", {
-                headers: { Authorization: `Bearer ${tokenResponse.access_token}` },
-              });
-              if (!res.ok) throw new Error("Could not fetch Google profile.");
-              const profile = await res.json();
-              const account = await loginWithSocial({
-                provider: "google",
-                email: profile.email,
-                name: profile.name || "",
-                providerUserId: profile.sub,
-              });
-              resolve(account);
-            } catch (err) {
-              reject(err);
-            }
-          },
-          error_callback: () => {
-            reject(Object.assign(new Error("Google sign-in was cancelled."), { code: "cancelled" }));
-          },
-        });
-        client.requestAccessToken({ prompt: "consent" });
-      }
-    });
+    client.requestAccessToken({ prompt: "select_account" });
   });
 }
 
@@ -169,10 +155,12 @@ async function signInWithApple() {
     throw new Error("Apple Sign-In failed to load.");
   }
 
+  const redirectURI = authConfig.appleRedirectURI || `${location.origin}/auth/`;
+
   AppleID.auth.init({
-    clientId: authConfig.appleClientId,
+    clientId: authConfig.appleClientId.trim(),
     scope: "name email",
-    redirectURI: authConfig.appleRedirectURI,
+    redirectURI,
     usePopup: true,
   });
 
