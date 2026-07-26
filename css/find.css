@@ -188,8 +188,8 @@
   position: fixed;
   inset: 0;
   pointer-events: none;
-  background: radial-gradient(ellipse 50% 30% at 50% 35%, rgba(255, 255, 255, 0.04), transparent 70%);
-  animation: find-glow 2.2s ease-in-out infinite;
+  background: radial-gradient(ellipse 50% 30% at 50% 35%, rgba(110, 196, 180, 0.05), transparent 70%);
+  opacity: 0.7;
 }
 
 @keyframes find-pulse {

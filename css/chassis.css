@@ -146,9 +146,10 @@ body::before {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.1;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
-  background-size: 180px;
+  opacity: 0.06;
+  /* Static tile — avoids live SVG feTurbulence compositing cost */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='128' height='128'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.45'/%3E%3C/svg%3E");
+  background-size: 128px;
   mix-blend-mode: soft-light;
 }
 
@@ -168,9 +169,14 @@ body > * {
   background: var(--panel);
   border: 1px solid var(--panel-edge);
   border-radius: var(--radius);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+}
+
+@supports (backdrop-filter: blur(1px)) {
+  .unit {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
 }
 
 .brand {
@@ -692,7 +698,12 @@ body > * {
   width: 100%;
   height: 5px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
+  --seek-fill: 0%;
+  background: linear-gradient(
+    90deg,
+    #f0f0f0 var(--seek-fill),
+    rgba(255, 255, 255, 0.14) var(--seek-fill)
+  );
   outline: none;
   cursor: pointer;
 }

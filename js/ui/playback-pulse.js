@@ -160,6 +160,7 @@ export function mountPlaybackPulse(parent = document.body) {
     if (!queueEl) return;
     const tracks = getPlaybackTracks();
     const key = activeKey();
+    syncUi.lastQueueKey = key || "";
     queueEl.innerHTML = tracks
       .map((t) => {
         const on = t.id === key;
@@ -214,7 +215,7 @@ export function mountPlaybackPulse(parent = document.body) {
       seek.value = String(pct);
       seek.disabled = !(state.duration > 0);
       const fill = state.duration > 0 ? (pct / 1000) * 100 : 0;
-      seek.style.background = `linear-gradient(90deg, #f0f0f0 ${fill}%, rgba(255,255,255,0.14) ${fill}%)`;
+      seek.style.setProperty("--seek-fill", `${fill}%`);
     }
 
     if (currentEl) currentEl.textContent = formatTime(state.currentTime);
@@ -236,8 +237,16 @@ export function mountPlaybackPulse(parent = document.body) {
       );
     }
 
-    if (expanded) renderQueue();
+    if (expanded) {
+      // Queue list only needs rebuild when the active track changes, not every seek tick
+      const key = activeKey() || "";
+      if (key !== syncUi.lastQueueKey) {
+        syncUi.lastQueueKey = key;
+        renderQueue();
+      }
+    }
   }
+  syncUi.lastQueueKey = "";
 
   async function playTrackId(id) {
     const track = getPlaybackTracks().find((t) => t.id === id);

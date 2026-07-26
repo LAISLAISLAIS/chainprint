@@ -6,7 +6,7 @@
 export function mountHeroMotion(canvas) {
   if (!canvas) return () => {};
 
-  const ctx = canvas.getContext("2d");
+  const ctx = canvas.getContext("2d", { alpha: true });
   if (!ctx) return () => {};
 
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -16,11 +16,14 @@ export function mountHeroMotion(canvas) {
   let dpr = 1;
   let t0 = performance.now();
   let running = false;
+  let onScreen = true;
+  /** @type {CanvasGradient | null} */
+  let cachedGlow = null;
+  let glowBreathBucket = -1;
 
   const bars = [
-    0.14, 0.28, 0.2, 0.42, 0.34, 0.55, 0.4, 0.7, 0.5, 0.62,
-    0.86, 0.6, 0.74, 0.44, 0.64, 0.36, 0.5, 0.24, 0.4, 0.18,
-    0.3, 0.14, 0.22, 0.1,
+    0.14, 0.28, 0.2, 0.42, 0.34, 0.55, 0.4, 0.7, 0.5, 0.62, 0.86, 0.6, 0.74, 0.44, 0.64, 0.36,
+    0.5, 0.24, 0.4, 0.18, 0.3, 0.14, 0.22, 0.1,
   ];
 
   let resizeTimer = 0;
@@ -35,14 +38,29 @@ export function mountHeroMotion(canvas) {
     canvas.style.width = `${w}px`;
     canvas.style.height = `${h}px`;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cachedGlow = null;
+    glowBreathBucket = -1;
   }
 
   function onResize() {
     clearTimeout(resizeTimer);
     resizeTimer = setTimeout(() => {
       resize();
-      if (reduced || document.hidden) draw(performance.now());
+      if (reduced || document.hidden || !onScreen) draw(performance.now());
     }, 120);
+  }
+
+  function glowFor(breath) {
+    const bucket = Math.round(breath * 40);
+    if (cachedGlow && bucket === glowBreathBucket) return cachedGlow;
+    glowBreathBucket = bucket;
+    const cy = h * 0.44;
+    const glow = ctx.createRadialGradient(w * 0.5, cy, 0, w * 0.5, cy, Math.max(w, h) * 0.38);
+    glow.addColorStop(0, `rgba(255, 255, 255, ${0.04 + breath * 0.02})`);
+    glow.addColorStop(0.5, "rgba(255, 255, 255, 0.01)");
+    glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+    cachedGlow = glow;
+    return glow;
   }
 
   function draw(now) {
@@ -52,12 +70,7 @@ export function mountHeroMotion(canvas) {
     const phase = reduced ? 0 : t * 0.18;
     const breath = reduced ? 0.5 : Math.sin(t * 0.25) * 0.5 + 0.5;
 
-    const cy = h * 0.44;
-    const glow = ctx.createRadialGradient(w * 0.5, cy, 0, w * 0.5, cy, Math.max(w, h) * 0.38);
-    glow.addColorStop(0, `rgba(255, 255, 255, ${0.04 + breath * 0.02})`);
-    glow.addColorStop(0.5, "rgba(255, 255, 255, 0.01)");
-    glow.addColorStop(1, "rgba(0, 0, 0, 0)");
-    ctx.fillStyle = glow;
+    ctx.fillStyle = glowFor(breath);
     ctx.fillRect(0, 0, w, h);
 
     const n = bars.length;
@@ -101,7 +114,7 @@ export function mountHeroMotion(canvas) {
   }
 
   function start() {
-    if (running || reduced) return;
+    if (running || reduced || document.hidden || !onScreen) return;
     running = true;
     t0 = performance.now();
     raf = requestAnimationFrame(draw);
@@ -113,14 +126,18 @@ export function mountHeroMotion(canvas) {
     raf = 0;
   }
 
-  function onVisibility() {
-    if (document.hidden) {
+  function syncRunState() {
+    if (document.hidden || !onScreen) {
       stop();
-    } else {
-      resize();
-      draw(performance.now());
-      start();
+      return;
     }
+    resize();
+    draw(performance.now());
+    start();
+  }
+
+  function onVisibility() {
+    syncRunState();
   }
 
   resize();
@@ -130,9 +147,22 @@ export function mountHeroMotion(canvas) {
   window.addEventListener("resize", onResize);
   document.addEventListener("visibilitychange", onVisibility);
 
+  let io = null;
+  if (typeof IntersectionObserver === "function") {
+    io = new IntersectionObserver(
+      (entries) => {
+        onScreen = entries.some((e) => e.isIntersecting && e.intersectionRatio > 0.05);
+        syncRunState();
+      },
+      { threshold: [0, 0.05, 0.2] }
+    );
+    io.observe(canvas);
+  }
+
   return () => {
     stop();
     clearTimeout(resizeTimer);
+    io?.disconnect();
     window.removeEventListener("resize", onResize);
     document.removeEventListener("visibilitychange", onVisibility);
   };

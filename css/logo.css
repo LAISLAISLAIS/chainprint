@@ -67,53 +67,11 @@
   opacity: 0.95;
 }
 
-.chain-link--1 .chain-stroke,
-.chain-link--2 .chain-stroke,
-.chain-link--3 .chain-stroke,
-.chain-link--4 .chain-stroke,
-.chain-link--5 .chain-stroke {
-  animation-delay: 0s;
-}
-
 @keyframes mark-rise {
   from {
     opacity: 0;
   }
   to {
-    opacity: 1;
-  }
-}
-
-@keyframes mark-breathe {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.94;
-  }
-}
-
-@keyframes link-signal {
-  0%,
-  100% {
-    opacity: 0.42;
-  }
-  50% {
-    opacity: 0.55;
-  }
-}
-
-.chain-link--2 .chain-stroke--mid {
-  animation-name: none;
-}
-
-@keyframes link-signal-mid {
-  0%,
-  100% {
-    opacity: 0.95;
-  }
-  50% {
     opacity: 1;
   }
 }
@@ -135,23 +93,27 @@
 }
 
 /*
- * Analyzing / Key·BPM busy — teal chain with hue-flow color fade.
+ * Analyzing / Key·BPM busy — palette gradient flow (teal family only).
+ * Stroke color + opacity only — no hue-rotate filters (smooth + on-brand).
  */
 .logo-hero--cycle {
   --mark-w: 120px;
-  --chain-color: var(--teal, #6ec4b4);
+  --chain-a: var(--teal-dim, #3f8f84);
+  --chain-b: var(--teal, #6ec4b4);
+  --chain-c: var(--teal-bright, #8ed9cb);
+  --chain-d: #b7ebe1;
   width: var(--mark-w);
   height: calc(var(--mark-w) * 0.333);
   margin: 0 auto;
-  color: var(--chain-color);
+  color: var(--chain-b);
   animation: none;
   transform: translateZ(0);
-  isolation: isolate;
 }
 
 .logo-hero--cycle .chain-compose {
-  animation: chain-cycle-breathe 2.8s ease-in-out infinite;
+  animation: chain-cycle-breathe 3.2s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
   transform-origin: 60px 20px;
+  transform: translateZ(0);
 }
 
 .logo-hero--cycle .chain-mark-svg {
@@ -161,59 +123,63 @@
 }
 
 .logo-hero--cycle .chain-link {
-  animation: chain-hue-spin 3.6s linear infinite;
-  transform-box: fill-box;
-  transform-origin: center;
-  will-change: filter;
+  animation: none;
+  filter: none;
 }
-
-.logo-hero--cycle .chain-link--1 { animation-delay: 0s; }
-.logo-hero--cycle .chain-link--2 { animation-delay: -0.72s; }
-.logo-hero--cycle .chain-link--3 { animation-delay: -1.44s; }
-.logo-hero--cycle .chain-link--4 { animation-delay: -2.16s; }
-.logo-hero--cycle .chain-link--5 { animation-delay: -2.88s; }
 
 .logo-hero--cycle .chain-stroke {
-  /* Saturated teal base so hue-rotate reads clearly */
-  stroke: var(--chain-color);
+  stroke: var(--chain-b);
   stroke-width: 3.5;
   fill: none;
-  opacity: 0.88;
-  animation: chain-link-glow 1.9s ease-in-out infinite !important;
+  opacity: 0.85;
+  animation: chain-palette-flow 4.8s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
 
-.logo-hero--cycle .chain-link--1 .chain-stroke { animation-delay: 0s !important; }
-.logo-hero--cycle .chain-link--2 .chain-stroke { animation-delay: 0.18s !important; }
-.logo-hero--cycle .chain-link--3 .chain-stroke { animation-delay: 0.36s !important; }
-.logo-hero--cycle .chain-link--4 .chain-stroke { animation-delay: 0.54s !important; }
-.logo-hero--cycle .chain-link--5 .chain-stroke { animation-delay: 0.72s !important; }
-
-@keyframes chain-hue-spin {
-  from {
-    filter: hue-rotate(0deg);
-  }
-  to {
-    filter: hue-rotate(360deg);
-  }
+.logo-hero--cycle .chain-link--1 .chain-stroke {
+  animation-delay: 0s;
+}
+.logo-hero--cycle .chain-link--2 .chain-stroke {
+  animation-delay: -0.96s;
+}
+.logo-hero--cycle .chain-link--3 .chain-stroke {
+  animation-delay: -1.92s;
+}
+.logo-hero--cycle .chain-link--4 .chain-stroke {
+  animation-delay: -2.88s;
+}
+.logo-hero--cycle .chain-link--5 .chain-stroke {
+  animation-delay: -3.84s;
 }
 
-@keyframes chain-link-glow {
+@keyframes chain-palette-flow {
   0%,
   100% {
-    opacity: 0.52;
+    stroke: #3f8f84;
+    opacity: 0.55;
+  }
+  25% {
+    stroke: #6ec4b4;
+    opacity: 0.9;
   }
   50% {
+    stroke: #8ed9cb;
     opacity: 1;
+  }
+  75% {
+    stroke: #b7ebe1;
+    opacity: 0.82;
   }
 }
 
 @keyframes chain-cycle-breathe {
   0%,
   100% {
-    opacity: 0.88;
+    opacity: 0.92;
+    transform: scale(1);
   }
   50% {
     opacity: 1;
+    transform: scale(1.02);
   }
 }
 
@@ -238,12 +204,11 @@
 }
 
 @media (max-width: 640px) {
-  .logo-hero--cycle {
-    will-change: auto;
+  .logo-hero--cycle .chain-stroke {
+    animation-duration: 5.4s;
   }
 
-  /* Keep hue fade on mobile — slightly slower for battery/GPU */
-  .logo-hero--cycle .chain-link {
-    animation-duration: 4.2s;
+  .logo-hero--cycle .chain-compose {
+    animation-duration: 3.6s;
   }
 }

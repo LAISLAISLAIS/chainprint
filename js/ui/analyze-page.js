@@ -261,6 +261,7 @@ const designEmpty = document.querySelector("[data-design-empty]");
 const designBody = document.querySelector("[data-design-body]");
 const designHeadline = document.querySelector("[data-design-headline]");
 const designBlurb = document.querySelector("[data-design-blurb]");
+const designSub = document.querySelector("[data-design-sub]");
 const designCues = document.querySelector("[data-design-cues]");
 const designLayers = document.querySelector("[data-design-layers]");
 const designChecklist = document.querySelector("[data-design-checklist]");
@@ -2016,7 +2017,11 @@ function bindStageRail(root) {
 bindStageRail(stageRailInserts);
 bindStageRail(stageRailSends);
 stageRailScroll?.addEventListener("scroll", updateStageRailMore, { passive: true });
-window.addEventListener("resize", updateStageRailMore);
+let stageRailResizeTimer = 0;
+window.addEventListener("resize", () => {
+  clearTimeout(stageRailResizeTimer);
+  stageRailResizeTimer = setTimeout(updateStageRailMore, 120);
+});
 
 exportPdfBtn?.addEventListener("click", async () => {
   if (!lastAdvice?.chain || !exportPdfBtn) return;

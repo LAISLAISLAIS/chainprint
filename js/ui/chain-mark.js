@@ -10,7 +10,7 @@ export function mountChainMark(root, opts = {}) {
   root.classList.add("logo-hero");
   if (variant === "cycle") root.classList.add("logo-hero--cycle");
 
-  /* Cycle uses chromatic stroke attrs so iOS still shows color if CSS filter is skipped */
+  /* Cycle uses palette stroke so color reads without CSS filter tricks */
   const strokeAttr = variant === "cycle" ? ' stroke="#6ec4b4"' : "";
 
   root.innerHTML = `
