@@ -11,7 +11,7 @@ import { getSession, updateAccount } from "./session.js";
  * Flip to true while developing / testing to unlock Deep + unlimited free analyses.
  * Keep false for a public launch with real quotas.
  */
-export const DEV_UNLOCK_PRO = false;
+export const DEV_UNLOCK_PRO = true;
 
 export const PLANS = {
   free: {
