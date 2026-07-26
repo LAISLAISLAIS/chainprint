@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Sign up · CHAINPRINT</title>
+  <meta name="description" content="Create a Chainprint account to reverse-engineer vocal mixes in your DAW. Includes 1 free analysis." />
+  <link rel="icon" href="../assets/mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="../css/chassis.css" />
+  <link rel="stylesheet" href="../css/logo.css" />
+  <link rel="stylesheet" href="../css/app.css" />
+  <link rel="stylesheet" href="../css/auth.css" />
+</head>
+<body>
+  <div class="auth-page">
+    <div class="auth-shell">
+      <a class="logo" href="../" aria-label="Chainprint home">
+        <span class="logo-mark" aria-hidden="true"></span>
+        <span class="logo-word">Chainprint</span>
+      </a>
+
+      <section class="unit auth-card">
+        <h1 data-auth-title>Create your account</h1>
+        <p class="auth-lede" data-auth-lede>
+          Sign up to analyze a reference mix and recreate the vocal chain in your DAW.
+        </p>
+
+        <div class="social-stack">
+          <button type="button" class="btn-social" data-social="google">
+            <span class="social-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18"><path fill="#EA4335" d="M12 10.2v3.6h5.1c-.2 1.2-.9 2.3-1.9 3l3.1 2.4c1.8-1.7 2.9-4.1 2.9-7 0-.7-.1-1.3-.2-1.9H12z"/><path fill="#34A853" d="M6.6 14.3l-.7.5-2.4 1.9C5.1 19.3 8.3 21.2 12 21.2c2.4 0 4.4-.8 5.9-2.1l-3.1-2.4c-.8.6-1.9.9-2.8.9-2.2 0-4-1.5-4.7-3.5z"/><path fill="#4A90E2" d="M3.5 7.3C2.7 8.8 2.3 10.4 2.3 12s.5 3.2 1.2 4.7c0 0 0 0 0 0l3.1-2.4c-.2-.5-.3-1.1-.3-1.7s.1-1.2.3-1.7L3.5 7.3z"/><path fill="#FBBC05" d="M12 5.4c1.3 0 2.5.5 3.4 1.3l2.6-2.6C16.4 2.6 14.4 1.8 12 1.8 8.3 1.8 5.1 3.7 3.5 7.3l3.1 2.4C7.9 7.7 9.8 5.4 12 5.4z"/></svg>
+            </span>
+            Continue with Google
+          </button>
+          <button type="button" class="btn-social" data-social="apple">
+            <span class="social-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M16.7 12.6c0-2.1 1.7-3.1 1.8-3.2-1-1.4-2.5-1.6-3-1.6-1.3-.1-2.5.8-3.1.8-.6 0-1.6-.7-2.7-.7-1.4 0-2.7.8-3.4 2.1-1.5 2.5-.4 6.3 1 8.3.7 1 1.5 2.1 2.6 2.1 1 0 1.4-.7 2.7-.7s1.6.7 2.7.7 1.8-1 2.5-2c.8-1.1 1.1-2.2 1.1-2.3-.1 0-2.1-.8-2.2-3.5zM14.4 6.5c.6-.7 1-1.7.9-2.7-.9 0-1.9.6-2.5 1.3-.6.6-1 1.6-.9 2.5 1 .1 1.9-.5 2.5-1.1z"/></svg>
+            </span>
+            Continue with Apple
+          </button>
+        </div>
+        <p class="social-note hidden" data-social-note></p>
+
+        <div class="auth-divider"><span>or</span></div>
+
+        <form class="auth-form" data-auth-form>
+          <div class="field" data-name-field>
+            <label for="name">Name</label>
+            <input id="name" name="name" type="text" autocomplete="name" placeholder="Your name" />
+          </div>
+          <div class="field">
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" autocomplete="email" required placeholder="you@studio.com" />
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="new-password" required minlength="6" placeholder="At least 6 characters" />
+          </div>
+          <p class="auth-error" data-auth-error role="alert"></p>
+          <button class="btn btn-primary auth-submit" type="submit" data-auth-submit>Sign up &amp; analyze</button>
+        </form>
+
+        <p class="auth-switch" data-auth-switch>
+          Already have an account? <a href="?mode=login">Log in</a>
+        </p>
+      </section>
+    </div>
+  </div>
+  <script type="module" src="../js/ui/auth-page.js"></script>
+</body>
+</html>

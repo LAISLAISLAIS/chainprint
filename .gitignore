@@ -1,0 +1,10 @@
+.DS_Store
+*.log
+.idea/
+.vscode/
+*.wav
+*.mp3
+*.flac
+*.aiff
+*.m4a
+calibration/exports/

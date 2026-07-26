@@ -4,113 +4,256 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>CHAINPRINT</title>
+  <meta name="description" content="Reverse-engineer any vocal mix and recreate the chain in your DAW." />
+  <link rel="icon" href="assets/mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="css/chassis.css" />
+  <link rel="stylesheet" href="css/logo.css" />
+  <link rel="stylesheet" href="css/app.css" />
+  <link rel="stylesheet" href="css/auth.css" />
   <style>
-    :root {
-      --chassis: #121416;
-      --panel: #1a1d21;
-      --silkscreen: #8a9098;
-      --lamp: #e8a317;
-      --lamp-dim: #8a6410;
-      --readout: #c8cdd4;
+    body.landing-body {
+      background: #000;
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-
-    html, body {
-      height: 100%;
-      background: var(--chassis);
-      color: var(--readout);
-      font-family: "IBM Plex Mono", "SF Mono", "Menlo", ui-monospace, monospace;
+    body.landing-body::before {
+      opacity: 0.22;
+      mix-blend-mode: soft-light;
     }
 
-    body {
-      min-height: 100%;
-      display: grid;
-      place-items: center;
+    .landing {
+      --brand: #f4f4f4;
+      --silkscreen: #8a8a8a;
+      --accent: #f4f4f4;
+      --accent-soft: rgba(255, 255, 255, 0.08);
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 24px 28px;
+      position: relative;
+      overflow: hidden;
       background:
-        radial-gradient(ellipse 80% 50% at 50% 0%, #1c2026 0%, transparent 55%),
-        linear-gradient(180deg, #0e1012 0%, var(--chassis) 40%, #0a0b0d 100%);
+        radial-gradient(ellipse 70% 45% at 50% 38%, rgba(255, 255, 255, 0.045) 0%, transparent 60%),
+        #000;
     }
 
-    .unit {
-      width: min(92vw, 420px);
-      background: linear-gradient(180deg, #22262c 0%, var(--panel) 12%, #15181c 100%);
-      border: 1px solid #2a2f36;
-      border-radius: 2px;
-      box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.06),
-        inset 0 -1px 0 rgba(0, 0, 0, 0.4),
-        0 18px 40px rgba(0, 0, 0, 0.45);
-      padding: 28px 28px 24px;
+    .hero-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0.85;
+      mask-image: radial-gradient(ellipse 65% 50% at 50% 45%, #000 15%, transparent 72%);
+      -webkit-mask-image: radial-gradient(ellipse 65% 50% at 50% 45%, #000 15%, transparent 72%);
     }
 
-    .brand {
-      font-family: "DIN Condensed", "Arial Narrow", "Helvetica Neue Condensed", sans-serif;
-      font-weight: 700;
-      font-size: clamp(2.4rem, 8vw, 3.2rem);
-      letter-spacing: 0.12em;
-      text-transform: uppercase;
-      color: #e6e9ee;
-      line-height: 1;
+    .landing-nav,
+    .hero {
+      position: relative;
+      z-index: 2;
     }
 
-    .label {
-      margin-top: 10px;
-      font-size: 0.68rem;
-      letter-spacing: 0.22em;
-      text-transform: uppercase;
-      color: var(--silkscreen);
-    }
-
-    .status {
-      margin-top: 28px;
+    .landing-nav {
       display: flex;
       align-items: center;
-      gap: 10px;
-      padding-top: 18px;
-      border-top: 1px solid #2a2f36;
+      justify-content: space-between;
+      width: min(1120px, 100%);
+      margin: 0 auto;
     }
 
-    .lamp {
-      width: 10px;
-      height: 10px;
-      border-radius: 50%;
-      background: var(--lamp);
-      box-shadow:
-        0 0 8px var(--lamp),
-        0 0 18px rgba(232, 163, 23, 0.35);
-      animation: pulse 2.4s ease-in-out infinite;
+    .landing-nav .logo-word {
+      opacity: 0.45;
+      font-weight: 600;
+      font-size: 0.9rem;
+      letter-spacing: -0.03em;
     }
 
-    .status-text {
-      font-size: 0.75rem;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: var(--lamp);
+    .landing-nav .logo-mark {
+      opacity: 0.55;
     }
 
-    .meta {
-      margin-top: 14px;
-      font-size: 0.65rem;
-      letter-spacing: 0.08em;
-      color: var(--silkscreen);
+    .landing .nav-quota {
+      color: #cfcfcf;
+      background: rgba(255, 255, 255, 0.06);
     }
 
-    @keyframes pulse {
-      0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--lamp), 0 0 18px rgba(232, 163, 23, 0.35); }
-      50% { opacity: 0.72; box-shadow: 0 0 4px var(--lamp-dim); }
+    .landing .account-menu-trigger {
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .landing .nav-links a {
+      color: #9a9a9a;
+    }
+
+    .landing .nav-links a:hover {
+      color: #f4f4f4;
+    }
+
+    .landing .nav-cta {
+      background: #f4f4f4 !important;
+      color: #0a0a0a !important;
+    }
+
+    .landing .nav-cta:hover {
+      background: #fff !important;
+    }
+
+    .hero {
+      flex: 1;
+      display: grid;
+      place-items: center;
+      width: min(1120px, 100%);
+      margin: 0 auto;
+      padding: 6vh 0 10vh;
+    }
+
+    .hero-copy {
+      text-align: center;
+      width: min(36rem, 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .logo-hero {
+      margin-bottom: 28px;
+    }
+
+    .hero-brand {
+      font-family: var(--font-brand);
+      font-weight: 800;
+      font-size: clamp(2.85rem, 10vw, 5rem);
+      letter-spacing: -0.06em;
+      line-height: 0.9;
+      color: #f7f7f7;
+      margin: 0 0 18px;
+      animation: hero-in 1.2s var(--ease-out) 0.06s both;
+    }
+
+    .hero-line {
+      margin: 0 0 40px;
+      max-width: 18rem;
+      font-size: clamp(0.98rem, 2.2vw, 1.12rem);
+      font-weight: 400;
+      letter-spacing: -0.01em;
+      line-height: 1.5;
+      color: #8f8f8f;
+      animation: hero-in 1.2s var(--ease-out) 0.16s both;
+    }
+
+    .cta-row {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      animation: hero-in 1.2s var(--ease-out) 0.26s both;
+    }
+
+    .landing .btn-primary {
+      min-width: 11.5rem;
+      padding: 13px 28px;
+      border-radius: 999px;
+      background: #f4f4f4;
+      color: #0a0a0a;
+      font-weight: 600;
+    }
+
+    .landing .btn-primary:hover {
+      background: #fff;
+    }
+
+    .cta-login {
+      font-size: 0.88rem;
+      color: #7a7a7a;
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .cta-login:hover {
+      color: #f4f4f4;
+    }
+
+    @keyframes hero-in {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .hero-brand,
+      .hero-line,
+      .cta-row,
+      .logo-hero {
+        animation: none;
+      }
+    }
+
+    @media (max-width: 560px) {
+      .landing { padding: 16px 18px 24px; }
+      .hero { padding: 8vh 0 12vh; }
+      .logo-hero { --mark-w: 132px; margin-bottom: 22px; }
+      .hero-line { margin-bottom: 32px; }
     }
   </style>
 </head>
-<body>
-  <main class="unit">
-    <h1 class="brand">Chainprint</h1>
-    <p class="label">Vocal signal readout</p>
-    <div class="status">
-      <span class="lamp" aria-hidden="true"></span>
-      <span class="status-text">Signal present</span>
-    </div>
-    <p class="meta">Step 0 · deploy check · client-side only</p>
-  </main>
+<body class="landing-body">
+  <div class="landing">
+    <canvas class="hero-canvas" data-hero-canvas aria-hidden="true"></canvas>
+
+    <header class="landing-nav">
+      <a class="logo" href="./" aria-label="Chainprint home">
+        <span class="logo-mark" aria-hidden="true"></span>
+        <span class="logo-word">Chainprint</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <span class="nav-auth" data-auth-nav></span>
+      </nav>
+    </header>
+
+    <main class="hero">
+      <div class="hero-copy">
+        <div class="logo-hero" data-chain-mark aria-hidden="true"></div>
+        <h1 class="hero-brand">Chainprint</h1>
+        <p class="hero-line">Recreate any vocal mix in your DAW.</p>
+        <div class="cta-row" data-home-cta>
+          <a class="btn btn-primary" href="auth/?mode=signup&next=/analyze/">Sign up free</a>
+          <a class="cta-login" href="auth/?mode=login&next=/analyze/">Log in</a>
+        </div>
+      </div>
+    </main>
+  </div>
+  <script type="module">
+    import { mountHeroMotion } from "./js/ui/hero-motion.js";
+    import { mountChainMark } from "./js/ui/chain-mark.js";
+    import { getSession } from "./js/auth/session.js";
+    import { mountAuthNav } from "./js/ui/nav-auth.js";
+    import { canAnalyze } from "./js/auth/quota.js";
+
+    mountHeroMotion(document.querySelector("[data-hero-canvas]"));
+    mountChainMark(document.querySelector("[data-chain-mark]"));
+    mountAuthNav(document.querySelector("[data-auth-nav]"), {
+      authHref: "auth/",
+      next: "/analyze/",
+    });
+
+    const account = getSession();
+    const cta = document.querySelector("[data-home-cta]");
+    if (account && cta) {
+      const access = canAnalyze(account);
+      cta.innerHTML = access.ok
+        ? `<a class="btn btn-primary" href="analyze/">Analyze a track</a>
+           <a class="cta-login" href="analyze/">Open workspace</a>`
+        : `<a class="btn btn-primary" href="analyze/">View account</a>
+           <a class="cta-login" href="auth/?mode=login">Switch account</a>`;
+    }
+  </script>
 </body>
 </html>

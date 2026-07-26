@@ -1,0 +1,25 @@
+.git
+.github
+.gitignore
+.DS_Store
+*.log
+.idea
+.vscode
+
+# Local / calibration audio
+*.wav
+*.mp3
+*.flac
+*.aiff
+*.m4a
+calibration/exports/
+
+# Host-specific configs (not needed inside the image)
+netlify.toml
+vercel.json
+docker-compose*.yml
+README.md
+
+# Agent / editor noise
+.cursor
+agent-transcripts

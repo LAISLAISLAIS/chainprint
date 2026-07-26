@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Analyze · CHAINPRINT</title>
+  <meta name="description" content="Upload a reference mix. Reverse-engineer the vocal and get a full chain for your DAW." />
+  <link rel="icon" href="../assets/mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="../css/chassis.css" />
+  <link rel="stylesheet" href="../css/logo.css" />
+  <link rel="stylesheet" href="../css/app.css" />
+  <link rel="stylesheet" href="../css/plugins.css" />
+  <link rel="stylesheet" href="../css/workspace.css" />
+  <link rel="stylesheet" href="../css/auth.css" />
+</head>
+<body class="studio-body">
+  <div class="studio" data-workspace>
+    <header class="studio-top">
+      <a class="logo studio-logo" href="../" aria-label="Chainprint home">
+        <span class="logo-mark" aria-hidden="true"></span>
+        <span class="logo-word">Chainprint</span>
+      </a>
+
+      <nav class="studio-tabs" data-views aria-label="Workspace">
+        <button type="button" class="studio-tab" data-view="chain" aria-pressed="true">Chain</button>
+        <button type="button" class="studio-tab" data-view="signature" aria-pressed="false" disabled>Signature</button>
+        <button type="button" class="studio-tab" data-view="design" aria-pressed="false" disabled>Design</button>
+        <button type="button" class="studio-tab" data-view="master" aria-pressed="false" disabled>Master</button>
+        <button type="button" class="studio-tab" data-view="why" aria-pressed="false" disabled>Why</button>
+      </nav>
+
+      <div class="studio-top-end">
+        <span class="nav-auth" data-auth-nav></span>
+      </div>
+    </header>
+
+    <div class="studio-grid">
+      <aside class="studio-source" data-source-rail>
+        <header class="source-head">
+          <h1 class="source-title">Reference</h1>
+          <span class="quota-chip hidden" data-quota-bar>
+            <span data-quota-label>Free</span>
+            <span class="quota-sep">·</span>
+            <span data-quota-left>Unlimited</span>
+          </span>
+        </header>
+
+        <div class="source-block">
+          <div class="dropzone compact" data-dropzone role="button" tabindex="0">
+            <span class="drop-main">Drop a mix</span>
+            <span class="drop-hint">or click · add another anytime · WAV MP3 FLAC</span>
+            <input type="file" data-file accept="audio/*,.wav,.mp3,.flac,.aiff,.m4a" hidden />
+          </div>
+
+          <div class="link-row compact">
+            <input
+              id="ref-url"
+              data-url
+              type="url"
+              placeholder="Paste a track link"
+              autocomplete="off"
+              spellcheck="false"
+              aria-label="Streaming or audio link"
+            />
+            <button type="button" class="ghost-btn" data-url-go>Load</button>
+          </div>
+        </div>
+
+        <div class="library-panel" data-library-panel>
+          <header class="library-head">
+            <h2 class="library-title">Library</h2>
+            <span class="library-count" data-library-count>0</span>
+          </header>
+          <ul class="library-list" data-library-list></ul>
+          <p class="library-hint" data-library-hint>Load multiple refs, then click one to view its chain.</p>
+        </div>
+
+        <div class="blend-panel hidden" data-blend-panel>
+          <header class="blend-head">
+            <h2 class="blend-title">Combine mixes</h2>
+            <p class="blend-sub">Pick two library tracks — we’ll build a hybrid target between them.</p>
+          </header>
+          <div class="blend-picks" data-blend-picks>
+            <span class="blend-slot" data-blend-slot="a">A · select</span>
+            <span class="blend-x" aria-hidden="true">×</span>
+            <span class="blend-slot" data-blend-slot="b">B · select</span>
+          </div>
+          <div class="blend-weights" data-blend-weights role="group" aria-label="Blend balance">
+            <button type="button" class="blend-weight" data-blend-weight="0.28">More A</button>
+            <button type="button" class="blend-weight is-active" data-blend-weight="0.5" aria-pressed="true">Even</button>
+            <button type="button" class="blend-weight" data-blend-weight="0.72">More B</button>
+          </div>
+          <button type="button" class="blend-go" data-blend-go disabled>Build combination</button>
+        </div>
+
+        <div class="track-card compact hidden" data-track-card>
+          <img data-track-art alt="" width="44" height="44" />
+          <div class="track-copy">
+            <p class="track-title" data-track-title></p>
+            <p class="track-meta" data-track-meta></p>
+          </div>
+        </div>
+
+        <div class="identity-row compact hidden" data-identity>
+          <input
+            id="track-identity"
+            data-identity-input
+            type="text"
+            placeholder="Artist – song"
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="Confirm artist and song"
+          />
+          <button type="button" class="ghost-btn" data-identity-go>Find</button>
+        </div>
+
+        <div class="source-footer">
+          <div class="mode-row compact" data-mode-row>
+            <button type="button" class="mode-seg" data-mode="standard" aria-pressed="true">Standard</button>
+            <button type="button" class="mode-seg" data-mode="deep" aria-pressed="false">
+              Deep<span class="lock">Pro</span>
+            </button>
+          </div>
+
+          <div class="analyze-progress compact hidden" data-progress aria-live="polite">
+            <div class="analyze-progress-head">
+              <span class="analyze-progress-label" data-progress-label>Working…</span>
+              <span class="analyze-progress-pct" data-progress-pct>0%</span>
+            </div>
+            <div class="analyze-progress-track">
+              <div class="analyze-progress-fill" data-progress-fill></div>
+            </div>
+            <ol class="analyze-progress-stages" data-progress-stages hidden>
+              <li data-stage="loading">Load</li>
+              <li data-stage="decoding">Decode</li>
+              <li data-stage="measuring">Measure</li>
+              <li data-stage="building">Build</li>
+            </ol>
+          </div>
+
+          <div class="status-row compact" data-idle-status>
+            <span class="status-dot" data-lamp-idle data-state="idle" aria-hidden="true"></span>
+            <span class="status-text" data-status>Waiting for reference</span>
+          </div>
+        </div>
+      </aside>
+
+      <main class="studio-main">
+        <section class="studio-panel is-active" data-panel="chain" data-primary>
+          <div class="chain-empty" data-empty>
+            <h2>Drop a reference mix</h2>
+            <p>Load one or more refs in the left library. Select two and hit Combine to get a hybrid chain between them.</p>
+          </div>
+
+          <div class="chain-workspace hidden" data-chain-workspace>
+            <div class="chain-toolbar">
+              <div class="chain-toolbar-copy">
+                <p class="chain-toolbar-title">Signal chain</p>
+                <p class="estimate-note" data-estimate-note></p>
+              </div>
+              <div class="chain-toolbar-actions">
+                <button type="button" class="export-btn" data-export-pdf disabled>
+                  Export PDF
+                </button>
+              </div>
+            </div>
+
+            <p class="honesty sr-only" data-honesty></p>
+
+            <div class="stage-rail-wrap">
+              <div class="stage-rail" data-stage-rail-inserts role="tablist" aria-label="Insert stages"></div>
+              <div class="stage-rail-divider" aria-hidden="true"></div>
+              <div class="stage-rail" data-stage-rail-sends role="tablist" aria-label="Send stages"></div>
+            </div>
+
+            <div class="stage-focus" data-stage-focus tabindex="0"></div>
+
+            <div class="stage-nav">
+              <button type="button" class="stage-nav-btn" data-stage-prev aria-label="Previous stage">
+                <span aria-hidden="true">←</span> Prev
+              </button>
+              <span class="stage-nav-count" data-stage-count></span>
+              <button type="button" class="stage-nav-btn" data-stage-next aria-label="Next stage">
+                Next <span aria-hidden="true">→</span>
+              </button>
+            </div>
+
+            <div class="highlights compact hidden" data-highlights></div>
+          </div>
+        </section>
+
+        <section class="studio-panel" data-panel="signature">
+          <div class="panel-pad">
+            <header class="panel-head">
+              <h2 class="panel-title">Vocal signature</h2>
+              <p class="panel-sub">Measured from the vocal region — what dialed every stage.</p>
+            </header>
+            <div class="readout-grid" data-readouts></div>
+            <div class="band-meters" data-bands></div>
+          </div>
+        </section>
+
+        <section class="studio-panel" data-panel="design">
+          <div class="panel-pad">
+            <header class="panel-head">
+              <h2 class="panel-title">Sound design</h2>
+              <p class="panel-sub" data-design-sub>Deep · atmosphere, ambient VSTs, and production layers.</p>
+            </header>
+            <div class="design-empty" data-design-empty>
+              <p>Run <strong>Deep</strong> to unlock ambient sends, granular FX, vocal design layers, and Pro tool picks.</p>
+            </div>
+            <div class="design-body hidden" data-design-body>
+              <p class="design-headline" data-design-headline></p>
+              <p class="design-blurb" data-design-blurb></p>
+              <div class="design-layers" data-design-layers></div>
+              <p class="section-label">Deep checklist</p>
+              <ul class="summary-list" data-design-checklist></ul>
+            </div>
+          </div>
+        </section>
+
+        <section class="studio-panel" data-panel="master">
+          <div class="panel-pad">
+            <header class="panel-head">
+              <h2 class="panel-title">Master analysis</h2>
+              <p class="panel-sub" data-master-sub>Pro · full-mix translation checklist + mastering chain.</p>
+            </header>
+            <div class="master-empty" data-master-empty>
+              <p>Run <strong>Deep</strong> analysis to unlock master-bus readouts, glue/limit targets, and Pro plugin picks.</p>
+            </div>
+            <div class="master-body hidden" data-master-body>
+              <div class="readout-grid" data-master-readouts></div>
+              <ul class="summary-list" data-master-notes></ul>
+              <p class="section-label">Mastering chain</p>
+              <div class="master-steps" data-master-steps></div>
+              <div class="band-meters" data-master-bands></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="studio-panel" data-panel="why">
+          <div class="panel-pad">
+            <header class="panel-head">
+              <h2 class="panel-title">Why this chain</h2>
+              <p class="panel-sub">Order and intent behind the stages.</p>
+            </header>
+            <ul class="summary-list" data-summary></ul>
+            <div class="highlights-inline" data-highlights-why></div>
+            <details class="console-fold">
+              <summary>Technical console</summary>
+              <pre class="console" data-console></pre>
+            </details>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <section class="gate-overlay hidden" data-gate="auth">
+    <div class="gate-card">
+      <h2>Sign up to analyze</h2>
+      <p>Create a free account to reverse-engineer a vocal mix.</p>
+      <div class="gate-actions">
+        <a class="btn btn-primary" href="../auth/?mode=signup&next=/analyze/">Sign up free</a>
+        <a class="btn btn-ghost" href="../auth/?mode=login&next=/analyze/">Log in</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="gate-overlay hidden" data-gate="quota">
+    <div class="gate-card">
+      <h2>You’ve used your free analysis</h2>
+      <p>Upgrade to analyze more songs. Plans are coming soon.</p>
+      <div class="gate-actions">
+        <button type="button" class="btn btn-primary" data-upgrade-soon>Notify me</button>
+        <button type="button" class="btn btn-ghost" data-logout-gate>Log out</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="hidden" aria-hidden="true">
+    <div data-signal-flow></div>
+    <div data-send-flow></div>
+    <div data-chain-inserts></div>
+    <div data-chain-sends></div>
+  </div>
+
+  <script type="module" src="../js/ui/analyze-page.js"></script>
+</body>
+</html>

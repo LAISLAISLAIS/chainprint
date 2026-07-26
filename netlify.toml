@@ -1,0 +1,35 @@
+# Static site — no build step. Publish the repo root.
+[build]
+  publish = "."
+
+[[redirects]]
+  from = "/analyze"
+  to = "/analyze/"
+  status = 301
+
+[[redirects]]
+  from = "/auth"
+  to = "/auth/"
+  status = 301
+
+[[redirects]]
+  from = "/calibration"
+  to = "/calibration/"
+  status = 301
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "DENY"
+
+[[headers]]
+  for = "/data/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400"

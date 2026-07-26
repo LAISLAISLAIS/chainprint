@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Calibration · CHAINPRINT</title>
+  <meta name="description" content="Calibration bench — dump one CSV row per reference track. Gate: do the numbers separate records that sound different?" />
+  <link rel="icon" href="../assets/mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="../css/chassis.css" />
+  <link rel="stylesheet" href="../css/logo.css" />
+  <link rel="stylesheet" href="../css/app.css" />
+</head>
+<body>
+  <div class="page">
+    <div class="page-shell">
+      <header class="unit page-header">
+        <div>
+          <a class="logo" href="../" aria-label="Chainprint home">
+            <span class="logo-mark" aria-hidden="true"></span>
+            <span class="logo-word">Chainprint</span>
+          </a>
+          <p class="label" style="margin-top:8px;margin-left:38px">Calibration bench</p>
+        </div>
+        <nav class="nav-links" aria-label="Primary">
+          <a href="../">Home</a>
+          <a href="../analyze/">Analyze</a>
+          <a href="./" aria-current="page">Calibration</a>
+        </nav>
+      </header>
+
+      <section class="unit panel">
+        <h2 class="panel-title">Reference batch</h2>
+        <p class="panel-sub">Drop tracks you know intimately. Gate: do the numbers separate records that sound different?</p>
+        <label class="dropzone" data-dropzone>
+          <span>Drop calibration tracks</span>
+          <span class="drop-hint">multi-file ok · WAV, MP3, FLAC, AIFF, M4A</span>
+          <input type="file" data-file accept="audio/*,.wav,.mp3,.flac,.aiff,.m4a" multiple />
+        </label>
+        <div class="status-row">
+          <span class="lamp" data-lamp data-state="idle" aria-hidden="true"></span>
+          <span class="status-text" data-status>Calibration idle</span>
+        </div>
+        <div class="controls-row">
+          <button type="button" data-export disabled>Export CSV</button>
+          <button type="button" data-clear disabled>Clear rows</button>
+        </div>
+      </section>
+
+      <section class="unit panel">
+        <h2 class="panel-title">Collected rows</h2>
+        <pre class="console" data-console></pre>
+      </section>
+    </div>
+  </div>
+  <script type="module" src="../js/ui/calibration-page.js"></script>
+</body>
+</html>

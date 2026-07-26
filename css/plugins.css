@@ -1,0 +1,245 @@
+/* Unified studio rack — denser, readable */
+
+.plugin-face {
+  margin: 0;
+  width: 100%;
+}
+
+.rack {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: #0c0c0c;
+  overflow: hidden;
+}
+
+.rack-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.rack-name {
+  font-family: var(--font-readout, "JetBrains Mono", ui-monospace, monospace);
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: #f0f0f0;
+}
+
+.rack-badge {
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #8a8a8a;
+}
+
+.rack-body {
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
+.rack-eq {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: #080808;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.rack-eq-plot {
+  fill: rgba(255, 255, 255, 0.02);
+}
+
+.rack-eq-grid {
+  stroke: rgba(255, 255, 255, 0.07);
+  stroke-width: 1;
+}
+
+.rack-eq-zero {
+  stroke: rgba(255, 255, 255, 0.16);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.rack-eq-curve {
+  fill: none;
+  stroke: #f0f0f0;
+  stroke-width: 2.25;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rack-eq-dot {
+  fill: #f0f0f0;
+  stroke: #0c0c0c;
+  stroke-width: 1.5;
+}
+
+.rack-eq-lab {
+  fill: #9a9a9a;
+  font-size: 10px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  text-anchor: middle;
+}
+
+.rack-eq-tick {
+  fill: #666;
+  font-size: 9px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  text-anchor: middle;
+}
+
+.rack-dials {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 8px;
+}
+
+.rack-dial {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 11px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: rgba(255, 255, 255, 0.03);
+  min-width: 0;
+}
+
+.rack-dial-val {
+  font-family: var(--font-readout, "JetBrains Mono", ui-monospace, monospace);
+  font-size: 0.9rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: #f5f5f5;
+  line-height: 1.3;
+  word-break: break-word;
+}
+
+.rack-dial-lab {
+  font-size: 0.7rem;
+  font-weight: 650;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #8a8a8a;
+}
+
+.rack-howto {
+  padding: 0 14px 14px;
+}
+
+.rack-copy {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.rack-copy li {
+  position: relative;
+  padding-left: 14px;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #c4c4c4;
+  letter-spacing: -0.01em;
+}
+
+.rack-copy li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #666;
+}
+
+/* Pro affiliate cards */
+.pro-picks {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 10px;
+}
+
+.pro-picks-label {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #8a8a8a;
+}
+
+.pro-pick {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 14px;
+  align-items: start;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.pro-pick-name {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: #f5f5f5;
+}
+
+.pro-pick-meta {
+  margin: 3px 0 0;
+  font-size: 0.78rem;
+  color: #8a8a8a;
+}
+
+.pro-pick-why {
+  margin: 6px 0 0;
+  grid-column: 1 / -1;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  color: #a8a8a8;
+}
+
+.pro-pick-buy {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #f2f2f2;
+  color: #0a0a0a;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  padding: 8px 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.pro-pick-buy:hover {
+  background: #fff;
+}
+
+.pro-pick-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 0.72rem;
+  color: #666;
+}

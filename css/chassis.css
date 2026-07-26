@@ -1,0 +1,198 @@
+/* Chainprint — shared tokens + studio chrome */
+
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap");
+
+:root {
+  --ink: #000000;
+  --chassis: #070707;
+  --panel: rgba(14, 14, 14, 0.82);
+  --panel-solid: #111111;
+  --panel-edge: rgba(255, 255, 255, 0.08);
+  --panel-edge-strong: rgba(255, 255, 255, 0.14);
+  --silkscreen: #8a8a8a;
+  --readout: #d4d4d4;
+  --brand: #f4f4f4;
+  --accent: #f0f0f0;
+  --accent-soft: rgba(255, 255, 255, 0.08);
+  --accent-dim: #9a9a9a;
+  --lamp: #f0f0f0;
+  --lamp-dim: #6a6a6a;
+  --danger: #ff6b6b;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --font-ui: "DM Sans", "Segoe UI", sans-serif;
+  --font-brand: "Syne", "Arial Narrow", sans-serif;
+  --font-readout: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  min-height: 100%;
+  background: var(--ink);
+  color: var(--readout);
+  font-family: var(--font-ui);
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background:
+    radial-gradient(ellipse 75% 45% at 50% -5%, rgba(255, 255, 255, 0.04) 0%, transparent 55%),
+    linear-gradient(180deg, #050505 0%, var(--chassis) 50%, #000 100%);
+  background-attachment: fixed;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.2;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
+  background-size: 200px;
+  mix-blend-mode: soft-light;
+}
+
+body > * {
+  position: relative;
+  z-index: 1;
+}
+
+.unit {
+  background: var(--panel);
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+}
+
+.brand {
+  font-family: var(--font-brand);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  text-transform: none;
+  color: var(--brand);
+  line-height: 0.95;
+}
+
+.label {
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--silkscreen);
+  font-weight: 500;
+}
+
+.meta {
+  font-size: 0.82rem;
+  letter-spacing: 0.01em;
+  color: var(--silkscreen);
+  line-height: 1.5;
+}
+
+.lamp {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
+  flex-shrink: 0;
+}
+
+.lamp[data-state="idle"] {
+  background: #3a3a3a;
+  box-shadow: none;
+  opacity: 0.7;
+}
+
+.lamp[data-state="live"] {
+  animation: lamp-pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes lamp-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
+  }
+  50% {
+    opacity: 0.55;
+    box-shadow: 0 0 3px rgba(255, 255, 255, 0.12);
+  }
+}
+
+.estimate-note {
+  font-size: 0.8rem;
+  letter-spacing: 0.01em;
+  color: var(--silkscreen);
+  line-height: 1.5;
+}
+
+.btn {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 999px;
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  padding: 12px 22px;
+  cursor: pointer;
+  text-decoration: none;
+  transition:
+    transform 0.2s var(--ease-out),
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #0a0a0a;
+}
+
+.btn-primary:hover {
+  background: #ffffff;
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--readout);
+  border: 1px solid var(--panel-edge-strong);
+}
+
+.btn-ghost:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+  color: var(--brand);
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--brand);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}

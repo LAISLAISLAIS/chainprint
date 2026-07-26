@@ -1,0 +1,195 @@
+{
+  "_meta": {
+    "purpose": "Map measured characteristics → DAW-specific plugin settings. Stock/free first; paid as upgrade. Written before any affiliate relationships.",
+    "status": "v0 — stock tiers filled for Logic / Ableton / Pro Tools",
+    "honesty": "Recommendations are plausible reconstructions with reasoning, never claimed true chains."
+  },
+  "daws": ["logic", "ableton", "pro_tools"],
+  "characteristics": {
+    "mud": {
+      "description": "200–500 Hz vs 500–2 kHz balance",
+      "orderNote": "Cut mud before boosting presence or air — otherwise you amplify the cloud.",
+      "teaching": "On finished R&B/rap masters the vocal often sits on a dense low-mid bed (808 + pads). A narrow cut around 250–400 Hz in the vocal region estimate is usually about clarity, not making it thin.",
+      "stock": {
+        "logic": {
+          "plugin": "Channel EQ",
+          "settings": "Bell, ~320 Hz, −2 to −3 dB, Q ~1.2. Check at 250 and 400 — pick the one that opens the lyric without hollowing the body.",
+          "notes": "Stock first. Listen in context of the full mix estimate."
+        },
+        "ableton": {
+          "plugin": "EQ Eight",
+          "settings": "Bell, ~320 Hz, −2 to −3 dB, Q ~1.2. Solo the band briefly, then set by ear against the 808.",
+          "notes": null
+        },
+        "pro_tools": {
+          "plugin": "EQ3 7-Band",
+          "settings": "Band 3 or 4 bell, ~320 Hz, −2 to −3 dB, Q ~1.2.",
+          "notes": null
+        }
+      },
+      "free": {
+        "logic": { "plugin": "TDR Nova (free)", "notes": "Dynamic EQ if mud only blooms on loud syllables." },
+        "ableton": { "plugin": "TDR Nova (free)", "notes": "Dynamic EQ if mud only blooms on loud syllables." },
+        "pro_tools": { "plugin": "TDR Nova (free)", "notes": "Dynamic EQ if mud only blooms on loud syllables." }
+      },
+      "paid": {
+        "logic": { "plugin": "FabFilter Pro-Q", "notes": "Upgrade path — not required for this cut." },
+        "ableton": { "plugin": "FabFilter Pro-Q", "notes": "Upgrade path — not required for this cut." },
+        "pro_tools": { "plugin": "FabFilter Pro-Q", "notes": "Upgrade path — not required for this cut." }
+      }
+    },
+    "sibilance": {
+      "description": "5–10 kHz prominence vs lower presence",
+      "orderNote": "De-ess before brightening. Adding air on an untamed S will scream.",
+      "teaching": "Sibilance on modern rap/R&B is often exaggerated by clipper + limiter chains. Aim for control, not deletion — dead-S vocals sound amateur.",
+      "stock": {
+        "logic": {
+          "plugin": "DeEsser",
+          "settings": "Start around 6–7 kHz, medium range. Threshold so S ducks ~3–6 dB on peaks only.",
+          "notes": null
+        },
+        "ableton": {
+          "plugin": null,
+          "gap": "Ableton has no dedicated stock de-esser.",
+          "settings": "Workaround: EQ Eight dynamic-style — narrow bell 6–7 kHz into Compressor sidechain, or split at 5 kHz with Multiband Dynamics and compress the high band lightly.",
+          "notes": "This gap is the product finding — stock users cannot route around it by buying nothing."
+        },
+        "pro_tools": {
+          "plugin": "DeEsser",
+          "settings": "HF band ~6–7 kHz; range so peaks pull 3–6 dB.",
+          "notes": null
+        }
+      },
+      "free": {
+        "ableton": { "plugin": "Spitfish / Rough Rider + EQ", "notes": "Or Tokyo Dawn TDR Nova dynamic band at 6–7 kHz." },
+        "logic": { "plugin": null, "notes": "Stock DeEsser is enough for v0." },
+        "pro_tools": { "plugin": null, "notes": "Stock DeEsser is enough for v0." }
+      },
+      "paid": {
+        "logic": { "plugin": "FabFilter Pro-DS / Waves Sibilance", "notes": "Finer detection; buy only if stock still lisps or dulls." },
+        "ableton": { "plugin": "FabFilter Pro-DS", "notes": "Highest-leverage paid buy for Ableton stock users." },
+        "pro_tools": { "plugin": "FabFilter Pro-DS", "notes": "Upgrade if stock dulls the top." }
+      }
+    },
+    "harshness": {
+      "description": "2.5–5 kHz bite vs lower mids",
+      "orderNote": "Soften harshness before heavy compression — compressors can glue the bite into the whole performance.",
+      "teaching": "Harshness here is often ear-fatigue from presence EQ + saturation, not just 'too much treble.' A wide, shallow cut usually beats a surgical notch.",
+      "stock": {
+        "logic": {
+          "plugin": "Channel EQ",
+          "settings": "Wide bell, ~3.2 kHz, −1.5 to −2.5 dB, Q ~0.7–1.0.",
+          "notes": null
+        },
+        "ableton": {
+          "plugin": "EQ Eight",
+          "settings": "Wide bell, ~3.2 kHz, −1.5 to −2.5 dB, Q ~0.7–1.0.",
+          "notes": null
+        },
+        "pro_tools": {
+          "plugin": "EQ3 7-Band",
+          "settings": "Wide bell, ~3.2 kHz, −1.5 to −2.5 dB, Q low.",
+          "notes": null
+        }
+      },
+      "free": {},
+      "paid": {
+        "logic": { "plugin": "sonible smart:EQ / FabFilter Pro-Q dynamic", "notes": "Only if the harshness moves with the performance." },
+        "ableton": { "plugin": "FabFilter Pro-Q dynamic", "notes": "Dynamic cut if bite only on loud lines." },
+        "pro_tools": { "plugin": "FabFilter Pro-Q dynamic", "notes": "Dynamic cut if bite only on loud lines." }
+      }
+    },
+    "air": {
+      "description": "Energy above ~8 kHz relative to body",
+      "orderNote": "Air last among EQ moves — after mud, harshness, and de-ess.",
+      "teaching": "Contemporary R&B/rap air is often a gentle shelf plus saturation harmonics, not a huge +6 dB sparkle. Match the measurement with restraint.",
+      "stock": {
+        "logic": {
+          "plugin": "Channel EQ",
+          "settings": "High shelf ~10–12 kHz. Elevated air: −1 to −2 dB. Recessed air: +1 to +2.5 dB. Keep Q gentle.",
+          "notes": "If sibilance was elevated, de-ess first or the shelf will fight you."
+        },
+        "ableton": {
+          "plugin": "EQ Eight",
+          "settings": "High shelf ~10–12 kHz, ±1 to ±2.5 dB depending on elevated/recessed.",
+          "notes": null
+        },
+        "pro_tools": {
+          "plugin": "EQ3 7-Band",
+          "settings": "HF shelf ~10–12 kHz, ±1 to ±2.5 dB.",
+          "notes": null
+        }
+      },
+      "free": {
+        "logic": { "plugin": "Softube Saturation Knob (free)", "notes": "Tiny drive can create air-like harmonics without a shelf." },
+        "ableton": { "plugin": "Saturator (stock)", "notes": "Soft mode, drive low — harmonics before EQ shelf." },
+        "pro_tools": { "plugin": "Lo-Fi / Air Distortion alternatives", "notes": "Prefer mild saturation over aggressive shelves." }
+      },
+      "paid": {
+        "logic": { "plugin": "FabFilter Pro-Q / Ozone Exciter", "notes": "Paid air tools are optional." },
+        "ableton": { "plugin": "FabFilter Pro-Q", "notes": "Optional." },
+        "pro_tools": { "plugin": "FabFilter Pro-Q", "notes": "Optional." }
+      }
+    },
+    "dynamics_crest": {
+      "description": "Peak-to-RMS — compression / limiting signature",
+      "orderNote": "Shape tone before you glue dynamics. Order: EQ/de-ess → compress → limit/clip.",
+      "teaching": "Low crest on modern vocals usually means serial compression (fast then slow) into a clipper or limiter — not one plugin at −20 dB GR. High crest means leave headroom; don't crush to imitate a denser record.",
+      "stock": {
+        "logic": {
+          "plugin": "Compressor → Limiter",
+          "settings": "Compressor: ratio 3:1–4:1, attack 8–15 ms, release auto/50–80 ms, 3–5 dB GR. Then Limiter: catch peaks 1–2 dB. For denser targets, add a second Compressor earlier (faster attack, 2–3 dB GR) before the main one.",
+          "notes": "Logic has no dedicated clipper — soft saturation before the limiter approximates edge."
+        },
+        "ableton": {
+          "plugin": "Compressor → Glue Compressor → Limiter",
+          "settings": "Compressor 3:1, attack ~10 ms, ~3–5 dB GR. Glue for bus-like density (soft knee, low GR). Limiter last for peaks. Saturator before Limiter if you want clipper-like density.",
+          "notes": null
+        },
+        "pro_tools": {
+          "plugin": "Dyn3 Compressor/Limiter → Maxim",
+          "settings": "Dyn3 ~3:1–4:1, attack 8–15 ms, 3–5 dB GR. Maxim for ceiling. Serial: two Dyn3 stages beat one smashed stage.",
+          "notes": null
+        }
+      },
+      "free": {
+        "logic": { "plugin": "OTT (free) — use sparingly", "notes": "Multiband smash is a genre tool; easy to overdo." },
+        "ableton": { "plugin": "OTT (stock-adjacent free)", "notes": "Familiar density tool — start wet/dry low." },
+        "pro_tools": { "plugin": "Rough Rider 3 (free)", "notes": "Aggressive color compressor for attitude." }
+      },
+      "paid": {
+        "logic": { "plugin": "FabFilter Pro-C 2 / Pro-L 2 / StandardCLIP", "notes": "Finer timing and true peak control." },
+        "ableton": { "plugin": "FabFilter Pro-C 2 / Pro-L 2", "notes": "Upgrade when stock timing feels blunt." },
+        "pro_tools": { "plugin": "FabFilter Pro-C 2 / Pro-L 2", "notes": "Upgrade when stock timing feels blunt." }
+      }
+    },
+    "stereo_width": {
+      "description": "Side/mid energy and L–R correlation",
+      "orderNote": "Width last. Widen support (doubles, verb, delays) — keep the lead take centered.",
+      "teaching": "Wide vocal regions on records usually come from stacked doubles and FX returns, not a stereo widener on the main mono vocal. Narrow images mean respect the center; don't fake width.",
+      "stock": {
+        "logic": {
+          "plugin": "Doubler / Stereo Delay / Space Designer",
+          "settings": "Lead: keep mono/center. Width: short stereo delay 60–120 ms low feedback, or subtle Doubler. Verb on a send, not inserted wide on the lead.",
+          "notes": null
+        },
+        "ableton": {
+          "plugin": "Utility + Delay + Reverb",
+          "settings": "Lead Utility width ~0–20%. Delay return ping-pong subtle. Reverb on send. Avoid Wideners on the main vocal.",
+          "notes": null
+        },
+        "pro_tools": {
+          "plugin": "Mod Delay III / D-Verb / Air Stereo Width (if available)",
+          "settings": "Center the lead. Build width on sends. If using a width plugin, restrict to FX bus.",
+          "notes": null
+        }
+      },
+      "free": {},
+      "paid": {
+        "logic": { "plugin": "Soundtoys MicroShift / Little Plate", "notes": "Paid doubles/verbs — optional flavor." },
+        "ableton": { "plugin": "Soundtoys MicroShift", "notes": "Optional." },
+        "pro_tools": { "plugin": "Soundtoys MicroShift", "notes": "Optional." }
+      }
+    }
+  }
+}
