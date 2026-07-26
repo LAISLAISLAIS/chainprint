@@ -2347,12 +2347,13 @@ async function runAnalysis() {
           ? "Measuring low end, glue, and width to build the instrumental chain."
           : "Measuring full-mix balance to build the mix-bus chain.";
   if (emptyEl) {
+    unmountHeroMark?.();
+    unmountHeroMark = null;
     emptyEl.classList.remove("hidden");
     emptyEl.innerHTML = `
       <div data-analyze-hero aria-hidden="true"></div>
       <h2>${analysisMode === "deep" ? "Deep analysis…" : readingLabel}</h2>
       <p>${readingDetail}</p>`;
-    unmountHeroMark?.();
     unmountHeroMark = mountChainMark(emptyEl.querySelector("[data-analyze-hero]"), { variant: "cycle" });
   }
 

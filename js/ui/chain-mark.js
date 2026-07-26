@@ -1,6 +1,6 @@
 /**
  * Hero / analyzing chain mark — horizontal 5-link lockup.
- * Cycle variant: JS-driven teal palette flow (CSS stroke animation is unreliable on SVG).
+ * Cycle variant: teal palette flow via CSS currentColor + JS stroke paint (belt & suspenders).
  * @param {HTMLElement | null} root
  * @param {{ variant?: 'hero' | 'cycle' }} [opts]
  */
@@ -11,33 +11,23 @@ export function mountChainMark(root, opts = {}) {
   root.classList.add("logo-hero");
   if (variant === "cycle") root.classList.add("logo-hero--cycle");
 
-  const uid = `cp-chain-${Math.random().toString(36).slice(2, 9)}`;
-
   root.innerHTML = `
     <svg class="chain-mark-svg" viewBox="0 0 120 40" aria-hidden="true">
-      <defs>
-        <linearGradient id="${uid}" gradientUnits="userSpaceOnUse" x1="0" y1="20" x2="120" y2="20">
-          <stop class="chain-grad-a" offset="0%" stop-color="#2f6f66"/>
-          <stop class="chain-grad-b" offset="35%" stop-color="#6ec4b4"/>
-          <stop class="chain-grad-c" offset="65%" stop-color="#d4f6ef"/>
-          <stop class="chain-grad-d" offset="100%" stop-color="#3f8f84"/>
-        </linearGradient>
-      </defs>
       <g class="chain-compose" fill="none" stroke-linecap="round" stroke-linejoin="round">
         <g class="chain-link chain-link--1">
-          <rect class="chain-stroke" x="10" y="6" width="14" height="28" rx="7"/>
+          <rect class="chain-stroke" x="10" y="6" width="14" height="28" rx="7" stroke="currentColor"/>
         </g>
         <g class="chain-link chain-link--2">
-          <rect class="chain-stroke chain-stroke--mid" x="18" y="13" width="42" height="14" rx="7"/>
+          <rect class="chain-stroke chain-stroke--mid" x="18" y="13" width="42" height="14" rx="7" stroke="currentColor"/>
         </g>
         <g class="chain-link chain-link--3">
-          <rect class="chain-stroke" x="54" y="6" width="14" height="28" rx="7"/>
+          <rect class="chain-stroke" x="54" y="6" width="14" height="28" rx="7" stroke="currentColor"/>
         </g>
         <g class="chain-link chain-link--4">
-          <rect class="chain-stroke" x="62" y="13" width="42" height="14" rx="7"/>
+          <rect class="chain-stroke" x="62" y="13" width="42" height="14" rx="7" stroke="currentColor"/>
         </g>
         <g class="chain-link chain-link--5">
-          <rect class="chain-stroke" x="96" y="6" width="14" height="28" rx="7"/>
+          <rect class="chain-stroke" x="96" y="6" width="14" height="28" rx="7" stroke="currentColor"/>
         </g>
       </g>
     </svg>
@@ -46,7 +36,7 @@ export function mountChainMark(root, opts = {}) {
   /** @type {(() => void) | null} */
   let stopCycle = null;
   if (variant === "cycle") {
-    stopCycle = startPaletteCycle(root, uid);
+    stopCycle = startPaletteCycle(root);
   }
 
   return () => {
@@ -57,20 +47,20 @@ export function mountChainMark(root, opts = {}) {
   };
 }
 
-/** Teal-family stops — deep → bright mint → deep (visible change, no rainbow) */
+/** Deep teal → bright mint — high contrast so the loop is obvious */
 const PALETTE = [
-  [47, 111, 102], // #2f6f66
+  [36, 92, 85], // #245c55
   [63, 143, 132], // #3f8f84
   [110, 196, 180], // #6ec4b4
-  [142, 217, 203], // #8ed9cb
-  [212, 246, 239], // #d4f6ef
-  [142, 217, 203],
+  [180, 235, 224], // #b4ebe0
+  [232, 255, 250], // #e8fffa
+  [180, 235, 224],
   [110, 196, 180],
   [63, 143, 132],
 ];
 
 /**
- * @param {number} t 0..1
+ * @param {number} t
  * @returns {string}
  */
 function samplePalette(t) {
@@ -82,68 +72,55 @@ function samplePalette(t) {
   const u = f - Math.floor(f);
   const a = PALETTE[i];
   const b = PALETTE[j];
-  const r = Math.round(a[0] + (b[0] - a[0]) * u);
-  const g = Math.round(a[1] + (b[1] - a[1]) * u);
-  const bl = Math.round(a[2] + (b[2] - a[2]) * u);
-  return `rgb(${r}, ${g}, ${bl})`;
+  return `rgb(${Math.round(a[0] + (b[0] - a[0]) * u)}, ${Math.round(a[1] + (b[1] - a[1]) * u)}, ${Math.round(a[2] + (b[2] - a[2]) * u)})`;
 }
 
 /**
+ * Keep painting solid per-link colors every frame.
+ * No IntersectionObserver (it was stopping the loop after first layout).
  * @param {HTMLElement} root
- * @param {string} gradId
  */
-function startPaletteCycle(root, gradId) {
+function startPaletteCycle(root) {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const links = /** @type {SVGGElement[]} */ ([...root.querySelectorAll(".chain-link")]);
   const strokes = /** @type {SVGElement[]} */ ([...root.querySelectorAll(".chain-stroke")]);
-  const stops = /** @type {SVGStopElement[]} */ ([...root.querySelectorAll(`#${CSS.escape(gradId)} stop`)]);
   const compose = root.querySelector(".chain-compose");
 
-  const paintStatic = () => {
+  if (reduced || !strokes.length) {
     const c = "#6ec4b4";
     for (const el of strokes) {
       el.setAttribute("stroke", c);
+      el.style.stroke = c;
       el.setAttribute("opacity", "0.92");
     }
-    for (const stop of stops) stop.setAttribute("stop-color", c);
-  };
-
-  if (reduced || !strokes.length) {
-    paintStatic();
     return () => {};
-  }
-
-  // Gradient stroke reads as a flowing band across the chain
-  for (const el of strokes) {
-    el.setAttribute("stroke", `url(#${gradId})`);
-    el.setAttribute("opacity", "0.95");
   }
 
   let raf = 0;
   let running = false;
   let t0 = performance.now();
-  let onScreen = true;
 
   function frame(now) {
     if (!running) return;
     const t = (now - t0) / 1000;
-    // Full palette lap ~2.8s — clearly visible while analyzing
-    const speed = 0.36;
+    // ~1.6s full palette lap
+    const speed = 0.62;
 
-    if (stops.length >= 4) {
-      stops[0].setAttribute("stop-color", samplePalette(t * speed));
-      stops[1].setAttribute("stop-color", samplePalette(t * speed + 0.22));
-      stops[2].setAttribute("stop-color", samplePalette(t * speed + 0.48));
-      stops[3].setAttribute("stop-color", samplePalette(t * speed + 0.72));
-    }
-
-    // Per-link opacity wave so motion reads even if gradient is subtle
-    strokes.forEach((el, i) => {
-      const wave = 0.62 + 0.38 * (0.5 + 0.5 * Math.sin(t * Math.PI * 2 * speed + i * 0.9));
-      el.setAttribute("opacity", wave.toFixed(3));
+    links.forEach((link, i) => {
+      const color = samplePalette(t * speed + i * 0.14);
+      link.style.color = color;
+      const stroke = strokes[i];
+      if (stroke) {
+        stroke.setAttribute("stroke", color);
+        stroke.style.stroke = color;
+        const wave = 0.7 + 0.3 * (0.5 + 0.5 * Math.sin(t * Math.PI * 2 * speed * 1.15 + i * 0.85));
+        stroke.setAttribute("opacity", wave.toFixed(3));
+        stroke.style.opacity = String(wave);
+      }
     });
 
     if (compose instanceof SVGElement) {
-      const s = 1 + 0.025 * Math.sin(t * Math.PI * 2 * 0.32);
+      const s = 1 + 0.035 * Math.sin(t * Math.PI * 2 * 0.45);
       compose.setAttribute("transform", `translate(60 20) scale(${s.toFixed(4)}) translate(-60 -20)`);
     }
 
@@ -151,7 +128,7 @@ function startPaletteCycle(root, gradId) {
   }
 
   function start() {
-    if (running || document.hidden || !onScreen) return;
+    if (running || document.hidden) return;
     running = true;
     t0 = performance.now();
     raf = requestAnimationFrame(frame);
@@ -169,26 +146,11 @@ function startPaletteCycle(root, gradId) {
   }
 
   document.addEventListener("visibilitychange", onVisibility);
-
-  /** @type {IntersectionObserver | null} */
-  let io = null;
-  if (typeof IntersectionObserver === "function") {
-    io = new IntersectionObserver(
-      (entries) => {
-        onScreen = entries.some((e) => e.isIntersecting && e.intersectionRatio > 0.02);
-        if (onScreen) start();
-        else stop();
-      },
-      { threshold: [0, 0.02, 0.2] }
-    );
-    io.observe(root);
-  }
-
-  start();
+  // Defer one frame so layout is ready, then run until unmounted
+  requestAnimationFrame(() => start());
 
   return () => {
     stop();
-    io?.disconnect();
     document.removeEventListener("visibilitychange", onVisibility);
   };
 }

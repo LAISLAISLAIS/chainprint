@@ -79,8 +79,9 @@
 @media (prefers-reduced-motion: reduce) {
   .logo-hero,
   .chain-compose,
-  .chain-stroke {
-    animation: none;
+  .chain-stroke,
+  .logo-hero--cycle .chain-link {
+    animation: none !important;
   }
 
   .chain-stroke {
@@ -93,18 +94,18 @@
 }
 
 /*
- * Analyzing / Key·BPM busy — JS drives palette + gradient;
- * CSS only sizes the mark and keeps strokes thick enough to read.
+ * Analyzing cycle — CSS currentColor loop as fallback;
+ * JS also paints stroke each frame (see chain-mark.js).
  */
 .logo-hero--cycle {
   --mark-w: 120px;
   width: var(--mark-w);
   height: calc(var(--mark-w) * 0.333);
   margin: 0 auto;
-  color: var(--teal, #6ec4b4);
+  color: #6ec4b4;
   animation: none;
   transform: translateZ(0);
-  filter: drop-shadow(0 0 10px rgba(110, 196, 180, 0.35));
+  filter: drop-shadow(0 0 12px rgba(110, 196, 180, 0.45));
 }
 
 .logo-hero--cycle .chain-mark-svg {
@@ -112,24 +113,55 @@
 }
 
 .logo-hero--cycle .chain-stroke {
-  stroke-width: 3.75;
+  stroke: currentColor;
+  stroke-width: 4;
   fill: none;
-  /* stroke/opacity set by JS each frame */
 }
 
-.logo-hero--cycle .chain-compose {
-  transform-origin: 60px 20px;
+.logo-hero--cycle .chain-link {
+  color: #6ec4b4;
+  animation: chain-teal-cycle 1.8s ease-in-out infinite;
+  will-change: color;
+}
+
+.logo-hero--cycle .chain-link--1 {
+  animation-delay: 0s;
+}
+.logo-hero--cycle .chain-link--2 {
+  animation-delay: -0.36s;
+}
+.logo-hero--cycle .chain-link--3 {
+  animation-delay: -0.72s;
+}
+.logo-hero--cycle .chain-link--4 {
+  animation-delay: -1.08s;
+}
+.logo-hero--cycle .chain-link--5 {
+  animation-delay: -1.44s;
+}
+
+@keyframes chain-teal-cycle {
+  0%,
+  100% {
+    color: #245c55;
+  }
+  25% {
+    color: #6ec4b4;
+  }
+  50% {
+    color: #e8fffa;
+  }
+  75% {
+    color: #8ed9cb;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .logo-hero--cycle {
     filter: none;
-    color: var(--teal, #6ec4b4);
   }
-}
 
-@media (max-width: 640px) {
-  .logo-hero--cycle {
-    filter: drop-shadow(0 0 8px rgba(110, 196, 180, 0.28));
+  .logo-hero--cycle .chain-link {
+    color: #6ec4b4 !important;
   }
 }
