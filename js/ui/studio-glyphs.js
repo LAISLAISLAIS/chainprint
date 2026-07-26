@@ -78,6 +78,34 @@ const GLYPHS = {
     svg(`<path d="M4 14c3 3 5-5 8-5s5 8 8 5" ${stroke}/>`),
   spark: () =>
     svg(`<path d="M12 3.5 13.8 9H19l-4 3.2L16.6 18 12 14.6 7.4 18l1.6-5.8L5 9h5.2z" ${stroke}/>`),
+  chain: () =>
+    svg(
+      `<rect x="3.5" y="9" width="7" height="6" rx="3" ${stroke}/><rect x="9.5" y="9" width="7" height="6" rx="3" ${stroke}/><rect x="15.5" y="9" width="5" height="6" rx="3" ${stroke}/>`
+    ),
+  compare: () =>
+    svg(
+      `<path d="M7 5v14M17 5v14" ${stroke}/><path d="M4 9h6M14 15h6" ${stroke}/>`
+    ),
+  why: () =>
+    svg(
+      `<circle cx="12" cy="12" r="8.5" ${stroke}/><path d="M12 10.5v5.5M12 7.8v.2" ${stroke}/>`
+    ),
+  share: () =>
+    svg(
+      `<circle cx="18" cy="6" r="2.2" ${stroke}/><circle cx="6" cy="12" r="2.2" ${stroke}/><circle cx="18" cy="18" r="2.2" ${stroke}/><path d="M8 11.2 16 7.2M8 12.8l8 4" ${stroke}/>`
+    ),
+  file: () =>
+    svg(
+      `<path d="M7 4.5h7l4 4V19.5H7z" ${stroke}/><path d="M14 4.5V9h4.5" ${stroke}/>`
+    ),
+  mic: () =>
+    svg(
+      `<rect x="9" y="3.5" width="6" height="10" rx="3" ${stroke}/><path d="M7 11.5a5 5 0 0 0 10 0M12 16.5v3.5M9 20h6" ${stroke}/>`
+    ),
+  account: () =>
+    svg(
+      `<circle cx="12" cy="9" r="3.2" ${stroke}/><path d="M5.5 19c1.4-3.2 3.6-4.8 6.5-4.8S17.1 15.8 18.5 19" ${stroke}/>`
+    ),
   default: () =>
     svg(`<circle cx="12" cy="12" r="7.5" ${stroke}/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/>`),
 };
@@ -89,7 +117,7 @@ const GLYPHS = {
 export function glyphKeyForLabel(label) {
   const s = String(label || "").toLowerCase();
   if (/tempo|bpm/.test(s)) return "tempo";
-  if (/^key|relative/.test(s)) return "key";
+  if (/^key|relative|finder/.test(s)) return "key";
   if (/pitch|f0|register/.test(s)) return "pitch";
   if (/air|bright/.test(s)) return "air";
   if (/sibil/.test(s)) return "sibilance";
@@ -100,14 +128,22 @@ export function glyphKeyForLabel(label) {
   if (/stereo|corr|side|width|mono/.test(s)) return "stereo";
   if (/source|instrument/.test(s)) return "sources";
   if (/space|reverb|ambient|room/.test(s)) return "space";
-  if (/print|check|master|limit/.test(s)) return "print";
-  if (/eq|subtract|carve/.test(s)) return "eq";
+  if (/print|check|master|limit|pdf|ableton|rack|export/.test(s)) return "print";
+  if (/eq|subtract|carve|signature|analyze|analys/.test(s)) return "eq";
   if (/gain|level/.test(s)) return "gain";
   if (/delay|send|throw/.test(s)) return "send";
-  if (/balance|target/.test(s)) return "balance";
-  if (/low end|bass|kick/.test(s)) return "lowend";
+  if (/balance|target|standard|deep|mode/.test(s)) return "balance";
+  if (/low end|bass|kick|instrumental|full mix/.test(s)) return "lowend";
   if (/top end|hat|cymbal/.test(s)) return "topend";
   if (/lane|design|layer|bed|double/.test(s)) return "layer";
+  if (/chain|stage|insert/.test(s)) return "chain";
+  if (/compare|a\/b|gap/.test(s)) return "compare";
+  if (/why|rationale|explain|glossary|help/.test(s)) return "why";
+  if (/share|link|publish/.test(s)) return "share";
+  if (/library|file|upload|reference|session/.test(s)) return "file";
+  if (/vocal|mic|dry/.test(s)) return "mic";
+  if (/account|settings|plan|free|pro|profile/.test(s)) return "account";
+  if (/blend|merge|hybrid/.test(s)) return "spark";
   return "default";
 }
 

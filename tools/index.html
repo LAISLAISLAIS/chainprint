@@ -31,7 +31,7 @@
   <link rel="stylesheet" href="../css/site-pages.css" />
 </head>
 <body>
-  <div class="site-page">
+  <div class="site-page tools-page">
     <header class="site-nav">
       <a class="logo" href="../" aria-label="Chainprint home">
         <span class="logo-mark" aria-hidden="true"></span>
@@ -45,128 +45,204 @@
       </nav>
     </header>
 
-    <main class="site-main">
-      <header class="site-hero">
+    <main class="site-main tools-main">
+      <header class="site-hero tools-hero">
+        <p class="tools-eyebrow">Feature map</p>
         <h1>Tools</h1>
         <p>
-          Everything Chainprint offers — from reverse-engineering a reference mix to exporting a rack,
-          spotting key and BPM, and sharing a chain.
+          Reverse-engineer any reference, read the meters, close the gaps, and export a chain you can
+          actually mix with.
         </p>
         <div class="site-cta-row">
           <a class="btn btn-primary" href="../analyze/">Open studio</a>
-          <a class="btn btn-ghost" href="../help/">Read the help guide</a>
+          <a class="btn btn-ghost" href="../find/">Try Key · BPM</a>
         </div>
       </header>
 
+      <section class="tools-highlights" aria-labelledby="tools-highlights-title">
+        <div class="tools-section-head">
+          <h2 id="tools-highlights-title">Highlights</h2>
+          <p>The capabilities people come for first.</p>
+        </div>
+        <div class="highlight-grid">
+          <a class="highlight-card" href="../analyze/">
+            <span class="tool-glyph" data-glyph="Analyze" aria-hidden="true"></span>
+            <div class="highlight-copy">
+              <h3>Analyze a reference</h3>
+              <p>Upload a file or paste a streaming link. Get a stage-by-stage chain with dialable settings.</p>
+            </div>
+          </a>
+          <a class="highlight-card" href="../analyze/">
+            <span class="tool-glyph" data-glyph="Signature" aria-hidden="true"></span>
+            <div class="highlight-copy">
+              <h3>Signature meters</h3>
+              <p>Tone, dynamics, width, key, and BPM — with plain-English explainers on tap.</p>
+            </div>
+          </a>
+          <a class="highlight-card" href="../analyze/">
+            <span class="tool-glyph" data-glyph="Compare" aria-hidden="true"></span>
+            <div class="highlight-copy">
+              <h3>Compare your mix</h3>
+              <p>Drop your take against the reference and see the gaps that still need closing.</p>
+            </div>
+          </a>
+          <a class="highlight-card" href="../analyze/">
+            <span class="tool-glyph" data-glyph="Design" aria-hidden="true"></span>
+            <div class="highlight-copy">
+              <h3>Design &amp; Master</h3>
+              <p>Deep mode adds production layers and a print-ready mastering checklist.</p>
+            </div>
+          </a>
+          <a class="highlight-card" href="../analyze/">
+            <span class="tool-glyph" data-glyph="Ableton rack" aria-hidden="true"></span>
+            <div class="highlight-copy">
+              <h3>Ableton + PDF</h3>
+              <p>Export a Live rack or a thorough analysis PDF you can keep on the session.</p>
+            </div>
+          </a>
+          <a class="highlight-card" href="../find/">
+            <span class="tool-glyph" data-glyph="Key BPM finder" aria-hidden="true"></span>
+            <div class="highlight-copy">
+              <h3>Key · BPM finder</h3>
+              <p>Standalone key, relative key, and tempo detection — free, no studio required.</p>
+            </div>
+          </a>
+        </div>
+      </section>
+
       <section class="site-section" aria-labelledby="tools-studio">
-        <h2 id="tools-studio">Analyze studio</h2>
-        <p class="site-lede">Upload or paste a reference, pick a target, and rebuild the mix in your DAW.</p>
+        <div class="tools-section-head">
+          <h2 id="tools-studio">Analyze studio</h2>
+          <p>Every panel and target inside the workspace.</p>
+        </div>
         <div class="tool-grid">
           <a class="tool-card" href="../analyze/">
+            <span class="tool-glyph" data-glyph="Analyze" aria-hidden="true"></span>
             <p class="tool-card-kicker">Core</p>
             <h3>Analyze</h3>
-            <p>Reverse-engineer a reference into a mixable chain with settings you can dial in Logic, Ableton, or Pro Tools.</p>
+            <p>Reverse-engineer a reference into a mixable chain for Logic, Ableton, or Pro Tools.</p>
           </a>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Vocal" aria-hidden="true"></span>
             <p class="tool-card-kicker">Target</p>
             <h3>Vocal</h3>
             <p>Build a vocal processing chain from the lead region of a reference mix.</p>
           </div>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Instrumental" aria-hidden="true"></span>
             <p class="tool-card-kicker">Target</p>
             <h3>Instrumental</h3>
             <p>Chain for beds and instruments when the reference isn’t a dry vocal stem.</p>
           </div>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Full mix" aria-hidden="true"></span>
             <p class="tool-card-kicker">Target</p>
             <h3>Full mix</h3>
             <p>Treat the whole song as the target — denser, mix-bus-aware recommendations.</p>
           </div>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Chain" aria-hidden="true"></span>
             <p class="tool-card-kicker">Panel</p>
             <h3>Chain</h3>
             <p>Stage-by-stage inserts and sends with dials, how-to copy, and rack-style visuals.</p>
           </div>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Signature" aria-hidden="true"></span>
             <p class="tool-card-kicker">Panel</p>
             <h3>Signature</h3>
-            <p>Measured tone, dynamics, width, key, and BPM — tap any readout for a plain-English explainer.</p>
+            <p>Measured tone, dynamics, width, key, and BPM — tap any readout for an explainer.</p>
           </div>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Compare" aria-hidden="true"></span>
             <p class="tool-card-kicker">Panel</p>
             <h3>Compare</h3>
-            <p>Drop your mix against the reference. See frequency, dynamics, and width gaps plus moves to close them.</p>
+            <p>Frequency, dynamics, and width gaps versus your mix — plus moves to close them.</p>
           </div>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Why" aria-hidden="true"></span>
             <p class="tool-card-kicker">Panel</p>
             <h3>Why</h3>
             <p>Priority moves first, then measured facts and the full build-order rationale.</p>
           </div>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Instruments" aria-hidden="true"></span>
             <p class="tool-card-kicker">Panel</p>
             <h3>Instruments</h3>
             <p>Source presence labels for what’s in the bed — with confidence and practical tips.</p>
           </div>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Design" aria-hidden="true"></span>
             <p class="tool-card-kicker">Pro · Deep</p>
             <h3>Design</h3>
-            <p>Production layers around the dry take — space, beds, width, and a before-you-print checklist.</p>
-            <p class="tool-card-meta">Requires Pro / Deep mode</p>
+            <p>Production layers around the dry take — space, beds, width, and a print checklist.</p>
+            <p class="tool-card-meta">Requires Deep mode</p>
           </div>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Master" aria-hidden="true"></span>
             <p class="tool-card-kicker">Pro · Deep</p>
             <h3>Master</h3>
             <p>Bus readouts, streaming-oriented notes, and a mastering chain suggestion.</p>
-            <p class="tool-card-meta">Requires Pro / Deep mode</p>
+            <p class="tool-card-meta">Requires Deep mode</p>
           </div>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Standard Deep mode" aria-hidden="true"></span>
             <p class="tool-card-kicker">Modes</p>
             <h3>Standard vs Deep</h3>
-            <p>Standard builds the chain. Deep unlocks Design &amp; Master plus deeper vocal character.</p>
+            <p>Standard builds the chain. Deep unlocks Design &amp; Master plus deeper character.</p>
           </div>
         </div>
       </section>
 
       <section class="site-section" aria-labelledby="tools-workflow">
-        <h2 id="tools-workflow">Workflow &amp; export</h2>
-        <p class="site-lede">Keep references handy, preview on your dry take, and get the chain out of the browser.</p>
+        <div class="tools-section-head">
+          <h2 id="tools-workflow">Workflow &amp; export</h2>
+          <p>Keep references handy, preview on your dry take, and get the chain out.</p>
+        </div>
         <div class="tool-grid">
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Library" aria-hidden="true"></span>
             <p class="tool-card-kicker">Library</p>
             <h3>Reference library</h3>
             <p>Load multiple references, switch between them, and keep the session locally.</p>
           </div>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Share link" aria-hidden="true"></span>
             <p class="tool-card-kicker">Input</p>
             <h3>Link load</h3>
-            <p>Paste Spotify, Apple Music, YouTube, or SoundCloud links to pull a preview for analysis.</p>
+            <p>Paste Spotify, Apple Music, YouTube, or SoundCloud links for analysis.</p>
           </div>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Compare A/B" aria-hidden="true"></span>
             <p class="tool-card-kicker">Preview</p>
             <h3>Dry vs chain A/B</h3>
-            <p>Add your dry vocal or instrumental and flip between dry and through-chain listening.</p>
+            <p>Add your dry vocal or instrumental and flip between dry and through-chain.</p>
           </div>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Blend merge" aria-hidden="true"></span>
             <p class="tool-card-kicker">Blend</p>
             <h3>Merge references</h3>
             <p>Weight two library refs and build a contrast-preserving hybrid chain.</p>
           </div>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Ableton rack" aria-hidden="true"></span>
             <p class="tool-card-kicker">Export</p>
             <h3>Ableton rack</h3>
-            <p>Download an Ableton Live Audio Effect Rack (.adg) dialed from the measured chain.</p>
+            <p>Download a Live Audio Effect Rack (.adg) dialed from the measured chain.</p>
           </div>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Analysis PDF" aria-hidden="true"></span>
             <p class="tool-card-kicker">Export</p>
             <h3>Analysis PDF</h3>
-            <p>A thorough printable report — signature, why, instruments, full chain, Design, and Master.</p>
+            <p>Printable report — signature, why, instruments, full chain, Design, and Master.</p>
           </div>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Shared chains" aria-hidden="true"></span>
             <p class="tool-card-kicker">Share</p>
             <h3>Shared chains</h3>
             <p>Publish a chain snapshot to a public link others can open and rebuild from.</p>
           </div>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Glossary" aria-hidden="true"></span>
             <p class="tool-card-kicker">Explainers</p>
             <h3>Readout glossary</h3>
             <p>Inline definitions for Signature, Master, and Compare meters — no jargon wall.</p>
@@ -175,34 +251,50 @@
       </section>
 
       <section class="site-section" aria-labelledby="tools-standalone">
-        <h2 id="tools-standalone">Standalone tools &amp; account</h2>
-        <p class="site-lede">Quick utilities and the account surface that powers quotas and defaults.</p>
+        <div class="tools-section-head">
+          <h2 id="tools-standalone">Standalone &amp; account</h2>
+          <p>Quick utilities and the account surface that powers quotas and defaults.</p>
+        </div>
         <div class="tool-grid">
           <a class="tool-card" href="../find/">
+            <span class="tool-glyph" data-glyph="Key BPM finder" aria-hidden="true"></span>
             <p class="tool-card-kicker">Free</p>
             <h3>Key · BPM finder</h3>
             <p>Detect musical key, relative key, and tempo from an upload or streaming link.</p>
           </a>
           <a class="tool-card" href="../auth/?mode=signup&next=/analyze/">
+            <span class="tool-glyph" data-glyph="Free plan" aria-hidden="true"></span>
             <p class="tool-card-kicker">Account</p>
             <h3>Free plan</h3>
             <p>Sign up to run analyses with a free quota and keep preferences across sessions.</p>
           </a>
           <div class="tool-card">
+            <span class="tool-glyph" data-glyph="Pro plan" aria-hidden="true"></span>
             <p class="tool-card-kicker">Account</p>
             <h3>Pro plan</h3>
-            <p>Unlimited analyses plus Deep mode — Design, Master, and deeper vocal extras.</p>
+            <p>Unlimited analyses plus Deep mode — Design, Master, and deeper extras.</p>
           </div>
           <a class="tool-card" href="../settings/">
+            <span class="tool-glyph" data-glyph="Settings" aria-hidden="true"></span>
             <p class="tool-card-kicker">Account</p>
             <h3>Settings</h3>
             <p>Profile, avatar, default target/mode, plan readout, and password.</p>
           </a>
           <a class="tool-card" href="../help/">
+            <span class="tool-glyph" data-glyph="Help" aria-hidden="true"></span>
             <p class="tool-card-kicker">Guide</p>
             <h3>Help</h3>
-            <p>Full walkthrough of how Chainprint works, what each panel means, and honest limits.</p>
+            <p>Walkthrough of how Chainprint works, what each panel means, and honest limits.</p>
           </a>
+        </div>
+      </section>
+
+      <section class="tools-bottom-cta" aria-label="Get started">
+        <h2>Ready to rebuild a mix?</h2>
+        <p>Open the studio with a reference and get a chain in minutes.</p>
+        <div class="site-cta-row">
+          <a class="btn btn-primary" href="../analyze/">Open studio</a>
+          <a class="btn btn-ghost" href="../help/">Read the help guide</a>
         </div>
       </section>
     </main>
@@ -220,6 +312,12 @@
   <script type="module">
     import { initAuth } from "../js/auth/session.js";
     import { mountAuthNav } from "../js/ui/nav-auth.js";
+    import { glyphHtml } from "../js/ui/studio-glyphs.js";
+
+    document.querySelectorAll("[data-glyph]").forEach((el) => {
+      el.innerHTML = glyphHtml(el.getAttribute("data-glyph") || "");
+    });
+
     await initAuth();
     mountAuthNav(document.querySelector("[data-auth-nav]"), {
       authHref: "../auth/",
