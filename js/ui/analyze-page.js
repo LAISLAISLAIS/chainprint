@@ -2188,7 +2188,11 @@ async function createOrCopyShareLink({ announce = true } = {}) {
   }
   const readout = library.active()?.result?.readout || null;
   const { url } = await createSharedChain({
-    advice: lastAdvice,
+    advice: {
+      ...lastAdvice,
+      target: lastAdvice.target || analysisTarget || "vocal",
+      mode: lastAdvice.mode || analysisMode || "standard",
+    },
     trackName: lastTrackName || undefined,
     keyLabel: readout?.pitch?.keyLabel || undefined,
     bpm: readout?.tempo?.bpm ?? undefined,
