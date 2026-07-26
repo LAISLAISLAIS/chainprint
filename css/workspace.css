@@ -3834,17 +3834,18 @@
   font-weight: 500;
 }
 
-/* Signature panel — fill the viewport instead of packing into the top */
+/* Signature panel — stacked sections that scroll; never overlap */
 .studio [data-panel="signature"] .panel-pad {
   height: 100%;
   min-height: 0;
   box-sizing: border-box;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1.15fr) minmax(0, 0.9fr);
-  gap: clamp(16px, 2.8vh, 28px);
-  padding-top: clamp(18px, 3vh, 28px);
-  padding-bottom: clamp(20px, 3.5vh, 36px);
-  align-content: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding-top: clamp(18px, 2.5vh, 26px);
+  padding-bottom: clamp(24px, 3.5vh, 40px);
+  overflow: auto;
+  align-content: start;
 }
 
 .studio [data-panel="signature"] .panel-head {
@@ -3853,36 +3854,37 @@
 }
 
 .studio [data-panel="signature"] .readout-grid {
-  min-height: 0;
+  flex: 0 0 auto;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(152px, 1fr));
   align-content: start;
-  gap: clamp(8px, 1.3vh, 14px);
-  grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
 }
 
 .studio [data-panel="signature"] .readout {
-  padding: clamp(10px, 1.5vh, 14px) 12px 10px;
+  padding: 12px 12px 10px;
 }
 
 .studio [data-panel="signature"] .readout-main {
-  gap: clamp(8px, 1.2vh, 12px);
+  gap: 9px;
 }
 
 .studio [data-panel="signature"] .band-meters {
-  min-height: 0;
+  flex: 0 0 auto;
   margin-top: 0;
   display: grid;
-  gap: clamp(8px, 1.5vh, 14px);
-  align-content: center;
-  padding-top: clamp(4px, 1vh, 12px);
+  gap: 11px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  align-content: start;
 }
 
 .studio [data-panel="signature"] .band-track {
-  height: clamp(8px, 1.3vh, 12px);
+  height: 9px;
 }
 
 .studio [data-panel="signature"] .band-row {
-  gap: 10px;
-  grid-template-columns: 78px minmax(0, 1fr) 48px;
+  gap: 12px;
+  grid-template-columns: 84px minmax(0, 1fr) 52px;
 }
 
 .studio [data-panel="master"] .master-body {
