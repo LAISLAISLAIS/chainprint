@@ -25,3 +25,4 @@ mcp/**/*.pyc
 mcp/**/*.egg-info/
 mcp/dist/
 mcp/.pytest_cache/
+scripts/.og-tmp/
