@@ -158,20 +158,7 @@ const socialStack = document.querySelector(".social-stack");
 const socialDivider = document.querySelector(".auth-divider");
 const socialReady = status.demo || status.google || status.apple;
 
-if (socialNote) {
-  if (!socialReady) {
-    socialNote.textContent =
-      "Email signup works now. Google / Apple unlock once OAuth Client IDs are added in js/auth/config.js.";
-    socialNote.classList.remove("hidden");
-  } else if (status.demo) {
-    socialNote.textContent =
-      "Local demo: Google / Apple work without Client IDs here. Production needs IDs in js/auth/config.js.";
-    socialNote.classList.remove("hidden");
-  } else if (status.google && !status.apple) {
-    socialNote.textContent = "Apple Sign In needs an Apple Developer Services ID (optional).";
-    socialNote.classList.remove("hidden");
-  }
-}
+socialNote?.classList.add("hidden");
 
 if (!socialReady) {
   socialStack?.classList.add("hidden");
