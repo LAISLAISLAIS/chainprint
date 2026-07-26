@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /calibration/
+Disallow: /calibration
+
+Sitemap: https://chainprint.app/sitemap.xml

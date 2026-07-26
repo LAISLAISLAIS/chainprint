@@ -15,6 +15,7 @@ export function mountHeroMotion(canvas) {
   let h = 0;
   let dpr = 1;
   let t0 = performance.now();
+  let running = false;
 
   const bars = [
     0.14, 0.28, 0.2, 0.42, 0.34, 0.55, 0.4, 0.7, 0.5, 0.62,
@@ -22,6 +23,7 @@ export function mountHeroMotion(canvas) {
     0.3, 0.14, 0.22, 0.1,
   ];
 
+  let resizeTimer = 0;
   function resize() {
     const parent = canvas.parentElement || document.body;
     const rect = parent.getBoundingClientRect();
@@ -35,6 +37,14 @@ export function mountHeroMotion(canvas) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
+  function onResize() {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      resize();
+      if (reduced || document.hidden) draw(performance.now());
+    }, 120);
+  }
+
   function draw(now) {
     const t = (now - t0) / 1000;
     ctx.clearRect(0, 0, w, h);
@@ -42,7 +52,6 @@ export function mountHeroMotion(canvas) {
     const phase = reduced ? 0 : t * 0.18;
     const breath = reduced ? 0.5 : Math.sin(t * 0.25) * 0.5 + 0.5;
 
-    // Soft white bloom behind the hero stack
     const cy = h * 0.44;
     const glow = ctx.createRadialGradient(w * 0.5, cy, 0, w * 0.5, cy, Math.max(w, h) * 0.38);
     glow.addColorStop(0, `rgba(255, 255, 255, ${0.04 + breath * 0.02})`);
@@ -76,7 +85,9 @@ export function mountHeroMotion(canvas) {
     }
     ctx.restore();
 
-    raf = requestAnimationFrame(draw);
+    if (running && !reduced) {
+      raf = requestAnimationFrame(draw);
+    }
   }
 
   function roundRect(c, x, y, rw, rh, r) {
@@ -89,12 +100,40 @@ export function mountHeroMotion(canvas) {
     c.closePath();
   }
 
+  function start() {
+    if (running || reduced) return;
+    running = true;
+    t0 = performance.now();
+    raf = requestAnimationFrame(draw);
+  }
+
+  function stop() {
+    running = false;
+    cancelAnimationFrame(raf);
+    raf = 0;
+  }
+
+  function onVisibility() {
+    if (document.hidden) {
+      stop();
+    } else {
+      resize();
+      draw(performance.now());
+      start();
+    }
+  }
+
   resize();
-  window.addEventListener("resize", resize);
-  raf = requestAnimationFrame(draw);
+  draw(performance.now());
+  if (!reduced) start();
+
+  window.addEventListener("resize", onResize);
+  document.addEventListener("visibilitychange", onVisibility);
 
   return () => {
-    cancelAnimationFrame(raf);
-    window.removeEventListener("resize", resize);
+    stop();
+    clearTimeout(resizeTimer);
+    window.removeEventListener("resize", onResize);
+    document.removeEventListener("visibilitychange", onVisibility);
   };
 }

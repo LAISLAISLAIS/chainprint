@@ -2,6 +2,16 @@
 *.log
 .idea/
 .vscode/
+.cursor/
+.env
+.env.*
+!.env.example
+node_modules/
+dist/
+build/
+*.pem
+*.key
+Thumbs.db
 *.wav
 *.mp3
 *.flac

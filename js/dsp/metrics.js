@@ -23,6 +23,10 @@ export const VOCAL_REGION = { lo: 200, hi: 8000 };
 
 const EPS = 1e-12;
 const HOP = FFT_SIZE / 4; // 75% overlap
+/** Cap spectral analysis so long masters stay interactive (~45s window). */
+const MAX_SPECTRUM_SEC = 45;
+/** Soft ceiling on FFT frames — stride if denser. */
+const MAX_SPECTRUM_FRAMES = 320;
 
 function db(power) {
   return 10 * Math.log10(Math.max(power, EPS));
@@ -106,7 +110,7 @@ function frameAt(channelData, offset) {
 
 /**
  * Average magnitude spectrum across overlapping Hann frames.
- * Short files still analyze (single padded frame).
+ * Long files use a mid-track window + frame stride so analysis stays snappy.
  */
 export function averageSpectrum(channelData, sampleRate) {
   const window = hannWindow(FFT_SIZE);
@@ -118,13 +122,32 @@ export function averageSpectrum(channelData, sampleRate) {
     for (let i = 0; i < mag.length; i++) accum[i] = mag[i];
     frames = 1;
   } else {
-    const lastStart = channelData.length - FFT_SIZE;
-    for (let offset = 0; offset <= lastStart; offset += HOP) {
+    const maxSamples = Math.round(sampleRate * MAX_SPECTRUM_SEC);
+    let start = 0;
+    let end = channelData.length;
+    if (channelData.length > maxSamples) {
+      // Skip early intro; analyze a representative mid-track slice
+      start = Math.floor((channelData.length - maxSamples) * 0.22);
+      end = start + maxSamples;
+    }
+
+    const lastStart = end - FFT_SIZE;
+    const span = Math.max(0, lastStart - start);
+    const approxFrames = Math.floor(span / HOP) + 1;
+    const stride = Math.max(1, Math.ceil(approxFrames / MAX_SPECTRUM_FRAMES));
+
+    for (let offset = start; offset <= lastStart; offset += HOP * stride) {
       const mag = magnitudeSpectrum(frameAt(channelData, offset), window);
       for (let i = 0; i < mag.length; i++) accum[i] += mag[i];
       frames += 1;
     }
-    for (let i = 0; i < accum.length; i++) accum[i] /= frames;
+    if (frames === 0) {
+      const mag = magnitudeSpectrum(frameAt(channelData, start), window);
+      for (let i = 0; i < mag.length; i++) accum[i] = mag[i];
+      frames = 1;
+    } else {
+      for (let i = 0; i < accum.length; i++) accum[i] /= frames;
+    }
   }
 
   return { mag: accum, sampleRate, frames, hop: HOP };
@@ -275,28 +298,105 @@ export function transientIndex(mag, sampleRate) {
  * Label everywhere in UI: estimate of vocal region on a finished master.
  */
 export function measureBuffer(audioBuffer) {
+  return measureFromChannels(audioBuffer);
+}
+
+/**
+ * Async measure with progress yields so the UI can breathe mid-analysis.
+ * @param {AudioBuffer} audioBuffer
+ * @param {(t: number) => void} [onProgress] 0–1 within measure stage
+ */
+export async function measureBufferAsync(audioBuffer, onProgress) {
+  const yieldMain = () =>
+    new Promise((r) => {
+      if (typeof scheduler !== "undefined" && scheduler.postTask) {
+        scheduler.postTask(() => r(), { priority: "user-visible" });
+      } else {
+        setTimeout(r, 0);
+      }
+    });
+
+  onProgress?.(0.05);
+  await yieldMain();
+  const partial = prepareChannels(audioBuffer);
+
+  onProgress?.(0.2);
+  await yieldMain();
+  const { mag, frames, hop } = averageSpectrum(partial.mono, partial.sampleRate);
+
+  onProgress?.(0.45);
+  await yieldMain();
+  const vocalMag = vocalWeightedSpectrum(mag, partial.sampleRate);
+  const loud = loudnessProxy(partial.mono);
+  const dyn = dynamics(partial.mono, partial.sampleRate);
+  const stereo = stereoMetrics(partial.leftWin, partial.rightWin);
+
+  onProgress?.(0.6);
+  await yieldMain();
+  const tempo = estimateTempo(partial.mono, partial.sampleRate);
+
+  onProgress?.(0.8);
+  await yieldMain();
+  const pitch = estimatePitchProfile(partial.mono, partial.sampleRate, mag);
+  const eqTargets = eqTargetsFromSpectrum(vocalMag, partial.sampleRate);
+
+  onProgress?.(1);
+  return buildReadout(partial, { mag, frames, hop, vocalMag, loud, dyn, stereo, tempo, pitch, eqTargets });
+}
+
+/** Cap mono mix to ~60s so dynamics/tempo/pitch stay responsive on long masters. */
+const MAX_MEASURE_SEC = 60;
+
+function prepareChannels(audioBuffer) {
   const sampleRate = audioBuffer.sampleRate;
   const left = audioBuffer.getChannelData(0);
   const right = audioBuffer.numberOfChannels > 1 ? audioBuffer.getChannelData(1) : left;
-  const mono = new Float32Array(left.length);
-  for (let i = 0; i < left.length; i++) {
-    mono[i] = 0.5 * (left[i] + right[i]);
+  const maxLen = Math.min(left.length, Math.round(sampleRate * MAX_MEASURE_SEC));
+  const start = left.length > maxLen ? Math.floor((left.length - maxLen) * 0.15) : 0;
+
+  const mono = new Float32Array(maxLen);
+  const leftWin = new Float32Array(maxLen);
+  const rightWin = new Float32Array(maxLen);
+  for (let i = 0; i < maxLen; i++) {
+    const idx = start + i;
+    const l = left[idx];
+    const r = right[idx];
+    leftWin[i] = l;
+    rightWin[i] = r;
+    mono[i] = 0.5 * (l + r);
   }
 
-  const { mag, frames, hop } = averageSpectrum(mono, sampleRate);
-  const vocalMag = vocalWeightedSpectrum(mag, sampleRate);
-  const loud = loudnessProxy(mono);
-  const dyn = dynamics(mono, sampleRate);
-  const stereo = stereoMetrics(left, right);
-  const tempo = estimateTempo(mono, sampleRate);
-  const pitch = estimatePitchProfile(mono, sampleRate, mag);
-  const eqTargets = eqTargetsFromSpectrum(vocalMag, sampleRate);
+  return {
+    sampleRate,
+    durationSec: audioBuffer.duration,
+    mono,
+    leftWin,
+    rightWin,
+  };
+}
+
+function measureFromChannels(audioBuffer) {
+  const partial = prepareChannels(audioBuffer);
+  const { mag, frames, hop } = averageSpectrum(partial.mono, partial.sampleRate);
+  const vocalMag = vocalWeightedSpectrum(mag, partial.sampleRate);
+  const loud = loudnessProxy(partial.mono);
+  const dyn = dynamics(partial.mono, partial.sampleRate);
+  const stereo = stereoMetrics(partial.leftWin, partial.rightWin);
+  const tempo = estimateTempo(partial.mono, partial.sampleRate);
+  const pitch = estimatePitchProfile(partial.mono, partial.sampleRate, mag);
+  const eqTargets = eqTargetsFromSpectrum(vocalMag, partial.sampleRate);
+  return buildReadout(partial, { mag, frames, hop, vocalMag, loud, dyn, stereo, tempo, pitch, eqTargets });
+}
+
+function buildReadout(partial, parts) {
+  const { mag, frames, hop, vocalMag, loud, dyn, stereo, tempo, pitch, eqTargets } = parts;
+  const { sampleRate, durationSec } = partial;
 
   return {
     estimate: true,
     note: "Estimate of the vocal region on a finished master — not an isolated stem, not the true chain.",
     sampleRate,
-    durationSec: audioBuffer.duration,
+    durationSec,
     frames,
     hop,
     fftSize: FFT_SIZE,

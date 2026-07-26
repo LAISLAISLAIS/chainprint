@@ -19,9 +19,21 @@ import { renderPluginFace } from "./plugin-visuals.js";
 import { mountChainMark } from "./chain-mark.js";
 import { playAudio, stopAudio, subscribePlayback, playingKey } from "./audio-player.js";
 import { mountPlaybackPulse } from "./playback-pulse.js";
+import { setPlaybackTrackProvider, notifyPlaylist } from "./playback-playlist.js";
 // PDF export is lazy-loaded on click so a CDN failure can't break the studio
 
 const library = createLibrary();
+
+setPlaybackTrackProvider(() =>
+  library
+    .list()
+    .map((entry) => {
+      const file = audioFileForEntry(entry);
+      if (!file) return null;
+      return { id: entry.id, title: entryDisplayName(entry), file };
+    })
+    .filter(Boolean)
+);
 let blendWeight = 0.5;
 /** When set, successful analysis updates this library id instead of adding */
 let updatingEntryId = null;
@@ -121,7 +133,13 @@ mountAuthNav(document.querySelector("[data-auth-nav]"), {
 });
 
 mountPlaybackPulse();
-subscribePlayback(syncPlayButtons);
+let lastPlaySig = "";
+subscribePlayback((state) => {
+  const sig = `${state.playing ? 1 : 0}:${state.key || ""}`;
+  if (sig === lastPlaySig) return;
+  lastPlaySig = sig;
+  syncPlayButtons();
+});
 
 function refreshQuotaChrome() {
   const account = getSession();
@@ -455,6 +473,7 @@ function renderLibrary() {
   }
 
   syncPlayButtons();
+  notifyPlaylist();
 }
 
 function applyEntryToStudio(entry) {

@@ -1,5 +1,6 @@
 /**
- * Floating, draggable reference player — seek, volume, play/pause.
+ * Reference player — desktop floating/draggable dock;
+ * mobile fixed bottom bar with expandable track queue.
  */
 
 import {
@@ -10,10 +11,17 @@ import {
   togglePlayPause,
   seekAudioRatio,
   stopAudio,
+  playAudio,
+  activeKey,
 } from "./audio-player.js";
+import {
+  getPlaybackTracks,
+  subscribePlaylist,
+} from "./playback-playlist.js";
 
 const BARS = 5;
 const POS_KEY = "chainprint.playerPos";
+const MOBILE_MQ = "(max-width: 720px)";
 
 /**
  * @param {ParentNode} [parent=document.body]
@@ -31,12 +39,26 @@ export function mountPlaybackPulse(parent = document.body) {
   el.setAttribute("role", "region");
   el.setAttribute("aria-label", "Reference player");
   el.innerHTML = `
+    <div class="playback-dock-sheet" data-player-sheet hidden>
+      <div class="playback-dock-sheet-head">
+        <span>Tracks</span>
+        <button type="button" class="playback-dock-sheet-close" data-player-collapse aria-label="Collapse">
+          <span aria-hidden="true"></span>
+        </button>
+      </div>
+      <ul class="playback-dock-queue" data-player-queue></ul>
+    </div>
     <div class="playback-dock-chrome" data-player-drag>
       <span class="playback-dock-grip" aria-hidden="true">
         <i></i><i></i><i></i><i></i><i></i><i></i>
       </span>
       <span class="playback-dock-drag-hint">Drag</span>
-      <p class="playback-dock-title" data-player-title>Reference</p>
+      <button type="button" class="playback-dock-title-btn" data-player-expand-title>
+        <p class="playback-dock-title" data-player-title>Reference</p>
+      </button>
+      <button type="button" class="playback-dock-expand" data-player-expand hidden aria-expanded="false" aria-label="Show tracks">
+        <span class="playback-dock-chevron" aria-hidden="true"></span>
+      </button>
       <button type="button" class="playback-dock-close" data-player-close aria-label="Close player">
         <span aria-hidden="true"></span>
       </button>
@@ -89,6 +111,7 @@ export function mountPlaybackPulse(parent = document.body) {
   parent.appendChild(el);
 
   const titleEl = el.querySelector("[data-player-title]");
+  const titleBtn = el.querySelector("[data-player-expand-title]");
   const playBtn = el.querySelector("[data-player-play]");
   const seek = el.querySelector("[data-player-seek]");
   const currentEl = el.querySelector("[data-player-current]");
@@ -97,13 +120,23 @@ export function mountPlaybackPulse(parent = document.body) {
   const volRange = el.querySelector("[data-playback-volume]");
   const closeBtn = el.querySelector("[data-player-close]");
   const dragHandle = el.querySelector("[data-player-drag]");
+  const expandBtn = el.querySelector("[data-player-expand]");
+  const collapseBtn = el.querySelector("[data-player-collapse]");
+  const sheet = el.querySelector("[data-player-sheet]");
+  const queueEl = el.querySelector("[data-player-queue]");
 
   let seeking = false;
+  let expanded = false;
   /** @type {{ x: number, y: number } | null} */
   let placed = loadPos();
+  const mobileMq = window.matchMedia(MOBILE_MQ);
+
+  function isMobile() {
+    return mobileMq.matches;
+  }
 
   function applyPlacement() {
-    if (!placed) {
+    if (isMobile() || !placed) {
       el.classList.remove("is-placed");
       el.style.left = "";
       el.style.top = "";
@@ -118,7 +151,45 @@ export function mountPlaybackPulse(parent = document.body) {
     el.style.bottom = "auto";
   }
 
+  function setExpanded(on) {
+    expanded = Boolean(on) && getPlaybackTracks().length > 1;
+    el.classList.toggle("is-expanded", expanded);
+    if (sheet) sheet.hidden = !expanded;
+    if (expandBtn) {
+      expandBtn.setAttribute("aria-expanded", expanded ? "true" : "false");
+      expandBtn.setAttribute("aria-label", expanded ? "Hide tracks" : "Show tracks");
+    }
+    renderQueue();
+  }
+
+  function renderQueue() {
+    if (!queueEl) return;
+    const tracks = getPlaybackTracks();
+    const key = activeKey();
+    queueEl.innerHTML = tracks
+      .map((t) => {
+        const on = t.id === key;
+        return `<li>
+          <button type="button" class="playback-dock-track ${on ? "is-current" : ""}" data-track-id="${escapeAttr(t.id)}">
+            <span class="playback-dock-track-title">${escapeHtml(t.title || "Reference")}</span>
+            ${on ? '<span class="playback-dock-track-now">Now</span>' : ""}
+          </button>
+        </li>`;
+      })
+      .join("");
+  }
+
+  function syncQueueChrome() {
+    const tracks = getPlaybackTracks();
+    const multi = tracks.length > 1;
+    el.classList.toggle("has-queue", multi);
+    if (expandBtn) expandBtn.hidden = !multi;
+    if (!multi && expanded) setExpanded(false);
+    else if (expanded) renderQueue();
+  }
+
   applyPlacement();
+  syncQueueChrome();
 
   function formatTime(sec) {
     if (!Number.isFinite(sec) || sec < 0) return "0:00";
@@ -132,6 +203,8 @@ export function mountPlaybackPulse(parent = document.body) {
     el.classList.toggle("is-live", state.active);
     el.classList.toggle("is-playing", state.playing);
     el.classList.toggle("is-muted", state.muted || state.volume <= 0.001);
+    document.body.classList.toggle("has-playback-dock", state.active);
+    document.body.classList.toggle("is-playing", state.playing);
 
     if (titleEl) titleEl.textContent = state.title || "Reference";
 
@@ -166,6 +239,19 @@ export function mountPlaybackPulse(parent = document.body) {
         state.muted || state.volume <= 0.001 ? "true" : "false"
       );
     }
+
+    if (expanded) renderQueue();
+  }
+
+  async function playTrackId(id) {
+    const track = getPlaybackTracks().find((t) => t.id === id);
+    if (!track) return;
+    try {
+      await playAudio(track.file, track.id, { title: track.title });
+      if (isMobile()) setExpanded(false);
+    } catch (err) {
+      console.error(err);
+    }
   }
 
   playBtn?.addEventListener("click", (e) => {
@@ -177,6 +263,7 @@ export function mountPlaybackPulse(parent = document.body) {
   closeBtn?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
+    setExpanded(false);
     stopAudio();
   });
 
@@ -204,7 +291,6 @@ export function mountPlaybackPulse(parent = document.body) {
   });
   seek?.addEventListener("input", onSeekInput);
   seek?.addEventListener("change", () => {
-    onSeekInput();
     seeking = false;
   });
   seek?.addEventListener("pointerup", () => {
@@ -214,7 +300,32 @@ export function mountPlaybackPulse(parent = document.body) {
     seeking = false;
   });
 
-  /* —— Drag to reposition —— */
+  expandBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setExpanded(!expanded);
+  });
+
+  collapseBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setExpanded(false);
+  });
+
+  titleBtn?.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (getPlaybackTracks().length > 1) setExpanded(!expanded);
+  });
+
+  queueEl?.addEventListener("click", (e) => {
+    const btn = e.target.closest("[data-track-id]");
+    if (!btn) return;
+    e.preventDefault();
+    playTrackId(btn.getAttribute("data-track-id"));
+  });
+
+  /* —— Desktop drag —— */
   let drag = null;
 
   function clampPos(x, y) {
@@ -229,7 +340,7 @@ export function mountPlaybackPulse(parent = document.body) {
   }
 
   function onPointerMove(e) {
-    if (!drag) return;
+    if (!drag || isMobile()) return;
     e.preventDefault();
     placed = clampPos(e.clientX - drag.ox, e.clientY - drag.oy);
     applyPlacement();
@@ -246,11 +357,11 @@ export function mountPlaybackPulse(parent = document.body) {
   }
 
   dragHandle?.addEventListener("pointerdown", (e) => {
+    if (isMobile()) return;
     if (e.button != null && e.button !== 0) return;
     if (e.target.closest("button")) return;
     e.preventDefault();
     const rect = el.getBoundingClientRect();
-    // Convert docked (right/bottom) into absolute coords on first drag
     if (!placed) {
       placed = { x: rect.left, y: rect.top };
       applyPlacement();
@@ -263,21 +374,40 @@ export function mountPlaybackPulse(parent = document.body) {
     window.addEventListener("pointercancel", onPointerUp);
   });
 
-  window.addEventListener("resize", () => {
-    if (!placed) return;
-    placed = clampPos(placed.x, placed.y);
+  function onResize() {
     applyPlacement();
-    savePos(placed);
-  });
+    if (!isMobile() && placed) {
+      placed = clampPos(placed.x, placed.y);
+      applyPlacement();
+      savePos(placed);
+    }
+    if (isMobile()) {
+      el.classList.remove("is-dragging");
+      drag = null;
+    }
+  }
 
-  const unsub = subscribePlayback((state) => {
-    syncUi(state);
-    document.body.classList.toggle("is-playing", state.playing);
+  function onMqChange() {
+    onResize();
+    if (!isMobile()) setExpanded(false);
+  }
+
+  window.addEventListener("resize", onResize);
+  mobileMq.addEventListener?.("change", onMqChange);
+  mobileMq.addListener?.(onMqChange);
+
+  const unsubPlay = subscribePlayback(syncUi);
+  const unsubList = subscribePlaylist(() => {
+    syncQueueChrome();
   });
 
   return () => {
-    unsub();
-    document.body.classList.remove("is-playing");
+    unsubPlay();
+    unsubList();
+    document.body.classList.remove("is-playing", "has-playback-dock");
+    window.removeEventListener("resize", onResize);
+    mobileMq.removeEventListener?.("change", onMqChange);
+    mobileMq.removeListener?.(onMqChange);
     window.removeEventListener("pointermove", onPointerMove);
     window.removeEventListener("pointerup", onPointerUp);
     window.removeEventListener("pointercancel", onPointerUp);
@@ -312,4 +442,16 @@ function savePos(pos) {
   } catch {
     /* ignore */
   }
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function escapeAttr(s) {
+  return escapeHtml(s).replace(/'/g, "&#39;");
 }

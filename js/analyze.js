@@ -3,20 +3,12 @@
  * Audio never leaves the machine (file upload or user-initiated URL fetch).
  */
 
-import { measureBuffer } from "./dsp/metrics.js";
+import { measureBufferAsync } from "./dsp/metrics.js";
 import { characterize, recommend } from "./recommend.js";
 import { resolveReferenceUrl } from "./source.js";
+import { decodeFile } from "./audio-decode.js";
 
-export async function decodeFile(file) {
-  const arrayBuffer = await file.arrayBuffer();
-  const ctx = new AudioContext();
-  try {
-    const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
-    return audioBuffer;
-  } finally {
-    await ctx.close();
-  }
-}
+export { decodeFile };
 
 function tick() {
   return new Promise((r) => requestAnimationFrame(() => r()));
@@ -24,7 +16,7 @@ function tick() {
 
 /**
  * @param {File} file
- * @param {{ pluginMap?: object, daw?: string, meta?: object, onProgress?: (p: {stage:string,label:string,progress:number}) => void }} [options]
+ * @param {{ pluginMap?: object, daw?: string, meta?: object, mode?: string, onProgress?: (p: {stage:string,label:string,progress:number}) => void }} [options]
  */
 export async function analyzeFile(file, { pluginMap = null, daw = "universal", meta = null, mode = "standard", onProgress } = {}) {
   const report = (stage, label, progress) => onProgress?.({ stage, label, progress });
@@ -33,14 +25,16 @@ export async function analyzeFile(file, { pluginMap = null, daw = "universal", m
   await tick();
   const buffer = await decodeFile(file);
 
-  report("decoding", "Decoding waveform…", 0.32);
+  report("decoding", "Decoding waveform…", 0.28);
   await tick();
 
-  report("measuring", mode === "deep" ? "Deep measuring vocal + master…" : "Measuring vocal signature…", 0.55);
+  report("measuring", mode === "deep" ? "Deep measuring vocal + master…" : "Measuring vocal signature…", 0.4);
   await tick();
-  const readout = measureBuffer(buffer);
+  const readout = await measureBufferAsync(buffer, (t) => {
+    report("measuring", mode === "deep" ? "Deep measuring vocal + master…" : "Measuring vocal signature…", 0.4 + t * 0.28);
+  });
 
-  report("characterizing", "Reading tone, tempo & pitch…", 0.72);
+  report("characterizing", "Reading tone, tempo & pitch…", 0.74);
   await tick();
   const traits = characterize(readout);
 

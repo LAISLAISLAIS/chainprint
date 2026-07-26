@@ -424,6 +424,87 @@
   color: #f4f4f4;
 }
 
+.find-seo {
+  margin-top: 48px;
+  padding-top: 28px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: grid;
+  gap: 14px;
+}
+
+.find-seo h2 {
+  margin: 8px 0 0;
+  font-family: var(--font-brand);
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: #e8e8e8;
+}
+
+.find-seo p,
+.find-seo li {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: #8a8a8a;
+}
+
+.find-seo strong {
+  color: #cfcfcf;
+  font-weight: 600;
+}
+
+.find-seo a {
+  color: #cfcfcf;
+}
+
+.find-seo-list {
+  margin: 0;
+  padding-left: 1.15rem;
+  display: grid;
+  gap: 6px;
+}
+
+.find-faq {
+  display: grid;
+  gap: 8px;
+}
+
+.find-faq details {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-btn);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 12px 14px;
+}
+
+.find-faq summary {
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e4e4e4;
+  letter-spacing: -0.01em;
+  list-style: none;
+}
+
+.find-faq summary::-webkit-details-marker {
+  display: none;
+}
+
+.find-faq details[open] summary {
+  margin-bottom: 8px;
+}
+
+.find-faq p {
+  font-size: 0.84rem;
+}
+
+@media (max-width: 640px) {
+  .find-seo {
+    margin-top: 36px;
+    padding-top: 22px;
+  }
+}
+
 @keyframes find-in {
   from {
     opacity: 0;

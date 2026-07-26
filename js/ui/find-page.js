@@ -5,7 +5,7 @@
 import { findKeyBpmFromFile, findKeyBpmFromUrl } from "../find-key-bpm.js";
 import { mountAuthNav } from "./nav-auth.js";
 import { mountChainMark } from "./chain-mark.js";
-import { playAudio, stopAudio, subscribePlayback, playingKey } from "./audio-player.js";
+import { playAudio, stopAudio, subscribePlayback } from "./audio-player.js";
 import { mountPlaybackPulse } from "./playback-pulse.js";
 
 mountAuthNav(document.querySelector("[data-auth-nav]"), {
@@ -44,7 +44,15 @@ let pendingUrl = null;
 /** @type {(() => void) | null} */
 let unmountFindMark = null;
 
-subscribePlayback(syncPlayUi);
+let lastFindPlay = null;
+subscribePlayback((state) => {
+  const on = Boolean(state.playing && state.key === "find");
+  if (on === lastFindPlay) return;
+  lastFindPlay = on;
+  playBtn?.classList.toggle("is-playing", on);
+  if (playLabel) playLabel.textContent = on ? "Pause" : "Play";
+  playBtn?.setAttribute("aria-label", on ? "Pause reference" : "Play reference");
+});
 
 function setStatus(text, isError = false) {
   if (!statusEl) return;
@@ -75,7 +83,7 @@ function setBusy(on) {
   document.body.classList.toggle("is-finding", on);
   if (goBtn) {
     goBtn.disabled = on;
-    goBtn.textContent = on ? "Finding…" : "Find";
+    goBtn.textContent = on ? "Finding…" : "Find key & BPM";
   }
   dropzone?.classList.toggle("is-busy", on);
   dropzone?.setAttribute("aria-disabled", on ? "true" : "false");
@@ -92,13 +100,6 @@ function setBusy(on) {
     unmountFindMark?.();
     unmountFindMark = null;
   }
-}
-
-function syncPlayUi() {
-  const on = playingKey() === "find";
-  playBtn?.classList.toggle("is-playing", on);
-  if (playLabel) playLabel.textContent = on ? "Pause" : "Play";
-  playBtn?.setAttribute("aria-label", on ? "Pause reference" : "Play reference");
 }
 
 function showResults(result) {

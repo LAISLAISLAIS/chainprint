@@ -2,7 +2,7 @@
  * Lightweight key + BPM finder (no full vocal-chain analysis).
  */
 
-import { decodeFile } from "./analyze.js";
+import { decodeFile } from "./audio-decode.js";
 import { resolveReferenceUrl } from "./source.js";
 import { estimateTempo } from "./dsp/tempo.js";
 import { estimatePitchProfile, relativeKey } from "./dsp/pitch.js";
