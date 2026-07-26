@@ -4233,12 +4233,12 @@
     min-width: 0;
   }
 
-  /* Uploads / library first, then Chain (plugins below) — stay pinned while scrolling */
+  /* Uploads / library first, then Chain (plugins below) */
   .studio-source {
     order: 1 !important;
-    position: sticky;
-    top: var(--studio-sticky-offset);
-    z-index: 45;
+    position: relative;
+    top: auto;
+    z-index: auto;
     border-right: none;
     border-bottom: 1px solid var(--studio-rule);
     border-top: none;
@@ -4249,11 +4249,11 @@
     padding: 0;
     gap: 0;
     background: #000;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+    box-shadow: none;
   }
 
   body.has-playback-dock.studio-body .studio-source {
-    top: calc(var(--studio-sticky-offset) + var(--playback-dock-space, 96px));
+    top: auto;
   }
 
   .studio-main {
