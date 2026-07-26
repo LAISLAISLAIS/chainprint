@@ -18,18 +18,29 @@ export async function createSharedChain(input) {
   const supabase = await getSupabase();
   if (!supabase) throw new Error("Sharing needs the cloud backend — not configured.");
 
-  const { data: userData } = await supabase.auth.getUser();
+  const { data: userData, error: userErr } = await supabase.auth.getUser();
+  if (userErr) throw new Error(userErr.message || "Could not verify your login.");
   const userId = userData?.user?.id;
   if (!userId) throw new Error("Log in to share a chain.");
 
   const advice = input.advice;
   if (!advice?.chain) throw new Error("Nothing to share yet — run an analysis first.");
 
+  const targetRaw = String(advice.target || input.target || "vocal").toLowerCase();
+  const target = ["vocal", "instrumental", "full"].includes(targetRaw) ? targetRaw : "vocal";
+  const mode = advice.mode === "deep" ? "deep" : "standard";
+
+  const instruments = (Array.isArray(advice.instruments) ? advice.instruments : [])
+    .slice(0, 6)
+    .map((i) => ({
+      label: typeof i === "string" ? i : String(i?.label || i?.name || "Source"),
+    }));
+
   const row = {
     owner: userId,
     track_name: input.trackName?.slice(0, 160) || null,
-    target: advice.target || null,
-    mode: advice.mode === "deep" ? "deep" : "standard",
+    target,
+    mode,
     key_label: input.keyLabel?.slice(0, 32) || null,
     bpm: Number.isFinite(Number(input.bpm)) ? Number(input.bpm) : null,
     artwork_url: input.artworkUrl?.slice(0, 500) || null,
@@ -37,7 +48,7 @@ export async function createSharedChain(input) {
       chain: advice.chain,
       honesty: advice.honesty || null,
       estimateNote: advice.estimateNote || null,
-      instruments: (advice.instruments || []).slice(0, 6).map((i) => ({ label: i.label })),
+      instruments,
     },
   };
 
@@ -46,7 +57,18 @@ export async function createSharedChain(input) {
     .insert(row)
     .select("id")
     .single();
-  if (error) throw new Error(error.message || "Could not create the share link.");
+  if (error) {
+    const msg = String(error.message || "");
+    if (/shared_chains|PGRST205|schema cache/i.test(msg) || error.code === "PGRST205") {
+      throw new Error(
+        "Share links need the shared_chains table. In Supabase → SQL, run supabase/migrations/004_shared_chains.sql, then try again."
+      );
+    }
+    if (/row-level security|RLS|permission denied|42501/i.test(msg)) {
+      throw new Error("Could not save the share (login expired?). Sign out, sign back in, and retry.");
+    }
+    throw new Error(msg || "Could not create the share link.");
+  }
 
   return { id: data.id, url: shareUrl(data.id) };
 }
