@@ -212,6 +212,19 @@
   transition: grid-template-columns 0.28s ease;
 }
 
+/* Reference upload / library only on Chain — other tabs are analysis-only */
+.studio:not([data-studio-view="chain"]) .studio-source {
+  display: none !important;
+}
+
+.studio:not([data-studio-view="chain"]) .studio-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.studio:not([data-studio-view="chain"]) .source-collapse {
+  display: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .studio-grid {
     transition: none;
@@ -4269,13 +4282,7 @@
     display: none !important;
   }
 
-  /* Track list on Chain only — other tabs keep upload/paste without the full list */
-  .studio:not([data-studio-view="chain"]) .library-panel,
-  .studio:not([data-studio-view="chain"]) .blend-panel {
-    display: none !important;
-  }
-
-  /* Ignore collapsed state on mobile — always show upload + paste link */
+  /* Ignore collapsed state on mobile — always show upload + paste link on Chain */
   .studio.is-source-collapsed .studio-source {
     display: flex;
     flex-direction: column;
