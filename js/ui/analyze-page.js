@@ -1610,7 +1610,7 @@ function renderDesign(design) {
                   .map(
                     (a) => `
                   <div class="pro-pick">
-                    <div>
+                    <div class="pro-pick-copy">
                       <p class="pro-pick-name">${escapeHtml(a.name)}</p>
                       <p class="pro-pick-meta">${escapeHtml(a.brand)} · ${escapeHtml(a.role)}</p>
                       <p class="pro-pick-why">${escapeHtml(a.why)}</p>
@@ -1797,7 +1797,7 @@ function renderAffiliates(step) {
         .map(
           (a) => `
         <div class="pro-pick">
-          <div>
+          <div class="pro-pick-copy">
             <p class="pro-pick-name">${escapeHtml(a.name)}</p>
             <p class="pro-pick-meta">${escapeHtml(a.brand)} · ${escapeHtml(a.role)}</p>
             <p class="pro-pick-why">${escapeHtml(a.why)}</p>

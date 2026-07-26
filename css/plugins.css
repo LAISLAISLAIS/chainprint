@@ -209,13 +209,15 @@
   }
 }
 
-/* Pro affiliate cards */
+/* Pro affiliate cards — keep full copy readable in the chain column */
 .pro-picks {
   margin-top: 4px;
   padding-top: 12px;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: grid;
   gap: 10px;
+  min-width: 0;
+  width: 100%;
 }
 
 .pro-picks-label {
@@ -229,13 +231,22 @@
 
 .pro-pick {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 8px 14px;
   align-items: start;
   padding: 12px 14px;
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.03);
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pro-pick-copy {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
 }
 
 .pro-pick-name {
@@ -244,20 +255,21 @@
   font-weight: var(--weight-semibold);
   letter-spacing: -0.02em;
   color: #f5f5f5;
+  overflow-wrap: anywhere;
 }
 
 .pro-pick-meta {
-  margin: 3px 0 0;
+  margin: 0;
   font-size: var(--text-xs);
   color: #8a8a8a;
 }
 
 .pro-pick-why {
-  margin: 6px 0 0;
-  grid-column: 1 / -1;
+  margin: 4px 0 0;
   font-size: var(--text-sm);
   line-height: 1.45;
   color: #a8a8a8;
+  overflow-wrap: break-word;
 }
 
 .pro-pick-buy {
@@ -276,6 +288,7 @@
   border-radius: 8px;
   text-decoration: none;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: background 0.15s ease;
 }
 
@@ -288,4 +301,18 @@
   margin: 0;
   font-size: var(--text-xs);
   color: #666;
+}
+
+.stage-focus .pro-picks {
+  margin-top: 2px;
+}
+
+@media (max-width: 1100px) {
+  .stage-focus .pro-pick {
+    grid-template-columns: 1fr;
+  }
+
+  .stage-focus .pro-pick-buy {
+    justify-self: start;
+  }
 }
