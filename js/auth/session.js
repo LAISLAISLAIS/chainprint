@@ -544,38 +544,47 @@ async function signupRemote({ email, password, username }) {
     );
   }
 
-  const { error: profileError } = await supabase.from("profiles").upsert(
-    {
-      id: user.id,
-      email,
-      username,
-      provider: "password",
-      plan: "free",
-      analyses_used: 0,
-    },
-    { onConflict: "id" }
-  );
-
-  if (profileError) {
-    if (/unique|duplicate/i.test(profileError.message || "")) {
-      throw Object.assign(new Error("That username or email is already taken."), {
-        code: "exists",
-      });
-    }
-    throw Object.assign(new Error(profileError.message || "Couldn’t save profile."), {
-      code: "profile_failed",
-    });
-  }
-
-  if (!data.session) {
-    throw Object.assign(
-      new Error("Account created. Confirm your email, then log in."),
-      { code: "confirm_email" }
+  // Profile row is created by DB trigger on auth.users. With a session we can
+  // upsert / ensure; without one (email confirm on), skip client insert — RLS
+  // would block auth.uid() = null.
+  if (data.session) {
+    const { error: profileError } = await supabase.from("profiles").upsert(
+      {
+        id: user.id,
+        email,
+        username,
+        provider: "password",
+        plan: "free",
+        analyses_used: 0,
+      },
+      { onConflict: "id" }
     );
+
+    if (profileError) {
+      if (/unique|duplicate/i.test(profileError.message || "")) {
+        throw Object.assign(new Error("That username or email is already taken."), {
+          code: "exists",
+        });
+      }
+      const { error: ensureErr } = await supabase.rpc("ensure_own_profile", {
+        p_username: username,
+      });
+      if (ensureErr) {
+        throw Object.assign(
+          new Error(profileError.message || "Couldn’t save profile."),
+          { code: "profile_failed" }
+        );
+      }
+    }
+
+    const profile = await fetchProfile(supabase, user.id);
+    return cacheAccount(mapProfileRow(user, profile));
   }
 
-  const profile = await fetchProfile(supabase, user.id);
-  return cacheAccount(mapProfileRow(user, profile));
+  throw Object.assign(
+    new Error("Account created. Confirm your email, then log in."),
+    { code: "confirm_email" }
+  );
 }
 
 async function loginRemote({ identifier, password }) {
@@ -613,14 +622,18 @@ async function loginRemote({ identifier, password }) {
       user.user_metadata?.username ||
       email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "").slice(0, 24) ||
       "user";
-    await supabase.from("profiles").upsert({
+    const safeName = uname.length >= 3 ? uname : `${uname}123`.slice(0, 24);
+    const { error: upsertErr } = await supabase.from("profiles").upsert({
       id: user.id,
       email,
-      username: uname.length >= 3 ? uname : `${uname}123`.slice(0, 24),
+      username: safeName,
       provider: "password",
       plan: "free",
       analyses_used: 0,
     });
+    if (upsertErr) {
+      await supabase.rpc("ensure_own_profile", { p_username: safeName });
+    }
     profile = await fetchProfile(supabase, user.id);
   }
 
