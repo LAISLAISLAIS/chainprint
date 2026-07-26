@@ -1915,11 +1915,14 @@ function escapeHtml(s) {
 function stageChip(entry, globalIndex) {
   const { step, kind } = entry;
   const type = step.type || (kind === "send" ? "Send" : "Insert");
+  const n = kind === "send" ? "S" : String(entry.index + 1).padStart(2, "0");
   return `
-    <button type="button" class="stage-chip" role="tab" data-stage-index="${globalIndex}" aria-selected="false">
-      <span class="stage-chip-n">${kind === "send" ? "Send" : `Step ${entry.index + 1}`}</span>
-      <span class="stage-chip-title">${escapeHtml(step.title)}</span>
-      <span class="stage-chip-type">${escapeHtml(type)}</span>
+    <button type="button" class="stage-chip" role="tab" data-stage-index="${globalIndex}" data-stage-kind="${kind}" data-stage-state="next" aria-selected="false">
+      <span class="stage-chip-n" aria-hidden="true">${escapeHtml(n)}</span>
+      <span class="stage-chip-copy">
+        <span class="stage-chip-title">${escapeHtml(step.title)}</span>
+        <span class="stage-chip-type">${escapeHtml(type)}</span>
+      </span>
     </button>`;
 }
 
@@ -1966,7 +1969,9 @@ function renderFocus() {
 
   document.querySelectorAll("[data-stage-index]").forEach((btn) => {
     const i = Number(btn.getAttribute("data-stage-index"));
+    const state = i < stageIndex ? "past" : i === stageIndex ? "current" : "next";
     btn.setAttribute("aria-selected", String(i === stageIndex));
+    btn.setAttribute("data-stage-state", state);
   });
 
   if (stageCount) stageCount.textContent = `${stageIndex + 1} / ${stages.length}`;

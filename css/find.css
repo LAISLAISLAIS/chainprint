@@ -110,20 +110,19 @@
   display: none;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  min-height: 40px;
-  margin-bottom: 8px;
+  width: auto;
+  min-height: 0;
+  margin: 0 auto 10px;
   overflow: visible;
   color: var(--teal, #6ec4b4);
 }
 
 .find-drop.is-busy .find-alive {
-  display: flex;
+  display: grid;
 }
 
 .find-drop.is-busy .find-alive.logo-hero--cycle,
-.find-drop.is-busy .find-alive.logo-hero,
-.find-drop.is-busy .find-alive .logo-hero--cycle {
+.find-drop.is-busy .find-alive.logo-hero {
   --mark-w: min(168px, 62vw);
   color: var(--teal, #6ec4b4);
 }
@@ -627,8 +626,8 @@
   }
 
   .find-drop.is-busy .find-alive.logo-hero--cycle,
-  .find-drop.is-busy .find-alive .logo-hero--cycle {
-    --mark-w: 112px;
+  .find-drop.is-busy .find-alive.logo-hero {
+    --mark-w: 120px;
   }
 }
 

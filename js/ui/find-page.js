@@ -171,6 +171,7 @@ function showResults(result) {
 
 async function run(task, label) {
   if (busy) return;
+  const started = performance.now();
   setBusy(true);
   setStatus(label);
   resultsEl && (resultsEl.hidden = true);
@@ -179,6 +180,9 @@ async function run(task, label) {
   if (playBtn) playBtn.hidden = true;
   try {
     const result = await task();
+    // Keep the listening mark on screen long enough to read as motion
+    const wait = Math.max(0, 700 - (performance.now() - started));
+    if (wait) await new Promise((r) => setTimeout(r, wait));
     setStatus("");
     showResults(result);
   } catch (err) {

@@ -91,15 +91,18 @@
 }
 
 /*
- * Analyzing / Key·BPM busy — HTML chain with CSS border-color loop.
- * (SVG stroke animations were freezing; this cannot get stuck mid-JS.)
+ * Analyzing / Key·BPM busy — HTML chain with CSS color loop.
+ * Fixed rem sizes (not %) so the mark can’t collapse when the host is a flex row.
  */
 .logo-hero--cycle {
   --mark-w: clamp(148px, 32vw, 210px);
-  width: var(--mark-w);
-  height: calc(var(--mark-w) * 0.34);
+  width: var(--mark-w) !important;
+  max-width: var(--mark-w);
+  height: calc(var(--mark-w) * 0.34) !important;
   margin: 0 auto;
   color: #6ec4b4;
+  display: grid !important;
+  place-items: center;
   animation: chain-flow-breathe 2.4s ease-in-out infinite;
   filter: drop-shadow(0 0 14px rgba(110, 196, 180, 0.4));
 }
@@ -116,26 +119,26 @@
 .chain-flow-link {
   display: block;
   box-sizing: border-box;
-  border-style: solid;
-  border-width: 3.5px;
+  border: 3.5px solid #3f8f84;
   border-radius: 999px;
   background: transparent;
-  flex-shrink: 0;
-  animation: chain-flow-color 1.7s ease-in-out infinite;
-  animation-delay: calc(var(--i, 0) * -0.34s);
+  flex: 0 0 auto;
+  animation: chain-flow-color 1.5s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -0.3s);
+  will-change: border-color, opacity, box-shadow;
 }
 
 .chain-flow-link--v {
-  width: 11.5%;
-  height: 72%;
-  margin-inline: -1.8%;
+  width: 14px;
+  height: 28px;
+  margin-inline: -3px;
   z-index: 1;
 }
 
 .chain-flow-link--h {
-  width: 26%;
-  height: 34%;
-  margin-inline: -1.8%;
+  width: 36px;
+  height: 14px;
+  margin-inline: -3px;
   z-index: 2;
 }
 
@@ -143,23 +146,23 @@
   0%,
   100% {
     border-color: #1f524c;
-    opacity: 0.72;
+    opacity: 0.7;
+    box-shadow: 0 0 0 rgba(110, 196, 180, 0);
   }
-  20% {
+  25% {
     border-color: #3f8f84;
     opacity: 0.9;
+    box-shadow: 0 0 6px rgba(110, 196, 180, 0.2);
   }
-  45% {
+  50% {
     border-color: #6ec4b4;
     opacity: 1;
+    box-shadow: 0 0 12px rgba(110, 196, 180, 0.55);
   }
-  70% {
+  75% {
     border-color: #e8fffa;
     opacity: 1;
-  }
-  85% {
-    border-color: #8ed9cb;
-    opacity: 0.95;
+    box-shadow: 0 0 16px rgba(232, 255, 250, 0.45);
   }
 }
 
@@ -170,7 +173,7 @@
     filter: drop-shadow(0 0 10px rgba(110, 196, 180, 0.28));
   }
   50% {
-    transform: scale(1.04);
+    transform: scale(1.05);
     filter: drop-shadow(0 0 18px rgba(142, 217, 203, 0.55));
   }
 }
@@ -185,5 +188,7 @@
     animation: none;
     border-color: #6ec4b4;
     opacity: 0.92;
+    box-shadow: none;
+    will-change: auto;
   }
 }
