@@ -229,6 +229,51 @@
   color: var(--ok, var(--metal-bright));
 }
 
+.settings-shares {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-share-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.settings-share-row.is-expired {
+  opacity: 0.62;
+}
+
+.settings-share-title {
+  font-family: var(--font-ui);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  color: var(--readout);
+  text-decoration: none;
+}
+
+.settings-share-title:hover {
+  color: var(--brand);
+}
+
+.settings-share-meta {
+  margin: 4px 0 0;
+  font-size: var(--text-xs);
+  color: var(--silkscreen);
+}
+
+.settings-share-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .settings-plan-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;

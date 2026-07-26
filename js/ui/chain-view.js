@@ -1,9 +1,8 @@
 /**
- * Public shared-chain page: /c/?id=<uuid>
- * Fetches a chain snapshot and renders it read-only with a recreate CTA.
+ * Public shared-chain page: /c/:id or /c/?id=<uuid>
  */
 
-import { fetchSharedChain } from "../share/chain-share.js";
+import { fetchSharedChain, shareIdFromLocation, shareUrl } from "../share/chain-share.js";
 
 const loading = document.querySelector("[data-share-loading]");
 const errorBox = document.querySelector("[data-share-error]");
@@ -13,6 +12,8 @@ const artEl = document.querySelector("[data-share-art]");
 const kickerEl = document.querySelector("[data-share-kicker]");
 const titleEl = document.querySelector("[data-share-title]");
 const chipsEl = document.querySelector("[data-share-chips]");
+const whyEl = document.querySelector("[data-share-why]");
+const stripEl = document.querySelector("[data-share-strip]");
 const insertsEl = document.querySelector("[data-share-inserts]");
 const sendsEl = document.querySelector("[data-share-sends]");
 
@@ -60,7 +61,31 @@ function showError(message) {
   if (errorMsg && message) errorMsg.textContent = message;
 }
 
-function render(row) {
+function renderStrip(inserts, sends) {
+  if (!stripEl) return;
+  const stages = [
+    ...inserts.map((s) => ({ label: s.title || s.type || "Insert", kind: "insert" })),
+    ...sends.map((s) => ({ label: s.title || s.type || "Send", kind: "send" })),
+  ].slice(0, 12);
+  if (!stages.length) {
+    stripEl.innerHTML = "";
+    stripEl.hidden = true;
+    return;
+  }
+  stripEl.hidden = false;
+  stripEl.innerHTML = stages
+    .map(
+      (s, i) => `
+      <span class="share-strip-stage" data-kind="${esc(s.kind)}">
+        <span class="share-strip-n">${i + 1}</span>
+        <span class="share-strip-label">${esc(s.label)}</span>
+      </span>
+      ${i < stages.length - 1 ? `<span class="share-strip-join" aria-hidden="true"></span>` : ""}`
+    )
+    .join("");
+}
+
+function render(row, id) {
   const chain = row.payload?.chain;
   if (!chain) {
     showError("This share is missing its chain data.");
@@ -93,6 +118,13 @@ function render(row) {
     chipsEl.innerHTML = bits.map((b) => `<span class="share-chip">${esc(b)}</span>`).join("");
   }
 
+  const why = row.payload?.honesty || row.payload?.estimateNote || "";
+  if (whyEl) {
+    whyEl.textContent =
+      why ||
+      "Reverse-engineered with Chainprint. Open each processor in order and set the values below.";
+  }
+
   if (artEl && typeof row.artwork_url === "string" && /^https?:/.test(row.artwork_url)) {
     artEl.src = row.artwork_url;
     artEl.classList.remove("hidden");
@@ -100,6 +132,8 @@ function render(row) {
 
   const inserts = Array.isArray(chain.inserts) ? chain.inserts : [];
   const sends = Array.isArray(chain.sends) ? chain.sends : [];
+  renderStrip(inserts, sends);
+
   if (insertsEl) {
     insertsEl.innerHTML = inserts.length
       ? inserts.map((s, i) => stepCard(s, i, "insert")).join("")
@@ -115,11 +149,11 @@ function render(row) {
   errorBox?.classList.add("hidden");
   card?.classList.remove("hidden");
 
+  const shareLink = id ? shareUrl(id) : location.href.split("#")[0];
   const mcpBlock = document.querySelector("[data-share-mcp]");
   const mcpUrl = document.querySelector("[data-share-mcp-url]");
   const mcpCopy = document.querySelector("[data-share-mcp-copy]");
   if (mcpBlock && mcpUrl) {
-    const shareLink = `${location.origin}/c/?id=${encodeURIComponent(new URLSearchParams(location.search).get("id") || "")}`;
     mcpUrl.value = shareLink;
     mcpBlock.hidden = false;
     mcpCopy?.addEventListener("click", async () => {
@@ -136,15 +170,37 @@ function render(row) {
   }
 }
 
+function readBootstrap() {
+  const el = document.getElementById("share-bootstrap");
+  if (!el?.textContent) return null;
+  try {
+    return JSON.parse(el.textContent);
+  } catch {
+    return null;
+  }
+}
+
 async function init() {
-  const id = new URLSearchParams(location.search).get("id");
+  const boot = readBootstrap();
+  if (boot?.row?.payload?.chain && boot.id) {
+    render(boot.row, boot.id);
+    return;
+  }
+
+  const id = shareIdFromLocation();
   if (!id) {
     showError("No chain id in this link.");
     return;
   }
+
+  // Prefer path URLs (/c/:id) so crawlers hit the SSR function with dynamic OG
+  if (location.search.includes("id=") && !/\/c\/[0-9a-f-]{36}/i.test(location.pathname)) {
+    history.replaceState(null, "", `/c/${encodeURIComponent(id)}`);
+  }
+
   try {
     const row = await fetchSharedChain(id);
-    render(row);
+    render(row, id);
   } catch (err) {
     console.error(err);
     showError(err.message || "Could not load that chain.");

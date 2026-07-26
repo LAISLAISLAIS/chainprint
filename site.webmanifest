@@ -1,7 +1,7 @@
 {
   "name": "Chainprint",
   "short_name": "Chainprint",
-  "description": "Reverse-engineer any vocal mix and recreate the chain in your DAW.",
+  "description": "Reverse-engineer any mix and recreate the chain in your DAW.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#000000",

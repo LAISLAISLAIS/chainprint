@@ -1,0 +1,41 @@
+name: Publish chainprint-mcp
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mcp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build + test deps
+        run: |
+          python -m pip install --upgrade pip build twine
+          pip install -e ".[dev]"
+      - name: Test
+        run: pytest -q
+      - name: Build
+        run: python -m build
+      - name: Publish to PyPI
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          if [ -z "$TWINE_PASSWORD" ]; then
+            echo "PYPI_API_TOKEN secret not set — skipping upload. Add it under repo Settings → Secrets, then re-run."
+            ls -la dist/
+            exit 0
+          fi
+          python -m twine upload dist/*

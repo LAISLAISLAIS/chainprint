@@ -4,6 +4,13 @@
 # Ableton MCP + public share JSON
 /api/chain/:id  /.netlify/functions/chain  200
 /api/chain  /.netlify/functions/chain  200
+# Share CRUD (auth required)
+/api/shares  /.netlify/functions/shares  200
+# Per-chain Open Graph image
+/api/og/:id  /.netlify/functions/og-chain  200
+/api/og  /.netlify/functions/og-chain  200
+# SSR share page with dynamic OG (path style)
+/c/:id  /.netlify/functions/share-page  200
 
 /analyze  /analyze/  301
 /auth  /auth/  301

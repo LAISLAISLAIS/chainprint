@@ -253,20 +253,20 @@
               <div class="chain-toolbar">
                 <div class="chain-toolbar-copy">
                   <p class="chain-toolbar-title">Chain</p>
-                  <p class="estimate-note" data-estimate-note>Exports an Ableton rack with settings dialed from this reference.</p>
+                  <p class="estimate-note" data-estimate-note>Share with a friend, export a Live rack, or let AI apply it.</p>
                 </div>
                 <div class="chain-toolbar-actions">
-                  <button type="button" class="export-btn export-btn-ghost" data-share-chain disabled>
+                  <button type="button" class="export-btn" data-share-chain disabled title="Copy a link anyone can open">
                     Share link
                   </button>
-                  <button type="button" class="export-btn export-btn-ghost" data-ableton-mcp disabled>
-                    Mix in Ableton
+                  <button type="button" class="export-btn export-btn-ghost" data-export-ableton disabled title="Download a stock Ableton Live rack (.adg)">
+                    Export Ableton rack
                   </button>
-                  <button type="button" class="export-btn export-btn-ghost" data-export-ableton disabled>
-                    Export Chain
+                  <button type="button" class="export-btn export-btn-ghost" data-ableton-mcp disabled title="Apply via Claude or Cursor + chainprint-mcp">
+                    Apply with AI
                   </button>
-                  <button type="button" class="export-btn" data-export-pdf disabled>
-                    Export Analysis PDF
+                  <button type="button" class="export-btn export-btn-ghost" data-export-pdf disabled>
+                    Export PDF
                   </button>
                 </div>
               </div>
@@ -274,12 +274,13 @@
               <dialog class="mcp-dialog" data-mcp-dialog>
                 <form method="dialog" class="mcp-dialog-panel">
                   <header class="mcp-dialog-head">
-                    <h2>Mix in Ableton with AI</h2>
+                    <h2>Apply with AI in Ableton</h2>
                     <button type="submit" class="mcp-dialog-close" aria-label="Close">×</button>
                   </header>
                   <p class="mcp-dialog-lede">
-                    Share this chain, then paste the link into Claude Desktop or Cursor with
-                    <code>chainprint-mcp</code> installed. It loads stock Live devices and dials them in.
+                    For power users. Share this chain, then paste the link into Claude Desktop or Cursor with
+                    <code>chainprint-mcp</code> installed — it loads stock Live devices and dials them in.
+                    Prefer a file you can drag in? Use <strong>Export Ableton rack</strong> instead.
                   </p>
                   <label class="mcp-dialog-field">
                     <span>Share link</span>

@@ -1197,8 +1197,8 @@ function applyEntryToStudio(entry) {
   if (estimateNoteEl) {
     estimateNoteEl.textContent =
       entry.kind === "blend"
-        ? "Exports an Ableton rack from this hybrid — settings blended from both references."
-        : "Exports an Ableton rack with settings dialed from this reference.";
+        ? "Share this hybrid chain, export a Live rack, or apply it with AI."
+        : "Share this chain, export a Live rack, or apply it with AI.";
   }
 
   setHasResults(true);
@@ -2128,7 +2128,7 @@ exportPdfBtn?.addEventListener("click", async () => {
     alert(err.message || "Could not export PDF. Check your connection and try again.");
   } finally {
     exportPdfBtn.classList.remove("is-busy");
-    exportPdfBtn.textContent = label || "Export Analysis PDF";
+    exportPdfBtn.textContent = label || "Export PDF";
   }
 });
 
@@ -2176,7 +2176,7 @@ exportAbletonBtn?.addEventListener("click", async () => {
     alert(err.message || "Could not build the Ableton rack.");
   } finally {
     exportAbletonBtn.disabled = false;
-    exportAbletonBtn.textContent = label || "Export Chain";
+    exportAbletonBtn.textContent = label || "Export Ableton rack";
   }
 });
 
@@ -2716,7 +2716,7 @@ function renderChain(advice) {
   }
   if (estimateNoteEl) {
     estimateNoteEl.textContent =
-      "Exports an Ableton rack with settings dialed from this reference.";
+      "Share this chain, export a Live rack, or apply it with AI.";
   }
 
   const insertStages = (chain.inserts || []).map((step, index) => ({

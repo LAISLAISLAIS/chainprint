@@ -57,7 +57,7 @@ def extract_chain_id(url_or_id: str) -> str:
     for part in reversed(parts):
         if UUID_RE.match(part):
             return part
-    raise ValueError("Expected a Chainprint share URL or UUID (…/c/?id=<uuid>).")
+    raise ValueError("Expected a Chainprint share URL or UUID (…/c/<uuid> or …/c/?id=<uuid>).")
 
 
 def api_base() -> str:

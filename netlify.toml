@@ -59,6 +59,27 @@
   to = "/c/"
   status = 301
 
+[[redirects]]
+  from = "/c/:id"
+  to = "/.netlify/functions/share-page"
+  status = 200
+  force = true
+
+[[redirects]]
+  from = "/api/shares"
+  to = "/.netlify/functions/shares"
+  status = 200
+
+[[redirects]]
+  from = "/api/og/:id"
+  to = "/.netlify/functions/og-chain"
+  status = 200
+
+[[redirects]]
+  from = "/api/og"
+  to = "/.netlify/functions/og-chain"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]

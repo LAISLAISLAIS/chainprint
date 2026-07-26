@@ -71,7 +71,7 @@ Restart Ableton Live, then:
 
 - Ableton Live 11 or 12 (Standard or Suite)
 - Python 3.10+ via [`uv`](https://github.com/astral-sh/uv) / `uvx`
-- A Chainprint share link (`https://chainprint.app/c/?id=…`)
+- A Chainprint share link (`https://chainprint.app/c/<uuid>`)
 
 ## Docs
 

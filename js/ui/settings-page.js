@@ -109,6 +109,82 @@ async function bootSettings(account) {
   }
 
   fillForms(account);
+  void loadShares();
+
+  async function loadShares() {
+    const list = document.querySelector("[data-shares-list]");
+    const status = document.querySelector("[data-shares-status]");
+    if (!list) return;
+    try {
+      const { listMySharedChains, deleteSharedChain, shareUrl } = await import("../share/chain-share.js");
+      const shares = await listMySharedChains();
+      if (!shares.length) {
+        list.innerHTML = `<p class="settings-hint" data-shares-empty>No shared chains yet. Create one from the studio with <strong>Share link</strong>.</p>`;
+        return;
+      }
+      list.innerHTML = shares
+        .map((s) => {
+          const title = s.track_name || "Untitled chain";
+          const expired = s.expires_at && new Date(s.expires_at).getTime() < Date.now();
+          const exp = s.expires_at
+            ? expired
+              ? "Expired"
+              : `Expires ${new Date(s.expires_at).toLocaleDateString()}`
+            : "No expiry";
+          const created = s.created_at
+            ? new Date(s.created_at).toLocaleDateString(undefined, {
+                year: "numeric",
+                month: "short",
+                day: "numeric",
+              })
+            : "";
+          const url = shareUrl(s.id);
+          return `<article class="settings-share-row${expired ? " is-expired" : ""}" data-share-id="${s.id}">
+            <div class="settings-share-copy">
+              <a class="settings-share-title" href="${url}" target="_blank" rel="noopener">${escapeHtml(title)}</a>
+              <p class="settings-share-meta">${escapeHtml([created, exp, s.target].filter(Boolean).join(" · "))}</p>
+            </div>
+            <div class="settings-share-actions">
+              <button type="button" class="btn btn-ghost" data-share-copy>Copy link</button>
+              <button type="button" class="btn btn-ghost" data-share-delete>Delete</button>
+            </div>
+          </article>`;
+        })
+        .join("");
+
+      list.querySelectorAll("[data-share-id]").forEach((row) => {
+        const id = row.getAttribute("data-share-id");
+        row.querySelector("[data-share-copy]")?.addEventListener("click", async () => {
+          try {
+            await navigator.clipboard.writeText(shareUrl(id));
+            setStatus(status, "Link copied.", "ok");
+          } catch {
+            setStatus(status, "Couldn’t copy — open the link and copy from the address bar.", "error");
+          }
+        });
+        row.querySelector("[data-share-delete]")?.addEventListener("click", async () => {
+          if (!confirm("Delete this share link? Anyone with it will lose access.")) return;
+          try {
+            await deleteSharedChain(id);
+            setStatus(status, "Share deleted.", "ok");
+            await loadShares();
+          } catch (err) {
+            setStatus(status, err.message || "Couldn’t delete.", "error");
+          }
+        });
+      });
+    } catch (err) {
+      list.innerHTML = `<p class="settings-hint">${escapeHtml(err.message || "Couldn’t load shares.")}</p>`;
+    }
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
 
   avatarInput?.addEventListener("change", async () => {
     const file = avatarInput.files?.[0];

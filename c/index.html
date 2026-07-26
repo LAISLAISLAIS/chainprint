@@ -16,13 +16,7 @@
   <meta property="og:title" content="Shared chain · Chainprint" />
   <meta property="og:description" content="A mix chain reverse-engineered with Chainprint — every stage, every setting." />
   <meta property="og:image" content="https://chainprint.app/assets/og-image.png?v=20260726" />
-  <meta property="og:image:width" content="1200" />
-  <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt" content="Chainprint — recreate any mix in your DAW" />
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Shared chain · Chainprint" />
-  <meta name="twitter:description" content="A mix chain reverse-engineered with Chainprint — every stage, every setting." />
-  <meta name="twitter:image" content="https://chainprint.app/assets/og-image.png?v=20260726" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" />
@@ -38,7 +32,7 @@
           <span class="logo-mark" aria-hidden="true"></span>
           <span class="logo-word">Chainprint</span>
         </a>
-        <a class="share-cta-btn" href="../analyze/">Recreate this — analyze your own</a>
+        <a class="share-cta-btn is-solid" href="../analyze/">Analyze your own</a>
       </header>
 
       <div class="share-loading" data-share-loading>
@@ -48,7 +42,7 @@
       <div class="share-error hidden" data-share-error>
         <h1>Chain not found</h1>
         <p data-share-error-msg>This link may have been deleted, or it never existed.</p>
-        <a class="share-cta-btn" href="../analyze/">Analyze your own reference</a>
+        <a class="share-cta-btn is-solid" href="../analyze/">Analyze your own reference</a>
       </div>
 
       <article class="share-card hidden" data-share-card>
@@ -61,9 +55,17 @@
           </div>
         </header>
 
-        <p class="share-lede">
+        <p class="share-why" data-share-why>
           Reverse-engineered with Chainprint. Open each processor in order and set the values below.
         </p>
+
+        <div class="share-strip" data-share-strip aria-label="Chain stages"></div>
+
+        <div class="share-cta-row">
+          <a class="share-cta-btn is-solid" href="../auth/?mode=signup&next=/analyze/">Try Chainprint free</a>
+          <a class="share-cta-btn" href="../analyze/">Open in studio</a>
+          <a class="share-cta-btn" href="../help/ableton-mcp/">Open in Ableton</a>
+        </div>
 
         <div class="share-columns">
           <section class="share-col">
@@ -86,10 +88,10 @@
 
         <section class="share-mcp" data-share-mcp hidden>
           <header class="share-mcp-head">
-            <h2>Mix in Ableton with AI</h2>
+            <h2>Have AI apply it in Ableton</h2>
             <p>
-              Paste this share link into Claude Desktop or Cursor with
-              <a href="../help/ableton-mcp/">chainprint-mcp</a> installed — it loads stock Live devices and dials them in.
+              Power users: paste this link into Claude or Cursor with
+              <a href="../help/ableton-mcp/">chainprint-mcp</a> installed.
             </p>
           </header>
           <label class="share-mcp-field">
