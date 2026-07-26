@@ -278,6 +278,8 @@ const blendDiff = document.querySelector("[data-blend-diff]");
 const blendGo = document.querySelector("[data-blend-go]");
 const blendWeightBtns = document.querySelectorAll("[data-blend-weight]");
 const sourceCollapseBtn = document.querySelector("[data-source-collapse]");
+const sourcePeekBtn = document.querySelector("[data-source-peek]");
+const sourcePeekMeta = document.querySelector("[data-source-peek-meta]");
 const SOURCE_COLLAPSE_KEY = "chainprint.sourceCollapsed";
 
 let pluginMap = null;
@@ -967,6 +969,7 @@ function renderLibrary() {
   if (libraryCount) {
     libraryCount.textContent = String(entries.length + dryAttached);
   }
+  syncSourcePeek();
 
   if (libraryList) {
     const pickOrder = library.blendPicks().map((e) => e.id);
@@ -1088,10 +1091,8 @@ function applyEntryToStudio(entry) {
     renderInstruments(null);
     return;
   }
-  // On mobile, tuck the reference rail so Chain stages are immediately reachable
-  if (typeof window !== "undefined" && window.matchMedia("(max-width: 960px)").matches) {
-    setSourceCollapsed(true);
-  }
+  // Keep the reference rail reachable on mobile (uploads / library / play)
+  // Collapse is still available via the header chevron if they want more Chain room.
   const { result } = entry;
   lastAdvice = result.advice || null;
   if (result.target) analysisTarget = result.target;
@@ -2692,6 +2693,11 @@ function setSourceCollapsed(collapsed) {
     const sr = sourceCollapseBtn.querySelector(".sr-only");
     if (sr) sr.textContent = on ? "Expand reference panel" : "Collapse reference panel";
   }
+  if (sourcePeekBtn) {
+    // Peek strip is mobile-only chrome for a collapsed rail
+    sourcePeekBtn.hidden = !on;
+  }
+  syncSourcePeek();
   try {
     localStorage.setItem(SOURCE_COLLAPSE_KEY, on ? "1" : "0");
   } catch {
@@ -2699,14 +2705,30 @@ function setSourceCollapsed(collapsed) {
   }
 }
 
+function syncSourcePeek() {
+  if (!sourcePeekMeta) return;
+  const n = library.list().filter((e) => e.kind === "track" && e.result).length;
+  sourcePeekMeta.textContent = n ? `${n} track${n === 1 ? "" : "s"} · tap to upload or play` : "Tap to upload a reference";
+}
+
 sourceCollapseBtn?.addEventListener("click", () => {
   setSourceCollapsed(!workspace?.classList.contains("is-source-collapsed"));
 });
 
+sourcePeekBtn?.addEventListener("click", () => {
+  setSourceCollapsed(false);
+  document.querySelector("[data-source-rail]")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+});
+
 try {
-  if (localStorage.getItem(SOURCE_COLLAPSE_KEY) === "1") setSourceCollapsed(true);
+  // On mobile, always start expanded so uploads stay obvious after refresh
+  const preferCollapsed =
+    localStorage.getItem(SOURCE_COLLAPSE_KEY) === "1" &&
+    !window.matchMedia("(max-width: 960px)").matches;
+  if (preferCollapsed) setSourceCollapsed(true);
+  else setSourceCollapsed(false);
 } catch {
-  /* ignore */
+  setSourceCollapsed(false);
 }
 
 blendGo?.addEventListener("click", () => {

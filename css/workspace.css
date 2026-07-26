@@ -325,12 +325,8 @@
   margin: 0;
 }
 
-.source-rail-body {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  flex: 1 1 auto;
-  overflow: hidden;
+.source-peek {
+  display: none;
 }
 
 .source-stack {
@@ -4118,8 +4114,9 @@
     --studio-sticky-offset: calc(48px + 44px + env(safe-area-inset-top, 0px));
     height: auto;
     min-height: 100svh;
-    grid-template-rows: auto 1fr;
+    width: 100%;
     max-width: 100%;
+    grid-template-rows: auto 1fr;
     /* Do NOT set overflow here — it breaks position:sticky on the header */
     overflow: visible;
   }
@@ -4175,8 +4172,13 @@
     grid-row: 2;
     justify-self: stretch;
     width: 100%;
+    max-width: 100%;
+    min-width: 0;
     overflow-x: auto;
+    overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-x;
+    overscroll-behavior-x: contain;
     scrollbar-width: none;
     border-top: 1px solid var(--studio-rule);
     height: 44px;
@@ -4202,13 +4204,23 @@
   }
 
   .studio-grid {
-    grid-template-columns: 1fr;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
+  /* Chain first, uploads/library underneath so both stay reachable */
   .studio-source {
+    order: 2;
     border-right: none;
-    border-bottom: 1px solid var(--studio-rule);
-    max-height: min(52vh, 420px);
+    border-bottom: none;
+    border-top: 1px solid var(--studio-rule);
+    max-height: none;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     padding: 0;
     gap: 0;
   }
@@ -4217,13 +4229,37 @@
     --studio-rail-width: 300px;
   }
 
+  /* Mobile collapse = compact peek bar, never fully gone */
   .studio.is-source-collapsed .studio-grid {
-    /* Collapse control lives in the header — don't leave a dead bar */
-    grid-template-rows: 1fr;
+    display: flex;
+    flex-direction: column;
   }
 
   .studio.is-source-collapsed .studio-source {
-    display: none;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    max-height: 52px;
+    min-height: 52px;
+    width: 100%;
+    padding: 0 12px;
+    gap: 10px;
+    border-top: 1px solid var(--studio-rule);
+    overflow: hidden;
+  }
+
+  .studio.is-source-collapsed .source-rail-body {
+    display: flex !important;
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .studio.is-source-collapsed .source-stack,
+  .studio.is-source-collapsed .source-dock {
+    display: none !important;
   }
 
   .studio.is-source-collapsed .studio-brand {
@@ -4245,13 +4281,69 @@
     position: static;
     top: auto;
     left: auto;
-    width: 22px;
-    height: 22px;
+    width: 36px;
+    height: 36px;
     transform: none;
+    flex-shrink: 0;
+    pointer-events: auto;
   }
 
   .studio.is-source-collapsed .source-collapse-icon {
     margin-right: 2px;
+  }
+
+  .source-peek {
+    display: none;
+  }
+
+  .studio.is-source-collapsed .source-peek {
+    display: flex;
+    appearance: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    min-height: 52px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #e8e8e8;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .source-peek-copy {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .source-peek-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #8a8a8a;
+  }
+
+  .source-peek-meta {
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: #e4e4e4;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .source-peek-action {
+    flex-shrink: 0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #041411;
+    background: var(--teal, #6ec4b4);
+    border-radius: 999px;
+    padding: 7px 12px;
   }
 
   /* One scroll container on mobile — nothing clipped, every row reachable */
@@ -4326,10 +4418,38 @@
   }
 
   .studio-main {
+    order: 1;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     min-height: 55vh;
     padding-bottom: calc(18px + env(safe-area-inset-bottom, 0));
-    max-width: 100%;
     overflow-x: hidden;
+  }
+
+  .studio-panel {
+    padding: 0;
+    overflow: visible;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .studio-panel.is-active {
+    display: block;
+    min-height: auto;
+    overflow: visible;
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .panel-pad {
+    padding: 16px var(--studio-gutter) 28px;
+    overflow-x: hidden;
+    overflow-y: visible;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .studio .account-menu-trigger {
@@ -4342,22 +4462,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .studio-panel {
-    padding: 0;
-    overflow: visible;
-  }
-
-  .studio-panel.is-active {
-    display: block;
-    min-height: auto;
-    overflow: visible;
-  }
-
-  .panel-pad {
-    padding: 16px var(--studio-gutter) 28px;
-    overflow: visible;
   }
 
   .panel-head .panel-title {
@@ -4443,6 +4547,10 @@
 
   .chain-workspace {
     min-height: 0;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
     /* Stages first: browse without scrolling past export chrome every time */
     grid-template-rows: auto auto minmax(0, 1fr) auto;
     grid-template-areas:
@@ -4458,19 +4566,30 @@
     z-index: 8;
     background: #080808;
     border-bottom: 1px solid var(--studio-rule);
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
   }
 
   .stage-rail-wrap {
+    display: flex;
     flex-direction: row;
     flex-wrap: nowrap;
     align-items: center;
     gap: 6px;
     padding: 10px var(--studio-gutter);
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    touch-action: pan-x;
     overscroll-behavior-x: contain;
+    overscroll-behavior-y: none;
+    scrollbar-width: none;
   }
 
   .stage-rail-wrap::-webkit-scrollbar {
@@ -4492,6 +4611,8 @@
     padding: 7px 10px 7px 7px;
     min-height: 40px;
     gap: 7px;
+    flex: 0 0 auto;
+    max-width: 11rem;
   }
 
   .stage-chip-n {
@@ -4504,9 +4625,10 @@
   }
 
   .stage-chip-title {
-    max-width: 8.5rem;
+    max-width: 7.5rem;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .stage-chip::after {
@@ -4520,6 +4642,10 @@
     gap: 10px;
     border-bottom: 1px solid var(--studio-rule);
     background: #050505;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
   }
 
   .stage-nav-btn {
@@ -4530,16 +4656,31 @@
   .stage-focus {
     padding: 16px var(--studio-gutter) calc(28px + var(--playback-dock-space, 0px));
     align-content: start;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+    box-sizing: border-box;
   }
 
   .stage-focus .chain-step {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
     min-height: 0;
     height: auto;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     align-items: start;
     align-content: start;
-    max-width: none;
+  }
+
+  .stage-focus .step-copy,
+  .stage-focus .step-rack,
+  .stage-focus .step-intro {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
   }
 
   .stage-focus .step-copy {
@@ -4554,10 +4695,38 @@
 
   .stage-focus .step-title {
     font-size: var(--text-xl);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    white-space: normal;
+  }
+
+  .stage-focus .step-why .why,
+  .stage-focus .step-why .how,
+  .stage-focus .step-copy p,
+  .chain-toolbar-copy p,
+  .hear-strip-hint {
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 
   .stage-focus .plugin-face .rack-dials {
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(140px, 100%), 1fr));
+  }
+
+  .chain-chrome,
+  .chain-toolbar,
+  .hear-strip {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .export-btn,
+  .hear-file-row .stem-pick-btn,
+  .preview-ab-seg {
+    max-width: 100%;
+    box-sizing: border-box;
   }
 
   .why-main,
