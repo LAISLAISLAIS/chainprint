@@ -1,5 +1,5 @@
 /**
- * Bottom-left live soundwave + volume while reference audio is playing.
+ * Bottom-right live soundwave + volume while reference audio is playing.
  */
 
 import {
@@ -72,10 +72,14 @@ export function mountPlaybackPulse(parent = document.body) {
     setVolume(Number(range.value));
   });
 
-  const unsub = subscribePlayback(syncUi);
+  const unsub = subscribePlayback((state) => {
+    syncUi(state);
+    document.body.classList.toggle("is-playing", state.playing);
+  });
 
   return () => {
     unsub();
+    document.body.classList.remove("is-playing");
     el.remove();
   };
 }
