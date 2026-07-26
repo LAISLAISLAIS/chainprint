@@ -171,7 +171,7 @@ function notFoundHtml(origin, message) {
   <title>Chain not found · Chainprint</title>
   <meta name="robots" content="noindex" />
   <meta property="og:title" content="Chain not found · Chainprint" />
-  <meta property="og:image" content="${origin}/assets/og-image.png?v=20260726" />
+  <meta property="og:image" content="${origin}/assets/og-card.png?v=20260726b" />
   <link rel="stylesheet" href="/css/chassis.css" />
   <link rel="stylesheet" href="/css/logo.css" />
   <link rel="stylesheet" href="/css/share.css" />

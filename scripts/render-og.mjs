@@ -11,6 +11,7 @@ import { execSync } from "node:child_process";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
 const outPng = join(root, "assets", "og-image.png");
+const outCard = join(root, "assets", "og-card.png");
 const tmp = join(root, "scripts", ".og-tmp");
 mkdirSync(tmp, { recursive: true });
 
@@ -97,4 +98,5 @@ const resvg = new Resvg(svg, {
 });
 const png = resvg.render().asPng();
 writeFileSync(outPng, png);
-console.log(`Wrote ${outPng} (${png.length} bytes)`);
+writeFileSync(outCard, png);
+console.log(`Wrote ${outPng} and ${outCard} (${png.length} bytes)`);

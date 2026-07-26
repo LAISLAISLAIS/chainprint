@@ -548,48 +548,63 @@
   font-weight: 600;
 }
 
-.account-menu-link {
-  display: block;
+.account-menu-panel .account-menu-link,
+.account-menu-panel a.account-menu-link {
+  display: block !important;
+  width: 100% !important;
+  box-sizing: border-box;
   margin-top: 10px;
-  padding: 8px 10px;
+  padding: 8px 10px !important;
+  min-height: 0;
   border-radius: 8px;
   border: 1px solid var(--panel-edge);
   color: var(--readout) !important;
   text-decoration: none !important;
-  font-size: 0.82rem;
+  font-family: var(--font-ui);
+  font-size: 0.82rem !important;
   font-weight: var(--weight-medium);
   text-align: center;
+  line-height: 1.2;
+  align-items: unset;
 }
 
-.account-menu-link:hover {
+.account-menu-panel .account-menu-link:hover,
+.account-menu-panel a.account-menu-link:hover {
   background: rgba(255, 255, 255, 0.05);
   border-color: var(--panel-edge-strong);
+  color: var(--readout) !important;
 }
 
 .account-menu-panel button,
-.account-menu-logout {
+.account-menu-panel .account-menu-logout,
+.account-menu-panel a.account-menu-logout {
   margin-top: 8px;
-  width: 100%;
+  width: 100% !important;
   appearance: none;
-  border: 1px solid var(--panel-edge-strong);
+  border: 1px solid var(--panel-edge);
   background: transparent;
-  color: var(--brand);
-  font: inherit;
-  font-size: 0.82rem;
-  font-weight: 600;
-  padding: 8px 10px;
-  border-radius: var(--radius-btn);
+  color: var(--readout) !important;
+  font-family: var(--font-ui);
+  font-size: 0.82rem !important;
+  font-weight: var(--weight-medium);
+  padding: 8px 10px !important;
+  min-height: 0;
+  border-radius: 8px;
   cursor: pointer;
   box-sizing: border-box;
   text-align: center;
   text-decoration: none !important;
-  display: block;
+  display: block !important;
+  line-height: 1.2;
+  align-items: unset;
 }
 
 .account-menu-panel button:hover,
-.account-menu-logout:hover {
-  border-color: rgba(255, 255, 255, 0.35);
+.account-menu-panel .account-menu-logout:hover,
+.account-menu-panel a.account-menu-logout:hover {
+  border-color: var(--panel-edge-strong);
   background: rgba(255, 255, 255, 0.05);
+  color: var(--readout) !important;
 }
 
 /* Analyze gates */

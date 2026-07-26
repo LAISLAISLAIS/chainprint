@@ -196,6 +196,14 @@
   padding: 7px 10px;
 }
 
+.studio .account-menu-panel a.account-menu-link {
+  display: block !important;
+  width: 100% !important;
+  box-sizing: border-box;
+  font-size: 0.82rem !important;
+  padding: 8px 10px !important;
+}
+
 .studio .nav-cta {
   background: #f2f2f2 !important;
   color: #0a0a0a !important;
