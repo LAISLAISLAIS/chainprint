@@ -31,11 +31,11 @@
       <section class="unit panel">
         <h2 class="panel-title">Reference batch</h2>
         <p class="panel-sub">Drop tracks you know intimately. Gate: do the numbers separate records that sound different?</p>
-        <label class="dropzone" data-dropzone>
+        <div class="dropzone" data-dropzone role="button" tabindex="0" aria-label="Upload calibration tracks">
           <span>Drop calibration tracks</span>
           <span class="drop-hint">multi-file ok · WAV, MP3, FLAC, AIFF, M4A</span>
-          <input type="file" data-file accept="audio/*,.wav,.mp3,.flac,.aiff,.m4a" multiple />
-        </label>
+          <input type="file" data-file accept="audio/*,.wav,.mp3,.flac,.aiff,.m4a" multiple hidden />
+        </div>
         <div class="status-row">
           <span class="lamp" data-lamp data-state="idle" aria-hidden="true"></span>
           <span class="status-text" data-status>Calibration idle</span>

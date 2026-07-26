@@ -29,10 +29,14 @@ function safeNext(path) {
     "/": "../",
     "/analyze": "../analyze/",
     "/analyze/": "../analyze/",
+    "/find": "../find/",
+    "/find/": "../find/",
     "/calibration": "../calibration/",
     "/calibration/": "../calibration/",
-    "analyze": "../analyze/",
+    analyze: "../analyze/",
     "analyze/": "../analyze/",
+    find: "../find/",
+    "find/": "../find/",
   };
   if (map[path]) return map[path];
   // Same-origin relative only — block open redirects

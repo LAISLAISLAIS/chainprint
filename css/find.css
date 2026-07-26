@@ -102,17 +102,17 @@
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 36px;
-  margin-bottom: 6px;
+  min-height: 40px;
+  margin-bottom: 8px;
 }
 
-.find-alive.logo-hero--cycle,
 .find-drop.is-busy .find-alive {
   display: flex;
 }
 
+.find-drop.is-busy .find-alive.logo-hero--cycle,
 .find-drop.is-busy .find-alive .logo-hero--cycle {
-  --mark-w: 128px;
+  --mark-w: min(148px, 56vw);
 }
 
 .find-drop.is-busy {
@@ -120,6 +120,44 @@
   border-color: rgba(255, 255, 255, 0.28);
   background: rgba(255, 255, 255, 0.05);
   pointer-events: none;
+  cursor: default;
+}
+
+.find-drop:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.find-identity {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.find-identity[hidden] {
+  display: none !important;
+}
+
+.find-identity input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-btn);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f4f4f4;
+  font: inherit;
+  font-size: 0.92rem;
+}
+
+.find-identity input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.find-identity .btn-primary {
+  padding: 12px 18px;
+  white-space: nowrap;
 }
 
 .find-drop.is-busy .find-drop-title {
@@ -420,6 +458,16 @@
 
   .find-link {
     grid-template-columns: 1fr;
+  }
+
+  .find-identity {
+    grid-template-columns: 1fr;
+  }
+
+  .find-identity .btn-primary {
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
   }
 
   .find-link input {

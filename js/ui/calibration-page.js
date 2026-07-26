@@ -14,10 +14,19 @@ const lamp = document.querySelector("[data-lamp]");
 const statusText = document.querySelector("[data-status]");
 
 const rows = [];
+let busy = false;
 
 function setStatus(state, text) {
   if (lamp) lamp.dataset.state = state;
   if (statusText) statusText.textContent = text;
+}
+
+function setBusy(on) {
+  busy = on;
+  dropzone?.classList.toggle("is-busy", on);
+  dropzone?.setAttribute("aria-disabled", on ? "true" : "false");
+  if (exportBtn) exportBtn.disabled = on || rows.length === 0;
+  if (clearBtn) clearBtn.disabled = on || rows.length === 0;
 }
 
 function refreshConsole() {
@@ -25,43 +34,66 @@ function refreshConsole() {
   consoleEl.textContent = rows.length
     ? `${rows.length} row(s) collected\n\n` + rows.join("\n")
     : "Drop reference tracks. One CSV row per file.";
-  const empty = rows.length === 0;
-  if (exportBtn) exportBtn.disabled = empty;
-  if (clearBtn) clearBtn.disabled = empty;
+  if (!busy) {
+    const empty = rows.length === 0;
+    if (exportBtn) exportBtn.disabled = empty;
+    if (clearBtn) clearBtn.disabled = empty;
+  }
 }
 
 async function handleFiles(fileList) {
+  if (busy) return;
   const files = [...fileList].filter(
     (f) => f.type.startsWith("audio/") || /\.(wav|mp3|flac|aiff|m4a)$/i.test(f.name)
   );
   if (!files.length) return;
 
+  setBusy(true);
   setStatus("live", "Measuring batch");
-  for (const file of files) {
-    try {
-      const result = await analyzeFile(file);
-      rows.push(readoutToCsvRow(result.source.name, result.readout));
-      console.log("[chainprint:cal]", result.source.name, result.readout, result.traits);
-    } catch (err) {
-      console.error(file.name, err);
-      rows.push(`# ERROR ${file.name}: ${err.message || err}`);
+  try {
+    for (const file of files) {
+      try {
+        const result = await analyzeFile(file);
+        rows.push(readoutToCsvRow(result.source.name, result.readout));
+        console.log("[chainprint:cal]", result.source.name, result.readout, result.traits);
+      } catch (err) {
+        console.error(file.name, err);
+        rows.push(`# ERROR ${file.name}: ${err.message || err}`);
+      }
+      refreshConsole();
     }
+    setStatus("live", `${rows.length} row(s) · estimate`);
+  } finally {
+    setBusy(false);
     refreshConsole();
   }
-  setStatus("live", `${rows.length} row(s) · estimate`);
+}
+
+function openPicker() {
+  if (busy || !fileInput) return;
+  fileInput.click();
 }
 
 if (dropzone && fileInput) {
-  dropzone.addEventListener("click", () => fileInput.click());
+  dropzone.addEventListener("click", (e) => {
+    if (e.target === fileInput || busy) return;
+    openPicker();
+  });
+  dropzone.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openPicker();
+    }
+  });
   dropzone.addEventListener("dragover", (e) => {
     e.preventDefault();
-    dropzone.classList.add("is-drag");
+    if (!busy) dropzone.classList.add("is-drag");
   });
   dropzone.addEventListener("dragleave", () => dropzone.classList.remove("is-drag"));
   dropzone.addEventListener("drop", (e) => {
     e.preventDefault();
     dropzone.classList.remove("is-drag");
-    handleFiles(e.dataTransfer?.files || []);
+    if (!busy) handleFiles(e.dataTransfer?.files || []);
   });
   fileInput.addEventListener("change", () => {
     handleFiles(fileInput.files || []);
@@ -71,6 +103,7 @@ if (dropzone && fileInput) {
 
 if (exportBtn) {
   exportBtn.addEventListener("click", () => {
+    if (busy) return;
     const dataRows = rows.filter((r) => !r.startsWith("#"));
     if (!dataRows.length) return;
     const stamp = new Date().toISOString().slice(0, 10);
@@ -80,6 +113,7 @@ if (exportBtn) {
 
 if (clearBtn) {
   clearBtn.addEventListener("click", () => {
+    if (busy) return;
     rows.length = 0;
     refreshConsole();
     setStatus("idle", "Calibration idle");
@@ -87,4 +121,3 @@ if (clearBtn) {
 }
 
 refreshConsole();
-setStatus("idle", "Calibration idle");

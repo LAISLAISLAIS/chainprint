@@ -89,7 +89,7 @@ export function createLibrary() {
         entries.splice(j, 1);
       }
     }
-    if (activeId === id) {
+    if (activeId === id || !get(activeId)) {
       activeId = entries.length ? entries[entries.length - 1].id : null;
     }
     return true;

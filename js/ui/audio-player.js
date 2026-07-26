@@ -9,6 +9,12 @@ let objectUrl = null;
 let currentKey = null;
 let volume = 0.85;
 let muted = false;
+/** @type {((ev: Event) => void) | null} */
+let onEnded = null;
+/** @type {((ev: Event) => void) | null} */
+let onPause = null;
+/** @type {((ev: Event) => void) | null} */
+let onPlay = null;
 /** @type {Set<(s: { playing: boolean, key: string | null, volume: number, muted: boolean }) => void>} */
 const listeners = new Set();
 
@@ -33,10 +39,14 @@ function notify() {
 function teardown() {
   if (audio) {
     audio.pause();
+    if (onEnded) audio.removeEventListener("ended", onEnded);
+    if (onPause) audio.removeEventListener("pause", onPause);
+    if (onPlay) audio.removeEventListener("play", onPlay);
     audio.removeAttribute("src");
     audio.load();
     audio = null;
   }
+  onEnded = onPause = onPlay = null;
   if (objectUrl) {
     URL.revokeObjectURL(objectUrl);
     objectUrl = null;
@@ -81,9 +91,12 @@ export async function playAudio(source, key = "default") {
     audio.src = objectUrl;
   }
 
-  audio.addEventListener("ended", () => notify());
-  audio.addEventListener("pause", () => notify());
-  audio.addEventListener("play", () => notify());
+  onEnded = () => notify();
+  onPause = () => notify();
+  onPlay = () => notify();
+  audio.addEventListener("ended", onEnded);
+  audio.addEventListener("pause", onPause);
+  audio.addEventListener("play", onPlay);
 
   try {
     await audio.play();

@@ -111,6 +111,9 @@ let stageIndex = 0;
 let activeView = "chain";
 /** @type {(() => void) | null} */
 let unmountHeroMark = null;
+let analyzing = false;
+let analysisGen = 0;
+let blending = false;
 
 mountAuthNav(document.querySelector("[data-auth-nav]"), {
   authHref: "../auth/",
@@ -179,6 +182,7 @@ document.querySelector("[data-upgrade-soon]")?.addEventListener("click", () => {
 });
 
 function setMode(mode) {
+  if (analyzing || blending) return;
   if (mode === "deep" && !canUseMode("deep").ok) return;
   const changed = analysisMode !== mode;
   analysisMode = mode;
@@ -278,6 +282,12 @@ function setProgress(on, { label = "", progress = 0, stage = "" } = {}) {
   idleStatus?.classList.toggle("hidden", on);
   document.body.classList.toggle("is-analyzing", on);
   document.querySelector("[data-workspace]")?.classList.toggle("is-analyzing", on);
+  dropzone?.classList.toggle("is-busy", on);
+  if (urlGo) urlGo.disabled = on;
+  if (identityGo) identityGo.disabled = on;
+  modeStandardBtn && (modeStandardBtn.disabled = on || blending);
+  modeDeepBtn && (modeDeepBtn.disabled = on || blending || !canUseMode("deep").ok);
+  if (blendGo) blendGo.disabled = on || blending || !library.canBlend();
 
   if (!on) {
     unmountHeroMark?.();
@@ -501,6 +511,7 @@ function selectLibraryEntry(id) {
 }
 
 async function rebuildBlend(existing = null) {
+  if (analyzing || blending) return;
   const picks = existing?.blendOf
     ? existing.blendOf.map((id) => library.get(id)).filter(Boolean)
     : library.blendPicks();
@@ -511,6 +522,9 @@ async function rebuildBlend(existing = null) {
     alert("Both tracks need a finished analysis first.");
     return;
   }
+
+  blending = true;
+  if (blendGo) blendGo.disabled = true;
 
   if (!pluginMap) {
     pluginMap = await loadPluginMap();
@@ -557,6 +571,9 @@ async function rebuildBlend(existing = null) {
     setProgress(false);
     alert(err.message || "Could not blend those mixes.");
     setStatus("idle", "Blend failed");
+  } finally {
+    blending = false;
+    if (blendGo) blendGo.disabled = !library.canBlend();
   }
 }
 
@@ -1079,6 +1096,7 @@ function showError(message, meta = null, opts = {}) {
 
 async function runAnalysis() {
   if (!lastSource || lastSource.kind === "blend") return;
+  if (analyzing || blending) return;
 
   const needsCredit = shouldConsumeQuota;
   if (needsCredit) {
@@ -1100,6 +1118,10 @@ async function runAnalysis() {
     modeDeepBtn?.setAttribute("aria-pressed", "false");
     alert("Deep analysis is part of Pro — coming with paid plans.");
   }
+
+  analyzing = true;
+  const gen = ++analysisGen;
+  const targetUpdateId = updatingEntryId;
 
   setHasResults(false);
   renderMaster(null);
@@ -1133,6 +1155,7 @@ async function runAnalysis() {
   setStatus("live", "Analyzing");
 
   const onProgress = (p) => {
+    if (gen !== analysisGen) return;
     setProgress(true, p);
     setStatus("live", p.label);
   };
@@ -1152,6 +1175,16 @@ async function runAnalysis() {
             onProgress,
           })
         : await analyzeFile(lastSource.file, { pluginMap, daw, mode: analysisMode, onProgress });
+
+    if (gen !== analysisGen) return;
+
+    // Mode re-run targeted an entry that was removed mid-flight — drop the result
+    if (targetUpdateId && !library.get(targetUpdateId)) {
+      updatingEntryId = null;
+      setProgress(false);
+      setStatus("idle", "Analysis discarded");
+      return;
+    }
 
     showTrackCard(result.source.meta);
 
@@ -1194,9 +1227,11 @@ async function runAnalysis() {
 
     setProgress(true, { label: "Chain ready", progress: 1, stage: "done" });
     await new Promise((r) => setTimeout(r, 220));
+    if (gen !== analysisGen) return;
     setProgress(false);
     console.log("[chainprint]", result);
   } catch (err) {
+    if (gen !== analysisGen) return;
     console.error(err);
     setProgress(false);
     const needsIdentity = err.code === "needs_identity" || err.code === "oembed";
@@ -1211,10 +1246,13 @@ async function runAnalysis() {
             : "",
     });
     setStatus("idle", needsIdentity ? "Confirm track" : "Failed");
+  } finally {
+    if (gen === analysisGen) analyzing = false;
   }
 }
 
 function beginNewSource(source) {
+  if (analyzing || blending) return;
   if (!applyAccessGate()) return;
   lastSource = source;
   updatingEntryId = null;
@@ -1223,9 +1261,12 @@ function beginNewSource(source) {
 }
 
 if (dropzone && fileInput) {
-  const openPicker = () => fileInput.click();
+  const openPicker = () => {
+    if (analyzing || blending) return;
+    fileInput.click();
+  };
   dropzone.addEventListener("click", (e) => {
-    if (e.target === fileInput) return;
+    if (e.target === fileInput || analyzing || blending) return;
     openPicker();
   });
   dropzone.addEventListener("keydown", (e) => {
@@ -1236,12 +1277,13 @@ if (dropzone && fileInput) {
   });
   dropzone.addEventListener("dragover", (e) => {
     e.preventDefault();
-    dropzone.classList.add("is-drag");
+    if (!analyzing && !blending) dropzone.classList.add("is-drag");
   });
   dropzone.addEventListener("dragleave", () => dropzone.classList.remove("is-drag"));
   dropzone.addEventListener("drop", (e) => {
     e.preventDefault();
     dropzone.classList.remove("is-drag");
+    if (analyzing || blending) return;
     const file = e.dataTransfer?.files?.[0];
     if (!file) return;
     beginNewSource({ kind: "file", file });
@@ -1307,13 +1349,30 @@ libraryList?.addEventListener("click", (e) => {
   if (remove) {
     e.preventDefault();
     e.stopPropagation();
+    if (analyzing || blending) return;
     const id = remove.getAttribute("data-library-remove");
-    if (playingKey() === id) stopAudio();
     library.remove(id);
+    const stillPlaying = playingKey();
+    if (stillPlaying && !library.get(stillPlaying)) stopAudio();
     const next = library.active();
     renderLibrary();
     if (next?.result) applyEntryToStudio(next);
-    else {
+    else if (library.list().length) {
+      const fallback = library.list().filter((e) => e.result).at(-1);
+      if (fallback) {
+        library.setActive(fallback.id);
+        applyEntryToStudio(fallback);
+        renderLibrary();
+      } else {
+        lastAdvice = null;
+        lastSource = null;
+        setHasResults(false);
+        renderMaster(null);
+        renderDesign(null);
+        showTrackCard(null);
+        setStatus("idle", "Waiting for a reference");
+      }
+    } else {
       lastAdvice = null;
       lastSource = null;
       setHasResults(false);
