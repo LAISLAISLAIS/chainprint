@@ -78,8 +78,16 @@ export function characterize(readout) {
   if (pitch.keyLabel && pitch.keyReliable) {
     summary.push(
       `Key ≈ ${pitch.keyLabel}${
+        readout.pitch?.relativeKey ? ` (rel. ${readout.pitch.relativeKey})` : ""
+      }${
         pitch.f0Hz && pitch.f0Reliable ? ` · lead ~${pitch.f0Hz.toFixed(0)} Hz (${pitch.register})` : ""
       }.`
+    );
+  } else if (pitch.keyLabel) {
+    summary.push(
+      `Key leaning ${pitch.keyLabel}${
+        readout.pitch?.relativeKey ? ` / ${readout.pitch.relativeKey}` : ""
+      } — verify before locking scale.`
     );
   } else if (pitch.f0Hz && pitch.f0Reliable) {
     summary.push(`Lead register ~${pitch.f0Hz.toFixed(0)} Hz (${pitch.register}) — key not locked.`);

@@ -102,7 +102,9 @@ export function formatReadoutConsole(result) {
     lines.push(
       `PITCH     key ${r.pitch.keyLabel || "ambiguous"}${
         r.pitch.keyReliable ? "" : " (unreliable)"
-      } · F0 ${r.pitch.f0Hz != null ? `${r.pitch.f0Hz.toFixed(1)} Hz` : "—"} (${r.pitch.register || "?"})`
+      }${r.pitch.relativeKey ? ` · rel ${r.pitch.relativeKey}` : ""} · F0 ${
+        r.pitch.f0Hz != null ? `${r.pitch.f0Hz.toFixed(1)} Hz` : "—"
+      } (${r.pitch.register || "?"})`
     );
   }
   if (r.eqTargets) {

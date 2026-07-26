@@ -1,0 +1,381 @@
+/* Key · BPM finder — minimal, focused */
+
+.find-body {
+  background: #000;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.find-body::before {
+  opacity: 0.18;
+}
+
+.find-page {
+  --brand: #f6f6f6;
+  --silkscreen: #8a8a8a;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 28px 48px;
+  background:
+    radial-gradient(ellipse 70% 40% at 50% 0%, rgba(255, 255, 255, 0.04) 0%, transparent 55%),
+    #000;
+}
+
+.find-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: min(640px, 100%);
+  margin: 0 auto 36px;
+  gap: 16px;
+}
+
+.find-nav .logo-word {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  opacity: 0.92;
+}
+
+.find-nav .nav-links a {
+  color: #9a9a9a;
+}
+
+.find-nav .nav-links a[aria-current="page"] {
+  color: #f4f4f4;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.find-main {
+  width: min(640px, 100%);
+  margin: 0 auto;
+  display: grid;
+  gap: 18px;
+  flex: 1;
+  align-content: start;
+  padding-top: 4vh;
+}
+
+.find-head {
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.find-head h1 {
+  margin: 0 0 10px;
+  font-family: var(--font-ui);
+  font-size: clamp(1.75rem, 4vw, 2.15rem);
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  color: #f6f6f6;
+  line-height: 1.1;
+}
+
+.find-head p {
+  margin: 0;
+  font-size: 1rem;
+  color: #8a8a8a;
+  line-height: 1.45;
+  letter-spacing: -0.012em;
+}
+
+.find-drop {
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  min-height: 132px;
+  padding: 28px 20px;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.find-alive {
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  gap: 3px;
+  height: 26px;
+  margin-bottom: 4px;
+}
+
+.find-alive i {
+  display: block;
+  width: 3px;
+  height: 30%;
+  border-radius: 1px;
+  background: #d0d0d0;
+  animation: find-bar 0.85s ease-in-out infinite;
+}
+
+.find-alive i:nth-child(1) { animation-delay: 0s; animation-duration: 0.72s; }
+.find-alive i:nth-child(2) { animation-delay: 0.1s; animation-duration: 0.9s; }
+.find-alive i:nth-child(3) { animation-delay: 0.18s; animation-duration: 0.68s; }
+.find-alive i:nth-child(4) { animation-delay: 0.05s; animation-duration: 1s; }
+.find-alive i:nth-child(5) { animation-delay: 0.22s; animation-duration: 0.8s; }
+.find-alive i:nth-child(6) { animation-delay: 0.12s; animation-duration: 0.94s; }
+.find-alive i:nth-child(7) { animation-delay: 0.28s; animation-duration: 0.76s; }
+
+@keyframes find-bar {
+  0%,
+  100% {
+    height: 20%;
+    opacity: 0.4;
+  }
+  45% {
+    height: 95%;
+    opacity: 1;
+  }
+  70% {
+    height: 45%;
+    opacity: 0.7;
+  }
+}
+
+.find-drop.is-busy {
+  border-style: solid;
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.05);
+  pointer-events: none;
+}
+
+.find-drop.is-busy .find-alive {
+  display: flex;
+}
+
+.find-drop.is-busy .find-drop-title {
+  animation: find-pulse 1.5s ease-in-out infinite;
+}
+
+.find-drop.is-busy .find-drop-sub {
+  opacity: 0.55;
+}
+
+.find-drop.is-busy .find-drop-title::after {
+  content: none;
+}
+
+.find-body.is-finding .find-page::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 50% 30% at 50% 35%, rgba(255, 255, 255, 0.04), transparent 70%);
+  animation: find-glow 2.2s ease-in-out infinite;
+}
+
+@keyframes find-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes find-glow {
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .find-alive i,
+  .find-drop.is-busy .find-drop-title,
+  .find-body.is-finding .find-page::after {
+    animation: none !important;
+  }
+}
+
+.find-drop:hover,
+.find-drop.is-drag {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.find-drop-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #f0f0f0;
+  letter-spacing: -0.02em;
+}
+
+.find-drop-sub {
+  font-size: 0.88rem;
+  color: #7a7a7a;
+}
+
+.find-link {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.find-link input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-btn);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f4f4f4;
+  font: inherit;
+  font-size: 0.92rem;
+  letter-spacing: -0.01em;
+}
+
+.find-link input::placeholder {
+  color: #666;
+}
+
+.find-link input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.35);
+}
+
+.find-link .btn-primary {
+  padding: 12px 20px;
+  border-radius: var(--radius-btn);
+  background: #f4f4f4;
+  color: #0a0a0a;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.find-link .btn-primary:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.find-status {
+  margin: 0;
+  text-align: center;
+  font-size: 0.9rem;
+  color: #9a9a9a;
+}
+
+.find-status.is-error {
+  color: #e8a0a0;
+}
+
+.find-results {
+  margin-top: 12px;
+  padding: 28px 24px 24px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  animation: find-in 0.45s var(--ease-out) both;
+}
+
+.find-source {
+  margin: 0 0 22px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #8a8a8a;
+  letter-spacing: -0.01em;
+}
+
+.find-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.find-metric {
+  text-align: center;
+  display: grid;
+  gap: 6px;
+}
+
+.find-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #6e6e6e;
+}
+
+.find-value {
+  font-family: var(--font-ui);
+  font-size: clamp(1.35rem, 3.5vw, 1.75rem);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  color: #f6f6f6;
+  line-height: 1.15;
+}
+
+.find-meta {
+  font-size: 0.78rem;
+  color: #7a7a7a;
+  min-height: 1.2em;
+}
+
+.find-note {
+  margin: 22px 0 0;
+  text-align: center;
+  font-size: 0.82rem;
+  color: #6e6e6e;
+  line-height: 1.45;
+}
+
+.find-chain-cta {
+  display: block;
+  margin-top: 20px;
+  text-align: center;
+  font-size: 0.88rem;
+  color: #9a9a9a;
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.15s ease;
+}
+
+.find-chain-cta:hover {
+  color: #f4f4f4;
+}
+
+@keyframes find-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 560px) {
+  .find-page {
+    padding: 16px 18px 40px;
+  }
+
+  .find-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .find-link {
+    grid-template-columns: 1fr;
+  }
+
+  .find-nav {
+    flex-wrap: wrap;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .find-results {
+    animation: none;
+  }
+}

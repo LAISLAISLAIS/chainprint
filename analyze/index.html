@@ -123,6 +123,9 @@
           </div>
 
           <div class="analyze-progress compact hidden" data-progress aria-live="polite">
+            <div class="analyze-alive" aria-hidden="true">
+              <span class="analyze-eq"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+            </div>
             <div class="analyze-progress-head">
               <span class="analyze-progress-label" data-progress-label>Working…</span>
               <span class="analyze-progress-pct" data-progress-pct>0%</span>
@@ -130,7 +133,7 @@
             <div class="analyze-progress-track">
               <div class="analyze-progress-fill" data-progress-fill></div>
             </div>
-            <ol class="analyze-progress-stages" data-progress-stages hidden>
+            <ol class="analyze-progress-stages" data-progress-stages>
               <li data-stage="loading">Load</li>
               <li data-stage="decoding">Decode</li>
               <li data-stage="measuring">Measure</li>

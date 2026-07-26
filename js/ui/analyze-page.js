@@ -228,7 +228,12 @@ function setProgress(on, { label = "", progress = 0, stage = "" } = {}) {
   if (!progressRoot) return;
   progressRoot.classList.toggle("hidden", !on);
   idleStatus?.classList.toggle("hidden", on);
-  if (!on) return;
+  document.body.classList.toggle("is-analyzing", on);
+  document.querySelector("[data-workspace]")?.classList.toggle("is-analyzing", on);
+  if (!on) {
+    if (progressFill) progressFill.style.width = "0%";
+    return;
+  }
 
   const pct = Math.round(Math.max(0, Math.min(1, progress)) * 100);
   if (progressLabel) progressLabel.textContent = label || "Working…";
@@ -551,8 +556,20 @@ function renderReadouts(readout, traits) {
         : `low conf. ${Math.round((readout.tempo.confidence || 0) * 100)}%`,
     ]);
   }
-  if (readout.pitch?.keyLabel && readout.pitch.keyReliable) {
-    items.push(["Key", readout.pitch.keyLabel, `conf ${Math.round((readout.pitch.keyConfidence || 0) * 100)}%`]);
+  if (readout.pitch?.keyLabel) {
+    const conf = Math.round((readout.pitch.keyConfidence || 0) * 100);
+    if (readout.pitch.keyReliable) {
+      items.push(["Key", readout.pitch.keyLabel, `conf ${conf}%`]);
+    } else {
+      items.push([
+        "Key?",
+        readout.pitch.keyLabel,
+        `leaning · vs ${readout.pitch.keyRunnerUp || "—"}`,
+      ]);
+    }
+    if (readout.pitch.relativeKey) {
+      items.push(["Relative", readout.pitch.relativeKey, "same signature"]);
+    }
   } else if (readout.pitch?.keyCandidates?.[0]) {
     items.push([
       "Key?",
@@ -673,6 +690,13 @@ function renderMaster(master) {
   ];
   if (r.bpm) items.splice(0, 0, ["BPM", `${r.bpm}`, "estimate"]);
   if (r.keyLabel) items.splice(r.bpm ? 1 : 0, 0, ["Key", r.keyLabel, "estimate"]);
+  if (r.relativeKey) {
+    items.splice(r.bpm ? (r.keyLabel ? 2 : 1) : r.keyLabel ? 1 : 0, 0, [
+      "Relative",
+      r.relativeKey,
+      "same signature",
+    ]);
+  }
   if (masterReadouts) {
     masterReadouts.innerHTML = items
       .map(

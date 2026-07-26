@@ -67,7 +67,11 @@ export function deepenTraits(readout, traits) {
     summary.push(`Deep tempo sync: ~${readout.tempo.bpm} BPM for throws / granular lengths.`);
   }
   if (readout.pitch?.keyLabel && readout.pitch.keyReliable) {
-    summary.push(`Deep pitch lane: scale center ≈ ${readout.pitch.keyLabel}.`);
+    summary.push(
+      `Deep pitch lane: scale center ≈ ${readout.pitch.keyLabel}${
+        readout.pitch.relativeKey ? ` (rel. ${readout.pitch.relativeKey})` : ""
+      }.`
+    );
   }
 
   return {
@@ -132,7 +136,11 @@ export function buildMasterAnalysis(readout, traits) {
     notes.push(`Tempo estimate ≈ ${readout.tempo.bpm} BPM — useful for delay throws on the master bus FX.`);
   }
   if (readout.pitch?.keyLabel && readout.pitch.keyReliable) {
-    notes.push(`Tonal center ≈ ${readout.pitch.keyLabel} — keep master EQ musical around that key.`);
+    notes.push(
+      `Tonal center ≈ ${readout.pitch.keyLabel}${
+        readout.pitch.relativeKey ? ` · relative ${readout.pitch.relativeKey}` : ""
+      } — keep master EQ musical around that key.`
+    );
   }
 
   const steps = [
@@ -317,6 +325,7 @@ export function deepVocalExtras(readout, traits) {
   });
 
   const keyLabel = (readout.pitch?.keyReliable && readout.pitch?.keyLabel) || (traits.deep?.keyLabel);
+  const relativeKey = readout.pitch?.relativeKey || null;
   const f0 = readout.pitch?.f0Reliable ? readout.pitch?.f0Hz : null;
   extras.push({
     role: "pitch",
@@ -328,7 +337,7 @@ export function deepVocalExtras(readout, traits) {
       {
         label: "Scale",
         value: keyLabel
-          ? `${keyLabel}${f0 ? ` · lead ~${Math.round(f0)} Hz` : ""}`
+          ? `${keyLabel}${relativeKey ? ` · rel ${relativeKey}` : ""}${f0 ? ` · lead ~${Math.round(f0)} Hz` : ""}`
           : "Set key in your tuner to match the song",
       },
       {
@@ -356,7 +365,7 @@ export function deepVocalExtras(readout, traits) {
       "Formant tools only if the ref clearly shifts character",
     ],
     why: keyLabel
-      ? `Measured tonal center ≈ ${keyLabel} — use it for correction scale / harmony stacks.`
+      ? `Measured tonal center ≈ ${keyLabel}${relativeKey ? ` (rel. ${relativeKey})` : ""} — use it for correction scale / harmony stacks.`
       : "Deep chains include pitch lane decisions — stock ‘correction’ vs designed Auto-Tune / formant moves.",
     how: "A/B the dry take. If it sounds like a plugin, slow the retune.",
     affiliates: affiliatesForRole("pitch"),

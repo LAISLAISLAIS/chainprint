@@ -19,6 +19,11 @@
   to = "/calibration/"
   status = 301
 
+[[redirects]]
+  from = "/find"
+  to = "/find/"
+  status = 301
+
 [[headers]]
   for = "/*"
   [headers.values]

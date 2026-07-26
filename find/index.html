@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Key · BPM · CHAINPRINT</title>
+  <meta name="description" content="Find the key, relative key, and BPM of any song — upload a file or paste a link." />
+  <link rel="icon" href="../assets/mark.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="../css/chassis.css" />
+  <link rel="stylesheet" href="../css/logo.css" />
+  <link rel="stylesheet" href="../css/app.css" />
+  <link rel="stylesheet" href="../css/auth.css" />
+  <link rel="stylesheet" href="../css/find.css" />
+</head>
+<body class="find-body">
+  <div class="find-page">
+    <header class="find-nav">
+      <a class="logo" href="../" aria-label="Chainprint home">
+        <span class="logo-mark" aria-hidden="true"></span>
+        <span class="logo-word">Chainprint</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="./" aria-current="page">Key · BPM</a>
+        <a href="../analyze/">Analyze</a>
+        <span class="nav-auth" data-auth-nav></span>
+      </nav>
+    </header>
+
+    <main class="find-main">
+      <header class="find-head">
+        <h1>Key · BPM</h1>
+        <p>Upload a file or paste a track link. Get the key, relative key, and tempo.</p>
+      </header>
+
+      <label class="find-drop" data-dropzone>
+        <input type="file" accept="audio/*,.mp3,.wav,.m4a,.flac,.ogg,.aiff,.aif" hidden data-file />
+        <span class="find-alive" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="find-drop-title">Drop audio here</span>
+        <span class="find-drop-sub">or click to choose a file</span>
+      </label>
+
+      <form class="find-link" data-link-form>
+        <input
+          type="url"
+          name="url"
+          data-url
+          placeholder="Paste Spotify, Apple, YouTube, or SoundCloud link"
+          autocomplete="off"
+          spellcheck="false"
+        />
+        <button type="submit" class="btn btn-primary" data-link-go>Find</button>
+      </form>
+
+      <p class="find-status" data-status hidden></p>
+
+      <section class="find-results" data-results hidden aria-live="polite">
+        <p class="find-source" data-source></p>
+        <div class="find-grid">
+          <div class="find-metric">
+            <span class="find-label">BPM</span>
+            <span class="find-value" data-bpm>—</span>
+            <span class="find-meta" data-bpm-meta></span>
+          </div>
+          <div class="find-metric">
+            <span class="find-label">Key</span>
+            <span class="find-value" data-key>—</span>
+            <span class="find-meta" data-key-meta></span>
+          </div>
+          <div class="find-metric">
+            <span class="find-label">Relative</span>
+            <span class="find-value" data-relative>—</span>
+            <span class="find-meta">same key signature</span>
+          </div>
+        </div>
+        <p class="find-note" data-note></p>
+        <a class="find-chain-cta" href="../analyze/">Want the vocal chain too? Open Analyze →</a>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="../js/ui/find-page.js"></script>
+</body>
+</html>

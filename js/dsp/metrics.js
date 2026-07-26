@@ -323,7 +323,8 @@ export function measureBuffer(audioBuffer) {
       centroidHz: spectralCentroidHz(mag, sampleRate),
       bands: spectralBalance(mag, sampleRate),
       bpm: tempo.reliable ? tempo.bpm : null,
-      keyLabel: pitch.keyReliable ? pitch.keyLabel : null,
+      keyLabel: pitch.keyLabel || null,
+      relativeKey: pitch.relativeKey || null,
       streamingTarget: "Aim integrated ≈ −14 LUFS / −1 dBTP for most DSPs (verify with a real meter).",
     },
   };

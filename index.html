@@ -187,6 +187,27 @@
       color: #f4f4f4;
     }
 
+    .cta-tools {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px 18px;
+      justify-content: center;
+      margin-top: 4px;
+    }
+
+    .cta-tool {
+      font-size: 0.84rem;
+      color: #6a6a6a;
+      text-decoration: none;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      transition: color 0.2s ease;
+    }
+
+    .cta-tool:hover {
+      color: #cfcfcf;
+    }
+
     @keyframes hero-in {
       from {
         opacity: 0;
@@ -234,6 +255,7 @@
         <span class="logo-word">Chainprint</span>
       </a>
       <nav class="nav-links" aria-label="Primary">
+        <a href="find/">Key · BPM</a>
         <span class="nav-auth" data-auth-nav></span>
       </nav>
     </header>
@@ -246,6 +268,9 @@
         <div class="cta-row" data-home-cta>
           <a class="btn btn-primary" href="auth/?mode=signup&next=/analyze/">Sign up free</a>
           <a class="cta-login" href="auth/?mode=login&next=/analyze/">Log in</a>
+          <div class="cta-tools">
+            <a class="cta-tool" href="find/">Just need key &amp; BPM?</a>
+          </div>
         </div>
       </div>
     </main>
