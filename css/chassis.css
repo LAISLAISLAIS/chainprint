@@ -1041,6 +1041,24 @@ body > * {
     transform: translateY(0);
   }
 
+  /* Studio: pin the player under the sticky header, above the plugin strip */
+  body.studio-body .playback-dock,
+  body.studio-body .playback-pulse {
+    top: var(--studio-sticky-offset, calc(48px + 44px + env(safe-area-inset-top, 0px)));
+    bottom: auto;
+    z-index: 55;
+    transform: translateY(-110%);
+  }
+
+  body.studio-body .playback-dock.is-live,
+  body.studio-body .playback-pulse.is-live {
+    transform: translateY(0);
+  }
+
+  body.studio-body .playback-dock.is-dragging {
+    transform: translateY(0);
+  }
+
   .playback-dock-backdrop {
     display: block;
     position: fixed;
@@ -1067,7 +1085,7 @@ body > * {
   .playback-dock-panel {
     position: relative;
     z-index: 1;
-    border-radius: 16px 16px 0 0;
+    border-radius: 18px 18px 0 0;
     border-left: none;
     border-right: none;
     border-bottom: none;
@@ -1078,6 +1096,32 @@ body > * {
     -webkit-backdrop-filter: none;
     background: #0a0a0a;
     box-shadow: 0 -10px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  body.studio-body .playback-dock-panel {
+    border-radius: 0 0 16px 16px;
+    border-top: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 10px 14px 12px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+  }
+
+  /* Expanded queue drops down from the top player */
+  body.studio-body .playback-dock-panel {
+    display: flex;
+    flex-direction: column;
+  }
+
+  body.studio-body .playback-dock.is-expanded .playback-dock-panel {
+    flex-direction: column;
+  }
+
+  body.studio-body .playback-dock-sheet {
+    order: 3;
+    margin: 8px 0 0;
+    padding: 10px 0 0;
+    border-bottom: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .playback-dock-grip,
@@ -1136,7 +1180,17 @@ body > * {
   }
 
   body.has-playback-dock.studio-body {
-    padding-bottom: var(--playback-dock-space);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    --playback-dock-space: 96px;
+  }
+
+  body.has-playback-dock.has-playback-expanded.studio-body {
+    --playback-dock-space: min(52vh, 340px);
+  }
+
+  /* Make room under the header for the top-pinned studio player */
+  body.studio-body.has-playback-dock .studio-grid {
+    padding-top: var(--playback-dock-space);
   }
 
   body.has-playback-dock .stage-nav {

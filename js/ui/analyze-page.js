@@ -1965,9 +1965,9 @@ function renderFocus() {
           ${gap}
         </header>
         ${tips}
-        ${affiliates}
       </div>
       ${face ? `<div class="step-rack">${face}</div>` : ""}
+      ${affiliates}
     </article>`;
 
   stageFocus.scrollTop = 0;
@@ -1990,8 +1990,14 @@ function selectStage(index) {
   renderFocus();
   updateStageRailMore();
   const activeChip = document.querySelector(`[data-stage-index="${stageIndex}"]`);
-  // Keep the chip strip in place — only nudge the active chip into the horizontal viewport
-  activeChip?.scrollIntoView({ block: "nearest", inline: "center", behavior: "smooth" });
+  // Scroll only the chip strip horizontally — never yank the page past the upload rail
+  if (activeChip && stageRailScroll) {
+    const chipRect = activeChip.getBoundingClientRect();
+    const railRect = stageRailScroll.getBoundingClientRect();
+    const delta =
+      chipRect.left - railRect.left - (railRect.width - chipRect.width) / 2;
+    stageRailScroll.scrollBy({ left: delta, behavior: "smooth" });
+  }
 }
 
 function canScrollMoreRight(el) {
@@ -2021,7 +2027,6 @@ function bindStageRail(root) {
     const btn = e.target.closest("[data-stage-index]");
     if (!btn) return;
     selectStage(Number(btn.getAttribute("data-stage-index")));
-    btn.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" });
     requestAnimationFrame(updateStageRailMore);
   });
   root?.addEventListener("scroll", updateStageRailMore, { passive: true });
@@ -2166,6 +2171,47 @@ shareChainBtn?.addEventListener("click", async () => {
 
 stagePrev?.addEventListener("click", () => selectStage(stageIndex - 1));
 stageNext?.addEventListener("click", () => selectStage(stageIndex + 1));
+
+/* Horizontal swipe on the plugin card — same path as Next / Prev */
+(() => {
+  if (!stageFocus) return;
+  const THRESH = 56;
+  let startX = 0;
+  let startY = 0;
+  let tracking = false;
+  let pointerId = null;
+
+  const ignoreTarget = (t) =>
+    t instanceof Element &&
+    Boolean(t.closest("a, button, input, textarea, select, label, [data-no-swipe]"));
+
+  stageFocus.addEventListener("pointerdown", (e) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (ignoreTarget(e.target)) return;
+    tracking = true;
+    pointerId = e.pointerId;
+    startX = e.clientX;
+    startY = e.clientY;
+  });
+
+  const endSwipe = (e) => {
+    if (!tracking || (pointerId != null && e.pointerId !== pointerId)) return;
+    tracking = false;
+    pointerId = null;
+    if (!stages.length || activeView !== "chain") return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if (Math.abs(dx) < THRESH || Math.abs(dx) < Math.abs(dy) * 1.2) return;
+    if (dx < 0) selectStage(stageIndex + 1);
+    else selectStage(stageIndex - 1);
+  };
+
+  stageFocus.addEventListener("pointerup", endSwipe);
+  stageFocus.addEventListener("pointercancel", () => {
+    tracking = false;
+    pointerId = null;
+  });
+})();
 
 document.addEventListener("keydown", (e) => {
   if (activeView !== "chain" || !stages.length) return;
@@ -2684,22 +2730,30 @@ blendToggle?.addEventListener("click", () => {
   blendToggle.setAttribute("aria-expanded", blendPanelOpen ? "true" : "false");
 });
 
+function isMobileStudio() {
+  return typeof window !== "undefined" && window.matchMedia("(max-width: 960px)").matches;
+}
+
 function setSourceCollapsed(collapsed) {
-  const on = Boolean(collapsed);
+  // Mobile keeps the reference rail always open — no collapse chrome
+  const on = isMobileStudio() ? false : Boolean(collapsed);
   workspace?.classList.toggle("is-source-collapsed", on);
   if (sourceCollapseBtn) {
     sourceCollapseBtn.setAttribute("aria-expanded", String(!on));
     sourceCollapseBtn.title = on ? "Expand reference panel" : "Collapse reference panel";
     const sr = sourceCollapseBtn.querySelector(".sr-only");
     if (sr) sr.textContent = on ? "Expand reference panel" : "Collapse reference panel";
+    sourceCollapseBtn.hidden = isMobileStudio();
   }
   if (sourcePeekBtn) {
-    // Peek strip is mobile-only chrome for a collapsed rail
-    sourcePeekBtn.hidden = !on;
+    // Peek strip is unused on mobile; desktop collapse still toggles it for narrow widths
+    sourcePeekBtn.hidden = isMobileStudio() ? true : !on;
   }
   syncSourcePeek();
   try {
-    localStorage.setItem(SOURCE_COLLAPSE_KEY, on ? "1" : "0");
+    if (!isMobileStudio()) {
+      localStorage.setItem(SOURCE_COLLAPSE_KEY, on ? "1" : "0");
+    }
   } catch {
     /* ignore quota / private mode */
   }
@@ -2712,6 +2766,7 @@ function syncSourcePeek() {
 }
 
 sourceCollapseBtn?.addEventListener("click", () => {
+  if (isMobileStudio()) return;
   setSourceCollapsed(!workspace?.classList.contains("is-source-collapsed"));
 });
 
@@ -2723,13 +2778,16 @@ sourcePeekBtn?.addEventListener("click", () => {
 try {
   // On mobile, always start expanded so uploads stay obvious after refresh
   const preferCollapsed =
-    localStorage.getItem(SOURCE_COLLAPSE_KEY) === "1" &&
-    !window.matchMedia("(max-width: 960px)").matches;
+    localStorage.getItem(SOURCE_COLLAPSE_KEY) === "1" && !isMobileStudio();
   if (preferCollapsed) setSourceCollapsed(true);
   else setSourceCollapsed(false);
 } catch {
   setSourceCollapsed(false);
 }
+
+window.matchMedia("(max-width: 960px)").addEventListener("change", (e) => {
+  if (e.matches) setSourceCollapsed(false);
+});
 
 blendGo?.addEventListener("click", () => {
   if (!applyAccessGate()) return;
