@@ -167,37 +167,6 @@
         </div>
 
         <div class="source-footer">
-          <details class="stems-panel compact" data-stems-panel>
-            <summary>Have stems? <span class="stems-soon">Auto-separate — coming</span></summary>
-            <p class="stems-hint">Optional. Analyzes your stem instead of estimating from the full master.</p>
-            <label class="stem-field">
-              <span class="stem-field-label">Vocal stem</span>
-              <span class="stem-picker">
-                <input
-                  type="file"
-                  class="stem-file-input"
-                  data-stem-vocal
-                  accept="audio/*,.wav,.mp3,.flac,.aiff,.m4a"
-                />
-                <span class="stem-pick-btn">Choose file</span>
-              </span>
-              <span class="stem-name" data-stem-vocal-name>No file chosen</span>
-            </label>
-            <label class="stem-field">
-              <span class="stem-field-label">Instrumental stem</span>
-              <span class="stem-picker">
-                <input
-                  type="file"
-                  class="stem-file-input"
-                  data-stem-instrumental
-                  accept="audio/*,.wav,.mp3,.flac,.aiff,.m4a"
-                />
-                <span class="stem-pick-btn">Choose file</span>
-              </span>
-              <span class="stem-name" data-stem-instrumental-name>No file chosen</span>
-            </label>
-          </details>
-
           <div class="mode-row compact" data-mode-row>
             <button type="button" class="mode-seg" data-mode="standard" aria-pressed="true">Standard</button>
             <button type="button" class="mode-seg" data-mode="deep" aria-pressed="false">
@@ -233,7 +202,7 @@
           <div class="chain-empty" data-empty>
             <p class="empty-kicker">Ready</p>
             <h2>Drop a reference mix</h2>
-            <p>Pick <strong>Vocal</strong>, <strong>Instrumental</strong>, or <strong>Full mix</strong> at the top of the left rail, then drop a reference.</p>
+            <p>Pick <strong>Vocal</strong>, <strong>Instrumental</strong>, or <strong>Full mix</strong>, drop a mixed reference, then add your dry take to hear the chain.</p>
           </div>
 
           <div class="chain-workspace hidden" data-chain-workspace>
@@ -248,6 +217,62 @@
                 </button>
               </div>
             </div>
+
+            <section class="hear-strip" data-hear-strip aria-label="Hear this chain on your dry take">
+              <div class="hear-strip-steps" aria-hidden="true">
+                <span class="hear-step is-done">1 · Reference</span>
+                <span class="hear-step-rule"></span>
+                <span class="hear-step" data-hear-step-dry>2 · Your dry take</span>
+                <span class="hear-step-rule"></span>
+                <span class="hear-step" data-hear-step-ab>3 · A/B</span>
+              </div>
+              <div class="hear-strip-main">
+                <div class="hear-strip-copy">
+                  <h3 class="hear-strip-title">Hear this chain on your track</h3>
+                  <p class="hear-strip-lede">
+                    The reference is already mixed — Chainprint can’t un-process it.
+                    Add your <strong>dry</strong> vocal or instrumental, then compare Your dry vs Through chain.
+                  </p>
+                </div>
+                <div class="hear-strip-controls">
+                  <label class="hear-file" data-hear-field="vocal">
+                    <span class="hear-file-label" data-hear-file-label>Your dry vocal</span>
+                    <span class="hear-file-row">
+                      <input
+                        type="file"
+                        class="stem-file-input"
+                        data-stem-vocal
+                        accept="audio/*,.wav,.mp3,.flac,.aiff,.m4a"
+                      />
+                      <span class="stem-pick-btn" data-hear-pick-label>Add dry vocal</span>
+                      <span class="stem-name" data-stem-vocal-name>No file yet</span>
+                    </span>
+                  </label>
+                  <label class="hear-file" data-hear-field="instrumental" hidden>
+                    <span class="hear-file-label">Your dry instrumental</span>
+                    <span class="hear-file-row">
+                      <input
+                        type="file"
+                        class="stem-file-input"
+                        data-stem-instrumental
+                        accept="audio/*,.wav,.mp3,.flac,.aiff,.m4a"
+                      />
+                      <span class="stem-pick-btn">Add dry instrumental</span>
+                      <span class="stem-name" data-stem-instrumental-name>No file yet</span>
+                    </span>
+                  </label>
+                  <div class="preview-ab-seg" role="group" aria-label="A/B your dry take">
+                    <button type="button" class="preview-ab-btn" data-preview-mode="dry" aria-pressed="true" disabled>
+                      Your dry
+                    </button>
+                    <button type="button" class="preview-ab-btn" data-preview-mode="chain" aria-pressed="false" disabled>
+                      Through chain
+                    </button>
+                  </div>
+                  <p class="hear-strip-hint" data-preview-hint>Add your dry take to unlock A/B</p>
+                </div>
+              </div>
+            </section>
 
             <p class="honesty sr-only" data-honesty></p>
 

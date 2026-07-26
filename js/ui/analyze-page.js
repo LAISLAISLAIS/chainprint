@@ -17,7 +17,7 @@ import { blendTracks } from "../blend.js";
 import { mountAuthNav } from "./nav-auth.js";
 import { renderPluginFace } from "./plugin-visuals.js";
 import { mountChainMark } from "./chain-mark.js";
-import { playAudio, stopAudio, subscribePlayback, playingKey } from "./audio-player.js";
+import { playAudio, stopAudio, subscribePlayback, playingKey, setChainFx, setChainPreview, isChainPreview } from "./audio-player.js";
 import { mountPlaybackPulse } from "./playback-pulse.js";
 import { setPlaybackTrackProvider, notifyPlaylist } from "./playback-playlist.js";
 // PDF export is lazy-loaded on click so a CDN failure can't break the studio
@@ -93,6 +93,16 @@ const stageCount = document.querySelector("[data-stage-count]");
 const stagePrev = document.querySelector("[data-stage-prev]");
 const stageNext = document.querySelector("[data-stage-next]");
 const exportPdfBtn = document.querySelector("[data-export-pdf]");
+const previewDryBtn = document.querySelector('[data-preview-mode="dry"]');
+const previewChainBtn = document.querySelector('[data-preview-mode="chain"]');
+const previewHint = document.querySelector("[data-preview-hint]");
+const hearFieldVocal = document.querySelector('[data-hear-field="vocal"]');
+const hearFieldInstrumental = document.querySelector('[data-hear-field="instrumental"]');
+const hearStepDry = document.querySelector("[data-hear-step-dry]");
+const hearStepAb = document.querySelector("[data-hear-step-ab]");
+const hearFileLabel = document.querySelector("[data-hear-file-label]");
+const hearPickLabel = document.querySelector("[data-hear-pick-label]");
+const hearLede = document.querySelector(".hear-strip-lede");
 const viewTabs = document.querySelectorAll("[data-view]");
 const panels = document.querySelectorAll("[data-panel]");
 const masterEmpty = document.querySelector("[data-master-empty]");
@@ -240,6 +250,7 @@ function setTarget(target) {
   targetInstrumentalBtn?.setAttribute("aria-pressed", String(next === "instrumental"));
   targetFullBtn?.setAttribute("aria-pressed", String(next === "full"));
   syncSignatureCopy();
+  syncChainPreviewUi();
   if (!changed) return;
   rerunActiveAnalysis();
 }
@@ -312,15 +323,19 @@ targetFullBtn?.addEventListener("click", () => setTarget("full"));
 
 stemVocalInput?.addEventListener("change", () => {
   stemVocalFile = stemVocalInput.files?.[0] || null;
-  if (stemVocalName) stemVocalName.textContent = stemVocalFile?.name || "No file chosen";
-  if (analysisTarget === "vocal") rerunActiveAnalysis();
+  if (stemVocalName) {
+    stemVocalName.textContent = stemVocalFile?.name || "No file yet";
+  }
+  syncChainPreviewUi();
+  if (analysisTarget === "vocal" && stemVocalFile) rerunActiveAnalysis();
 });
 stemInstrumentalInput?.addEventListener("change", () => {
   stemInstrumentalFile = stemInstrumentalInput.files?.[0] || null;
   if (stemInstrumentalName) {
-    stemInstrumentalName.textContent = stemInstrumentalFile?.name || "No file chosen";
+    stemInstrumentalName.textContent = stemInstrumentalFile?.name || "No file yet";
   }
-  if (analysisTarget === "instrumental") rerunActiveAnalysis();
+  syncChainPreviewUi();
+  if (analysisTarget === "instrumental" && stemInstrumentalFile) rerunActiveAnalysis();
 });
 
 function setView(view) {
@@ -354,11 +369,91 @@ function setStatus(state, text) {
   if (statusText) statusText.textContent = text;
 }
 
+function dryPreviewStem() {
+  if (analysisTarget === "vocal") return stemVocalFile;
+  if (analysisTarget === "instrumental") return stemInstrumentalFile;
+  return stemVocalFile || stemInstrumentalFile || null;
+}
+
+function syncHearStripFields() {
+  const wantInstrumental = analysisTarget === "instrumental";
+  if (hearFieldVocal) hearFieldVocal.hidden = wantInstrumental;
+  if (hearFieldInstrumental) hearFieldInstrumental.hidden = !wantInstrumental;
+
+  if (hearFileLabel) {
+    hearFileLabel.textContent =
+      analysisTarget === "full" ? "Your dry take" : "Your dry vocal";
+  }
+  if (hearPickLabel) {
+    hearPickLabel.textContent =
+      analysisTarget === "full"
+        ? "Add dry take"
+        : analysisTarget === "instrumental"
+          ? "Add dry instrumental"
+          : "Add dry vocal";
+  }
+  if (hearLede) {
+    hearLede.innerHTML =
+      analysisTarget === "instrumental"
+        ? `The reference is already mixed — Chainprint can’t un-process it. Add your <strong>dry instrumental</strong>, then compare Your dry vs Through chain.`
+        : analysisTarget === "full"
+          ? `The reference is already mixed — Chainprint can’t un-process it. Add a <strong>dry take</strong> (vocal or instrumental), then compare Your dry vs Through chain.`
+          : `The reference is already mixed — Chainprint can’t un-process it. Add your <strong>dry vocal</strong>, then compare Your dry vs Through chain.`;
+  }
+}
+
+function syncChainPreviewUi() {
+  syncHearStripFields();
+  const hasChain = Boolean(lastAdvice?.chain);
+  const stem = dryPreviewStem();
+  const canPreview = hasChain && Boolean(stem);
+
+  if (previewDryBtn) previewDryBtn.disabled = !canPreview;
+  if (previewChainBtn) previewChainBtn.disabled = !canPreview;
+
+  if (!canPreview && isChainPreview()) {
+    setChainPreview(false);
+  }
+
+  const previewOn = isChainPreview();
+  previewDryBtn?.setAttribute("aria-pressed", String(canPreview && !previewOn));
+  previewChainBtn?.setAttribute("aria-pressed", String(canPreview && previewOn));
+
+  hearStepDry?.classList.toggle("is-ready", Boolean(stem));
+  hearStepDry?.classList.toggle("is-active", hasChain && !stem);
+  hearStepAb?.classList.toggle("is-ready", canPreview);
+  hearStepAb?.classList.toggle("is-active", canPreview && previewOn);
+
+  if (previewHint) {
+    if (!hasChain) {
+      previewHint.textContent = "Analyze a reference first";
+    } else if (!stem) {
+      previewHint.textContent =
+        analysisTarget === "instrumental"
+          ? "Step 2 — add your dry instrumental to unlock A/B"
+          : analysisTarget === "full"
+            ? "Step 2 — add a dry take to unlock A/B"
+            : "Step 2 — add your dry vocal to unlock A/B";
+    } else if (previewOn) {
+      previewHint.textContent = "Playing your dry take through the Chainprint chain";
+    } else {
+      previewHint.textContent = "Playing your dry take unprocessed — hit Through chain to hear the processing";
+    }
+  }
+}
+
 function audioFileForEntry(entry) {
   if (!entry) return null;
   if (entry.audioFile instanceof Blob) return entry.audioFile;
   if (entry.source?.kind === "file" && entry.source.file instanceof Blob) return entry.source.file;
   return null;
+}
+
+function applyChainFxFromAdvice(advice) {
+  const chain = advice?.chain || null;
+  setChainFx(chain);
+  if (!chain || !dryPreviewStem()) setChainPreview(false);
+  syncChainPreviewUi();
 }
 
 function syncPlayButtons() {
@@ -374,6 +469,9 @@ function syncPlayButtons() {
 async function toggleEntryPlayback(entry) {
   const file = audioFileForEntry(entry);
   if (!file || !entry) return;
+  // Library play is always the mixed reference — never chain-preview on it
+  setChainPreview(false);
+  syncChainPreviewUi();
   try {
     await playAudio(file, entry.id, { title: entryDisplayName(entry) });
   } catch (err) {
@@ -381,6 +479,37 @@ async function toggleEntryPlayback(entry) {
     setStatus("idle", "Couldn’t play this reference");
   }
 }
+
+async function setPreviewMode(mode) {
+  if (!lastAdvice?.chain) return;
+  const stem = dryPreviewStem();
+  if (!stem) {
+    syncChainPreviewUi();
+    const field =
+      analysisTarget === "instrumental" ? hearFieldInstrumental : hearFieldVocal;
+    field?.querySelector(".stem-pick-btn")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    setStatus("idle", "Add your dry take to hear this chain");
+    return;
+  }
+
+  const wantChain = mode === "chain";
+  setChainPreview(wantChain);
+  syncChainPreviewUi();
+
+  const entry = library.active();
+  const titleBase = entry ? entryDisplayName(entry) : "Dry take";
+  try {
+    await playAudio(stem, entry ? `${entry.id}:dry` : "dry-preview", {
+      title: wantChain ? `${titleBase} · through chain` : `${titleBase} · your dry`,
+    });
+  } catch (err) {
+    console.warn("[preview] dry take play failed", err);
+    setStatus("idle", "Couldn’t play your dry take");
+  }
+}
+
+previewDryBtn?.addEventListener("click", () => setPreviewMode("dry"));
+previewChainBtn?.addEventListener("click", () => setPreviewMode("chain"));
 
 function setProgress(on, { label = "", progress = 0, stage = "" } = {}) {
   if (!progressRoot) return;
@@ -627,6 +756,7 @@ function applyEntryToStudio(entry) {
   }
 
   setHasResults(true);
+  applyChainFxFromAdvice(lastAdvice);
   setStatus("live", entry.kind === "blend" ? "Combination ready" : "Chain ready");
 }
 
@@ -717,6 +847,11 @@ function setHasResults(on) {
     else chainWorkspace.classList.add("hidden");
   }
   if (exportPdfBtn) exportPdfBtn.disabled = !on;
+  if (!on) {
+    applyChainFxFromAdvice(null);
+  } else {
+    applyChainFxFromAdvice(lastAdvice);
+  }
   const target = lastAdvice?.target || analysisTarget;
   const hasInstruments = target === "instrumental" || target === "full";
   viewTabs.forEach((tab) => {
@@ -1198,8 +1333,11 @@ function renderChain(advice) {
     if (stageRailSends) stageRailSends.innerHTML = "";
     if (stageFocus) stageFocus.innerHTML = "";
     if (highlightsRoot) highlightsRoot.innerHTML = "";
+    applyChainFxFromAdvice(null);
     return;
   }
+
+  applyChainFxFromAdvice(advice);
 
   const { chain } = advice;
   if (honestyEl) honestyEl.textContent = chain.honesty;

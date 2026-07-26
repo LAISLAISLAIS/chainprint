@@ -1,6 +1,9 @@
 /**
  * In-app reference playback — plays the same audio we measured (file or preview).
+ * Optional Web Audio chain preview (dry / processed A–B).
  */
+
+import { buildChainFx } from "../audio/chain-fx.js";
 
 let audio = null;
 /** @type {string | null} */
@@ -24,8 +27,137 @@ let onMeta = null;
 /** @type {Set<(s: ReturnType<typeof snapshot>) => void>} */
 const listeners = new Set();
 
+/** @type {AudioContext | null} */
+let audioCtx = null;
+/** @type {MediaElementAudioSourceNode | null} */
+let mediaSource = null;
+/** @type {GainNode | null} */
+let dryGain = null;
+/** @type {GainNode | null} */
+let wetGain = null;
+/** @type {GainNode | null} */
+let masterGain = null;
+/** @type {GainNode | null} */
+let fxInput = null;
+/** @type {ReturnType<typeof buildChainFx> | null} */
+let fxGraph = null;
+/** @type {object | null} */
+let pendingChain = null;
+let chainPreview = false;
+let graphReady = false;
+
+function ensureContext() {
+  if (audioCtx) return audioCtx;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return null;
+  audioCtx = new AC();
+  return audioCtx;
+}
+
 function applyVolume() {
+  if (masterGain && audioCtx) {
+    const v = muted ? 0 : volume;
+    masterGain.gain.setTargetAtTime(v, audioCtx.currentTime, 0.015);
+    if (audio) audio.volume = 1;
+    return;
+  }
   if (audio) audio.volume = muted ? 0 : volume;
+}
+
+function applyPreviewGains(immediate = false) {
+  if (!dryGain || !wetGain || !audioCtx) return;
+  const t = audioCtx.currentTime;
+  const tau = immediate ? 0.005 : 0.02;
+  if (chainPreview && fxGraph) {
+    dryGain.gain.setTargetAtTime(0, t, tau);
+    wetGain.gain.setTargetAtTime(1, t, tau);
+  } else {
+    dryGain.gain.setTargetAtTime(1, t, tau);
+    wetGain.gain.setTargetAtTime(0, t, tau);
+  }
+}
+
+function disconnectFxOnly() {
+  if (fxGraph) {
+    fxGraph.dispose();
+    fxGraph = null;
+  }
+  if (fxInput) {
+    try {
+      fxInput.disconnect();
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
+function rebuildFxFromPending() {
+  if (!audioCtx || !fxInput || !wetGain) return;
+  disconnectFxOnly();
+  if (!pendingChain) {
+    applyPreviewGains(true);
+    return;
+  }
+  fxGraph = buildChainFx(audioCtx, pendingChain);
+  if (fxGraph) {
+    fxInput.connect(fxGraph.input);
+    fxGraph.output.connect(wetGain);
+  }
+  applyPreviewGains(true);
+}
+
+/**
+ * Wire MediaElementSource → dry/wet → master once per audio element.
+ * Safe to call repeatedly; no-ops if already connected for this element.
+ */
+function ensureGraph() {
+  if (!audio) return false;
+  const ctx = ensureContext();
+  if (!ctx) return false;
+
+  if (graphReady && mediaSource) {
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    return true;
+  }
+
+  try {
+    mediaSource = ctx.createMediaElementSource(audio);
+  } catch (err) {
+    // Element already connected somehow — abandon graph for this session element
+    console.warn("[playback] MediaElementSource failed", err);
+    return false;
+  }
+
+  dryGain = ctx.createGain();
+  wetGain = ctx.createGain();
+  masterGain = ctx.createGain();
+  fxInput = ctx.createGain();
+  fxInput.gain.value = 1;
+
+  dryGain.gain.value = 1;
+  wetGain.gain.value = 0;
+  masterGain.gain.value = muted ? 0 : volume;
+
+  mediaSource.connect(dryGain);
+  mediaSource.connect(fxInput);
+  dryGain.connect(masterGain);
+  wetGain.connect(masterGain);
+  masterGain.connect(ctx.destination);
+
+  graphReady = true;
+  audio.volume = 1;
+  rebuildFxFromPending();
+  applyVolume();
+
+  if (ctx.state === "suspended") ctx.resume().catch(() => {});
+  return true;
+}
+
+function resetGraphState() {
+  disconnectFxOnly();
+  dryGain = wetGain = masterGain = fxInput = mediaSource = null;
+  graphReady = false;
+  // Keep pendingChain + chainPreview so the next playAudio rebuilds FX
 }
 
 function snapshot() {
@@ -41,6 +173,8 @@ function snapshot() {
     currentTime,
     duration,
     progress: duration > 0 ? Math.min(1, currentTime / duration) : 0,
+    chainPreview: Boolean(chainPreview),
+    chainFxReady: Boolean(pendingChain && fxGraph),
   };
 }
 
@@ -78,7 +212,34 @@ function teardown() {
   }
   currentKey = null;
   currentTitle = "";
+  resetGraphState();
   notify();
+}
+
+/**
+ * Attach / replace the FX graph from a Chainprint chain object.
+ * @param {{ inserts?: object[], sends?: object[] } | null} chain
+ */
+export function setChainFx(chain) {
+  pendingChain = chain && (chain.inserts?.length || chain.sends?.length) ? chain : null;
+  if (!pendingChain) {
+    chainPreview = false;
+  }
+  if (graphReady) rebuildFxFromPending();
+  notify();
+}
+
+/** @param {boolean} on */
+export function setChainPreview(on) {
+  chainPreview = Boolean(on) && Boolean(pendingChain);
+  if (chainPreview) ensureGraph();
+  applyPreviewGains(false);
+  notify();
+  return chainPreview;
+}
+
+export function isChainPreview() {
+  return Boolean(chainPreview);
 }
 
 /**
@@ -101,6 +262,7 @@ export async function playAudio(source, key = "default", opts = {}) {
   if (currentKey === key && audio && audio.paused) {
     try {
       currentTitle = title || currentTitle;
+      ensureGraph();
       applyVolume();
       await audio.play();
       notify();
@@ -114,9 +276,9 @@ export async function playAudio(source, key = "default", opts = {}) {
 
   audio = new Audio();
   audio.preload = "auto";
+  audio.crossOrigin = "anonymous";
   currentKey = key;
   currentTitle = title;
-  applyVolume();
 
   if (typeof source === "string") {
     audio.src = source;
@@ -135,6 +297,10 @@ export async function playAudio(source, key = "default", opts = {}) {
   audio.addEventListener("play", onPlay);
   audio.addEventListener("timeupdate", onTime);
   audio.addEventListener("loadedmetadata", onMeta);
+
+  // Connect graph before play so output routes through Web Audio when available
+  ensureGraph();
+  applyVolume();
 
   try {
     await audio.play();
@@ -166,6 +332,7 @@ export function pauseAudio() {
 
 export function resumeAudio() {
   if (!audio || !audio.paused) return Promise.resolve(false);
+  ensureGraph();
   applyVolume();
   return audio
     .play()
