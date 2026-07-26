@@ -49,7 +49,12 @@ export function dialInstrumental(readout, traits) {
 
   const lowShelfCut = round1(clamp(0.4 + Math.max(0, sub + 10) * 0.12, 0.3, 2.2));
   const kickBassCarve = round0(clamp(base.mudHz || 280, 180, 380));
-  const hatCutHz = round0(clamp(readout.eqTargets?.harshHz || 5500, 4500, 8000));
+  // Keep pocket (presence) below hat bite so dials + EQ dots don’t stack on one Hz
+  let vocalPocket = round0(clamp(readout.eqTargets?.presenceHz || 3200, 2500, 4000));
+  let hatCutHz = round0(clamp(readout.eqTargets?.harshHz || 5500, 5000, 9000));
+  if (hatCutHz - vocalPocket < 900) {
+    hatCutHz = round0(clamp(vocalPocket + 1400, 5200, 9000));
+  }
   const hatCutDb = round1(clamp(0.5 + Math.max(0, (tone.harshness ?? -8) + 6) * 0.25 + (ti > 5 ? 0.4 : 0), 0.3, 3.5));
   const glueGr = round1(clamp(2.8 - crest * 0.12, 0.6, 2.4));
   const glueAttack = round0(clamp(18 + crest * 1.2, 10, 40));
@@ -57,7 +62,6 @@ export function dialInstrumental(readout, traits) {
   const satDrive =
     crest < 8 ? "low–medium" : brilliance > -10 || air > -12 ? "low" : "very low";
   const limitCatch = round1(clamp(2.8 - crest * 0.15, 0.6, 2.8));
-  const vocalPocket = round0(clamp(readout.eqTargets?.presenceHz || 3200, 2500, 4500));
 
   return {
     ...base,
@@ -282,10 +286,10 @@ export function buildInstrumentalChain(readout, traits, _daw = "universal") {
     signalFlow,
     sendFlow,
     orderWhy: [
-      `Insert order: ${signalFlow.join(" → ")}`,
-      `Sends: ${sendFlow.join(" → ")}`,
-      "Carve and mono lows before glue and width.",
-    ],
+      `Build inserts in this order: ${inserts.map((s) => s.title).join(" → ")}.`,
+      sends.length ? `Then sends: ${sends.map((s) => s.title).join(" → ")}.` : null,
+      "Carve and mono the lows before glue or width.",
+    ].filter(Boolean),
     inserts,
     sends,
     paidUpgrades: [
@@ -446,8 +450,8 @@ export function buildFullMixChain(readout, traits, _daw = "universal") {
     signalFlow,
     sendFlow,
     orderWhy: [
-      `Insert order: ${signalFlow.join(" → ")}`,
-      "Corrective EQ → glue → image → limit. Brightening last is how bus chains fall apart.",
+      `Build inserts in this order: ${inserts.map((s) => s.title).join(" → ")}.`,
+      "Corrective EQ first, then glue, then width, then limiting. Brightening last is how bus chains fall apart.",
     ],
     inserts,
     sends,

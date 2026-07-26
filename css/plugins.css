@@ -24,7 +24,7 @@
 
 .rack-name {
   font-family: var(--font-readout, "JetBrains Mono", ui-monospace, monospace);
-  font-size: 0.9rem;
+  font-size: var(--text-base);
   font-weight: 500;
   letter-spacing: -0.01em;
   color: #f0f0f0;
@@ -32,7 +32,7 @@
 
 .rack-badge {
   font-size: 0.7rem;
-  font-weight: 650;
+  font-weight: var(--weight-semibold);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #8a8a8a;
@@ -84,9 +84,10 @@
 
 .rack-eq-lab {
   fill: #9a9a9a;
-  font-size: 10px;
-  font-family: "JetBrains Mono", ui-monospace, monospace;
-  text-anchor: middle;
+  font-size: 9.5px;
+  font-family: var(--font-ui, "DM Sans", sans-serif);
+  font-weight: 600;
+  /* text-anchor set per-label in SVG when bands collide */
 }
 
 .rack-eq-tick {
@@ -115,7 +116,7 @@
 
 .rack-dial-val {
   font-family: var(--font-readout, "JetBrains Mono", ui-monospace, monospace);
-  font-size: 0.9rem;
+  font-size: var(--text-base);
   font-weight: 500;
   letter-spacing: -0.02em;
   color: #f5f5f5;
@@ -125,7 +126,7 @@
 
 .rack-dial-lab {
   font-size: 0.7rem;
-  font-weight: 650;
+  font-weight: var(--weight-semibold);
   letter-spacing: 0.05em;
   text-transform: uppercase;
   color: #8a8a8a;
@@ -146,7 +147,7 @@
 .rack-copy li {
   position: relative;
   padding-left: 14px;
-  font-size: 0.9rem;
+  font-size: var(--text-base);
   line-height: 1.45;
   color: #c4c4c4;
   letter-spacing: -0.01em;
@@ -169,7 +170,7 @@
   }
 
   .rack-name {
-    font-size: 0.84rem;
+    font-size: var(--text-sm);
   }
 
   .rack-body {
@@ -186,7 +187,7 @@
   }
 
   .rack-dial-val {
-    font-size: 0.84rem;
+    font-size: var(--text-sm);
   }
 
   .rack-howto {
@@ -194,7 +195,7 @@
   }
 
   .rack-copy li {
-    font-size: 0.86rem;
+    font-size: var(--text-sm);
   }
 
   .pro-pick {
@@ -219,8 +220,8 @@
 
 .pro-picks-label {
   margin: 0;
-  font-size: 0.72rem;
-  font-weight: 650;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #8a8a8a;
@@ -240,21 +241,21 @@
 .pro-pick-name {
   margin: 0;
   font-size: 0.9375rem;
-  font-weight: 650;
+  font-weight: var(--weight-semibold);
   letter-spacing: -0.02em;
   color: #f5f5f5;
 }
 
 .pro-pick-meta {
   margin: 3px 0 0;
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   color: #8a8a8a;
 }
 
 .pro-pick-why {
   margin: 6px 0 0;
   grid-column: 1 / -1;
-  font-size: 0.84rem;
+  font-size: var(--text-sm);
   line-height: 1.45;
   color: #a8a8a8;
 }
@@ -268,8 +269,8 @@
   background: #f2f2f2;
   color: #0a0a0a;
   font: inherit;
-  font-size: 0.78rem;
-  font-weight: 650;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
   letter-spacing: -0.01em;
   padding: 8px 12px;
   border-radius: 8px;
@@ -285,6 +286,6 @@
 .pro-pick-note {
   grid-column: 1 / -1;
   margin: 0;
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   color: #666;
 }

@@ -72,42 +72,54 @@ export function characterize(readout) {
     keyConfidence: readout.pitch?.keyConfidence ?? 0,
   };
 
-  const summary = [];
+  const findings = [];
+  const pushFinding = (label, text) => {
+    findings.push({ label, text });
+  };
+
   if (target === "instrumental") {
-    summary.push("Target: instrumental bed — mix tips favor low-end carve, glue, and width-by-band.");
+    pushFinding("Target", "This chain is for an instrumental bed — low-end carve, bus glue, and stereo width.");
   } else if (target === "full") {
-    summary.push("Target: full mix — mix-bus order + master translation.");
+    pushFinding("Target", "This chain is for a full mix — bus EQ, glue, imaging, then delivery checks.");
   } else {
-    summary.push("Target: vocal chain from the vocal region estimate.");
+    pushFinding("Target", "This chain is for the vocal — built from the vocal region of the reference.");
   }
   if (readout.sourceKind === "stem") {
-    summary.push("Source: uploaded stem (higher accuracy than a full-master estimate).");
+    pushFinding("Source", "You uploaded a stem — this read is more accurate than estimating from a full master.");
   }
 
   if (tempo.bpm && tempo.reliable) {
-    summary.push(`Pulse ≈ ${tempo.bpm} BPM (${tempo.feel || "tempo"}).`);
+    pushFinding("Tempo", `About ${tempo.bpm} BPM. Use this to time delays and throws.`);
   } else if (tempo.bpm) {
-    summary.push(`Possible BPM ~${tempo.bpm} (low confidence) — verify before tempo-sync.`);
+    pushFinding("Tempo", `Maybe ~${tempo.bpm} BPM (uncertain). Check it before syncing FX to tempo.`);
   }
   if (pitch.keyLabel && pitch.keyReliable) {
-    summary.push(
-      `Key ≈ ${pitch.keyLabel}${
-        readout.pitch?.relativeKey ? ` (rel. ${readout.pitch.relativeKey})` : ""
+    pushFinding(
+      "Key",
+      `${pitch.keyLabel}${
+        readout.pitch?.relativeKey ? ` (relative ${readout.pitch.relativeKey})` : ""
       }${
-        pitch.f0Hz && pitch.f0Reliable ? ` · lead ~${pitch.f0Hz.toFixed(0)} Hz (${pitch.register})` : ""
-      }.`
+        pitch.f0Hz && pitch.f0Reliable
+          ? `. Lead sits near ${pitch.f0Hz.toFixed(0)} Hz (${pitch.register}).`
+          : "."
+      }`
     );
   } else if (pitch.keyLabel) {
-    summary.push(
-      `Key leaning ${pitch.keyLabel}${
+    pushFinding(
+      "Key",
+      `Leaning ${pitch.keyLabel}${
         readout.pitch?.relativeKey ? ` / ${readout.pitch.relativeKey}` : ""
-      } — verify before locking scale.`
+      }. Confirm by ear before locking your scale.`
     );
   } else if (pitch.f0Hz && pitch.f0Reliable) {
-    summary.push(`Lead register ~${pitch.f0Hz.toFixed(0)} Hz (${pitch.register}) — key not locked.`);
+    pushFinding(
+      "Pitch",
+      `Lead around ${pitch.f0Hz.toFixed(0)} Hz (${pitch.register}). Key wasn’t clear enough to lock.`
+    );
   } else if (readout.pitch?.keyRunnerUp) {
-    summary.push(
-      `Key ambiguous (${readout.pitch.keyCandidates?.[0]?.label || "?"} vs ${readout.pitch.keyRunnerUp}) — set scale manually.`
+    pushFinding(
+      "Key",
+      `Ambiguous (${readout.pitch.keyCandidates?.[0]?.label || "?"} vs ${readout.pitch.keyRunnerUp}). Set the scale yourself.`
     );
   }
 
@@ -119,38 +131,78 @@ export function characterize(readout) {
   const targets = readout.eqTargets;
 
   if (target === "vocal") {
-    if (tone.air === "elevated") summary.push("Air is up — top end is carrying presence.");
-    else if (tone.air === "recessed") summary.push("Air is down — vocal sits darker / closer.");
-    else if (air < -14) summary.push("Top end sits slightly dark — gentle air shelf likely.");
+    if (tone.air === "elevated") {
+      pushFinding("Air", "Bright top end — a gentle high shelf will match the reference.");
+    } else if (tone.air === "recessed") {
+      pushFinding("Air", "Darker top — don’t over-brighten; keep the vocal closer and softer up high.");
+    } else if (air < -14) {
+      pushFinding("Air", "Slightly dark overall — a small air shelf is enough.");
+    }
 
-    if (tone.sibilance === "elevated") summary.push("Sibilance region is hot relative to body.");
-    else if (sib > -5) summary.push(`Sibilance leaning forward (index ${sib.toFixed(1)}).`);
+    if (tone.sibilance === "elevated") {
+      pushFinding("Sibilance", "S and T sounds are hot. De-ess after compression.");
+    } else if (sib > -5) {
+      pushFinding("Sibilance", "Sibilance is a bit forward. Watch the de-esser.");
+    }
 
-    if (tone.harshness === "elevated") summary.push("Upper-mid bite is forward (harshness band).");
-    else if (harsh > -7) summary.push(`Upper-mid bite present — cut near ${targets?.harshHz || 3e3} Hz.`);
+    if (tone.harshness === "elevated") {
+      pushFinding(
+        "Harshness",
+        `Upper-mid bite is forward. Cut near ${targets?.harshHz || 3000} Hz in Subtractive EQ.`
+      );
+    } else if (harsh > -7) {
+      pushFinding(
+        "Harshness",
+        `Some upper-mid bite — a cut near ${targets?.harshHz || 3000} Hz helps.`
+      );
+    }
 
-    if (tone.mud === "elevated") summary.push("Low-mids are heavy — body may be masking clarity.");
-    else if (mud > -3) summary.push(`Low-mid weight — mud cut near ${targets?.mudHz || 320} Hz.`);
+    if (tone.mud === "elevated") {
+      pushFinding(
+        "Low-mids",
+        `Muddy around ${targets?.mudHz || 320} Hz. Cut this in Subtractive EQ before you compress.`
+      );
+    } else if (mud > -3) {
+      pushFinding(
+        "Low-mids",
+        `Some low-mid weight — a cut near ${targets?.mudHz || 320} Hz keeps the vocal clear.`
+      );
+    }
   } else {
     const fullTone = readout.toneFull || readout.tone;
-    if (fullTone.mud > -2) summary.push("Low-mid bed is heavy — expect kick/bass carve + group HPFs.");
-    if (fullTone.harshness > -6) summary.push("Top/harsh energy is forward — tame hats before brightening.");
-    if (readout.stereo.sideMidRatio > 0.25) summary.push("Wide side energy — mono the lows; manage width by band.");
+    if (fullTone.mud > -2) {
+      pushFinding("Low end", "Low-mids are heavy. Carve kick/bass and high-pass non-bass groups.");
+    }
+    if (fullTone.harshness > -6) {
+      pushFinding("Top end", "Hats/cymbals are hot. Tame them before adding air.");
+    }
+    if (readout.stereo.sideMidRatio > 0.25) {
+      pushFinding("Width", "Lots of side energy. Keep lows mono; widen by band, not with one widener.");
+    }
   }
 
-  if (dynamics === "heavily_limited") summary.push("Crest is low — dense, limited print.");
-  if (dynamics === "open") summary.push("Crest is high — more transient / less smashed.");
+  if (dynamics === "heavily_limited") {
+    pushFinding("Dynamics", "Very dense (low crest). Use two light compressors, not one slammed limiter.");
+  }
+  if (dynamics === "open") {
+    pushFinding("Dynamics", "Open and dynamic. Don’t over-compress — keep the transient life.");
+  }
   if (dynamics === "controlled" || dynamics === "dynamic") {
-    summary.push(`Crest ${crest.toFixed(1)} dB — compression dialed to this density.`);
+    pushFinding(
+      "Dynamics",
+      `Crest about ${crest.toFixed(1)} dB. Compression in the chain is set for this density.`
+    );
   }
 
-  if (stereo === "wide") summary.push("Stereo image is wide in the side channel.");
-  if (stereo === "narrow") summary.push("Image is mono-leaning — centered pocket.");
+  if (stereo === "wide") {
+    pushFinding("Stereo", "Wide image. Keep the lead centered; put width on doubles and FX.");
+  }
+  if (stereo === "narrow") {
+    pushFinding("Stereo", "Narrow / centered image. Don’t force width on the lead.");
+  }
 
-  if (targets) {
-    summary.push(
-      `EQ centers from this spectrum: mud ${targets.mudHz} · harsh ${targets.harshHz} · air ${targets.airHz} Hz.`
-    );
+  if (targets && target === "vocal") {
+    // EQ centers stay in the technical console — too cryptic for the Why page.
   }
 
   const instruments = readout.instruments || [];
@@ -159,18 +211,132 @@ export function characterize(readout) {
       .slice(0, 3)
       .map((i) => i.label)
       .join(", ");
-    summary.push(`Likely sources: ${top}.`);
+    pushFinding("Sources", `Likely hearing: ${top}.`);
   }
 
-  if (!summary.length) summary.push("Balance sits near a typical contemporary pocket.");
+  if (!findings.length) {
+    pushFinding("Balance", "Sits near a typical contemporary mix pocket.");
+  }
 
-  return { tone, dynamics, stereo, tempo, pitch, summary, target, instruments };
+  const summary = findings.map((f) => f.text);
+
+  return { tone, dynamics, stereo, tempo, pitch, summary, findings, target, instruments };
 }
 
 function buildChainForTarget(target, readout, traits, daw) {
   if (target === "instrumental") return buildInstrumentalChain(readout, traits, daw);
   if (target === "full") return buildFullMixChain(readout, traits, daw);
   return buildVocalChain(readout, traits, daw);
+}
+
+/** Resolve a chain insert by role so copy names the real stage, not a hardcoded Step N. */
+function stageByRole(chain, role) {
+  const inserts = chain?.inserts || [];
+  const idx = inserts.findIndex((s) => s.role === role);
+  if (idx < 0) return null;
+  return { index: idx + 1, title: inserts[idx].title || role, role };
+}
+
+function stageName(chain, role, fallback) {
+  return stageByRole(chain, role)?.title || fallback;
+}
+
+function rebuildOrderWhy(chain, target) {
+  const inserts = (chain?.inserts || []).map((s) => s.title).filter(Boolean);
+  const sends = (chain?.sends || []).map((s) => s.title).filter(Boolean);
+  const tip =
+    target === "instrumental"
+      ? "Carve and mono the lows before glue or width — locking mud into compression is hard to undo."
+      : target === "full"
+        ? "Corrective EQ first, then glue, then width, then limiting. Brightening last is how bus chains fall apart."
+        : "Cut mud and harshness before compressing. De-ess after compression — compressors make S’s louder.";
+  return { inserts, sends, tip };
+}
+
+function buildHighlights(chain, liveTraits, readout, target) {
+  const highlights = [];
+  const add = (stage, action, because) => {
+    if (!stage || !action) return;
+    highlights.push({
+      stage,
+      action,
+      because: because || "",
+      title: stage,
+      body: action,
+      characteristic: stage,
+      why: because || action,
+    });
+  };
+
+  const mudHz = readout?.eqTargets?.mudHz || 320;
+  const harshHz = readout?.eqTargets?.harshHz || 3200;
+  const deessHz = readout?.eqTargets?.deessHz || 6500;
+  const eqStage = stageName(chain, "eq_subtractive", "Subtractive EQ");
+  const deessStage = stageName(chain, "deess", "De-esser");
+  const comp1 = stageName(chain, "comp1", "Compressor 1");
+  const comp2 = stageName(chain, "comp2", "Compressor 2");
+
+  if (target === "vocal") {
+    if (liveTraits.tone.mud === "elevated") {
+      add(
+        eqStage,
+        `Cut around ${mudHz} Hz to clear muddy low-mids — do this before any compression.`,
+        "We measured elevated mud in the vocal region."
+      );
+    }
+    if (liveTraits.tone.harshness === "elevated") {
+      add(
+        eqStage,
+        `Cut around ${harshHz} Hz to ease upper-mid bite.`,
+        "Upper mids measured harsh on this reference."
+      );
+    }
+    if (liveTraits.tone.sibilance === "elevated") {
+      add(
+        deessStage,
+        `Tame S and T sounds around ${deessHz} Hz after you compress.`,
+        "Sibilance measured hot — compressors will make it worse if you skip this."
+      );
+    }
+    if (liveTraits.dynamics === "heavily_limited" || liveTraits.dynamics === "controlled") {
+      add(
+        comp1,
+        `Use ${comp1} and ${comp2} gently in series — not one heavy limiter on the lead.`,
+        "The vocal region is already dense."
+      );
+    }
+  } else {
+    if (liveTraits.tone.mud === "elevated" || (readout.toneFull?.mud ?? -99) > -2) {
+      add(
+        stageName(chain, "eq_subtractive", "Corrective EQ"),
+        "High-pass non-bass groups and carve kick/bass so the midrange can breathe.",
+        "Low end is masking the mix."
+      );
+    }
+    if (liveTraits.tone.harshness === "elevated" || (readout.toneFull?.harshness ?? -99) > -6) {
+      add(
+        stageName(chain, "eq_subtractive", "Corrective EQ"),
+        "Tame hats and cymbals before you add air or brightness.",
+        "Top end measured harsh."
+      );
+    }
+    if (liveTraits.dynamics === "heavily_limited" || liveTraits.dynamics === "controlled") {
+      add(
+        stageName(chain, "comp1", "Bus glue"),
+        "Add only 1–2 dB of bus glue. Don’t slam another limiter on the bus.",
+        "The mix is already dense."
+      );
+    }
+    if (liveTraits.stereo === "wide" || readout.stereo.sideMidRatio > 0.22) {
+      add(
+        stageName(chain, "width", "Width"),
+        "Keep lows mono. Open width by band on the highs — not with one widener on everything.",
+        "Stereo image measures wide."
+      );
+    }
+  }
+
+  return highlights;
 }
 
 /**
@@ -237,49 +403,12 @@ export function recommend(traits, pluginMap, daw = "universal", readout = null, 
         : "Deep full-mix recreation — mix-bus order plus Master delivery checklist. Not the original session.";
   }
 
-  const chars = pluginMap?.characteristics || {};
-  const highlights = [];
-  const maybe = (id, cond, why) => {
-    if (!cond || !chars[id]) return;
-    highlights.push({
-      characteristic: id,
-      why,
-      teaching: chars[id].teaching || null,
-      orderNote: chars[id].orderNote || null,
-    });
+  chain = {
+    ...chain,
+    orderWhy: rebuildOrderWhy(chain, resolvedTarget),
   };
 
-  if (resolvedTarget === "vocal") {
-    maybe("mud", liveTraits.tone.mud === "elevated", "Mud elevated — trust the deeper low-mid cut in Step 2.");
-    maybe("sibilance", liveTraits.tone.sibilance === "elevated", "Sibilance hot — don’t skip or under-do de-ess.");
-    maybe("harshness", liveTraits.tone.harshness === "elevated", "Harshness forward — keep the measured upper-mid cut.");
-    maybe(
-      "dynamics_crest",
-      liveTraits.dynamics === "heavily_limited" || liveTraits.dynamics === "controlled",
-      "Low crest — serial compression in the chain is doing real work."
-    );
-  } else {
-    maybe(
-      "low_end_mask",
-      liveTraits.tone.mud === "elevated" || (readout.toneFull?.mud ?? -99) > -2,
-      "Low-end masking — carve kick/bass and HPF non-bass groups."
-    );
-    maybe(
-      "bus_glue",
-      liveTraits.dynamics === "heavily_limited" || liveTraits.dynamics === "controlled",
-      "Dense crest — gentle bus glue (1–2 dB), not another slam limiter."
-    );
-    maybe(
-      "stereo_image",
-      liveTraits.stereo === "wide" || readout.stereo.sideMidRatio > 0.22,
-      "Wide side energy — mono lows and manage width by band."
-    );
-    maybe(
-      "harshness",
-      liveTraits.tone.harshness === "elevated" || (readout.toneFull?.harshness ?? -99) > -6,
-      "Top/harsh energy — tame hats/cymbals before shelving air."
-    );
-  }
+  const highlights = buildHighlights(chain, liveTraits, readout, resolvedTarget);
 
   const master = deep ? buildMasterAnalysis(readout, liveTraits) : null;
   const design = deep && resolvedTarget === "vocal" ? buildDesignBrief(readout, liveTraits) : null;

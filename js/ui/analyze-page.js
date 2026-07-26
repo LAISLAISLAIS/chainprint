@@ -13,27 +13,157 @@ import {
   getPlan,
 } from "../auth/quota.js";
 import { createLibrary } from "../session/library.js";
-import { blendTracks } from "../blend.js";
+import {
+  deserializeEntry,
+  deserializeStem,
+  loadWorkspace,
+  saveWorkspace,
+  serializeEntry,
+  serializeStem,
+  workspaceKey,
+} from "../session/library-persist.js";
+import { blendTracks, blendReadouts } from "../blend.js";
 import { mountAuthNav } from "./nav-auth.js";
 import { renderPluginFace } from "./plugin-visuals.js";
 import { mountChainMark } from "./chain-mark.js";
 import { playAudio, stopAudio, subscribePlayback, playingKey, setChainFx, setChainPreview, isChainPreview } from "./audio-player.js";
 import { mountPlaybackPulse } from "./playback-pulse.js";
 import { setPlaybackTrackProvider, notifyPlaylist } from "./playback-playlist.js";
-// PDF export is lazy-loaded on click so a CDN failure can't break the studio
+import { compareMixes } from "../match.js";
+import { bindReadoutExplainers, readoutCardHtml } from "./readout-glossary.js";
+import { glyphHtml, meterLevelForReadout } from "./studio-glyphs.js";
+// PDF export + share are lazy-loaded on click so a CDN failure can't break the studio
 
-const library = createLibrary();
+const library = createLibrary({
+  onChange() {
+    if (persistReady) schedulePersist();
+  },
+});
 
-setPlaybackTrackProvider(() =>
-  library
-    .list()
-    .map((entry) => {
-      const file = audioFileForEntry(entry);
-      if (!file) return null;
-      return { id: entry.id, title: entryDisplayName(entry), file };
-    })
-    .filter(Boolean)
-);
+/** Dry takes attached to a specific library reference id */
+/** @type {Map<string, { vocal: File | null, instrumental: File | null }>} */
+const dryByEntryId = new Map();
+
+let persistReady = false;
+/** @type {ReturnType<typeof setTimeout> | null} */
+let persistTimer = null;
+
+function schedulePersist() {
+  if (!persistReady) return;
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    persistTimer = null;
+    void persistWorkspaceNow();
+  }, 400);
+}
+
+async function persistWorkspaceNow() {
+  try {
+    const account = getSession();
+    /** @type {Record<string, { dryVocal: ReturnType<typeof serializeStem>, dryInstrumental: ReturnType<typeof serializeStem> }>} */
+    const dryByEntry = {};
+    for (const [id, slot] of dryByEntryId) {
+      if (!library.get(id)) continue;
+      if (!slot.vocal && !slot.instrumental) continue;
+      dryByEntry[id] = {
+        dryVocal: serializeStem(slot.vocal),
+        dryInstrumental: serializeStem(slot.instrumental),
+      };
+    }
+    await saveWorkspace(workspaceKey(account?.id), {
+      version: 2,
+      activeId: library.active()?.id || null,
+      analysisTarget,
+      analysisMode,
+      entries: library.list().map(serializeEntry),
+      dryByEntry,
+    });
+  } catch (err) {
+    console.warn("[chainprint] persist failed", err);
+  }
+}
+
+/**
+ * @returns {Promise<boolean>}
+ */
+async function restoreWorkspace() {
+  const account = getSession();
+  const key = workspaceKey(account?.id);
+  let raw = await loadWorkspace(key);
+
+  // First login on this browser — adopt any guest workspace
+  if ((!raw || !raw.entries?.length) && account?.id) {
+    const guest = await loadWorkspace(workspaceKey(null));
+    if (guest?.entries?.length) {
+      raw = guest;
+      await saveWorkspace(key, guest);
+    }
+  }
+
+  if (!raw || !Array.isArray(raw.entries) || !raw.entries.length) return false;
+
+  const entries = raw.entries.map(deserializeEntry).filter(Boolean);
+  if (!entries.length) return false;
+
+  library.hydrate(entries, raw.activeId || null);
+
+  dryByEntryId.clear();
+  if (raw.dryByEntry && typeof raw.dryByEntry === "object") {
+    for (const [id, slot] of Object.entries(raw.dryByEntry)) {
+      if (!library.get(id) || !slot || typeof slot !== "object") continue;
+      dryByEntryId.set(id, {
+        vocal: deserializeStem(slot.dryVocal),
+        instrumental: deserializeStem(slot.dryInstrumental),
+      });
+    }
+  } else if (raw.dryVocal || raw.dryInstrumental) {
+    // Migrate legacy global dry stems onto the active reference
+    const attachId = raw.activeId && library.get(raw.activeId) ? raw.activeId : entries[0]?.id;
+    if (attachId) {
+      dryByEntryId.set(attachId, {
+        vocal: deserializeStem(raw.dryVocal),
+        instrumental: deserializeStem(raw.dryInstrumental),
+      });
+    }
+  }
+
+  if (raw.analysisTarget === "instrumental" || raw.analysisTarget === "full" || raw.analysisTarget === "vocal") {
+    analysisTarget = raw.analysisTarget;
+    targetVocalBtn?.setAttribute("aria-pressed", String(analysisTarget === "vocal"));
+    targetInstrumentalBtn?.setAttribute("aria-pressed", String(analysisTarget === "instrumental"));
+    targetFullBtn?.setAttribute("aria-pressed", String(analysisTarget === "full"));
+  }
+  if (raw.analysisMode === "standard" || raw.analysisMode === "deep") {
+    analysisMode = raw.analysisMode === "deep" && canUseMode("deep").ok ? "deep" : "standard";
+    modeStandardBtn?.setAttribute("aria-pressed", String(analysisMode === "standard"));
+    modeDeepBtn?.setAttribute("aria-pressed", String(analysisMode === "deep"));
+  }
+
+  syncDryInputsFromActive();
+
+  syncSignatureCopy();
+  syncChainPreviewUi();
+  return true;
+}
+
+setPlaybackTrackProvider(() => {
+  const tracks = [];
+  for (const entry of library.list()) {
+    const file = audioFileForEntry(entry);
+    if (file) {
+      tracks.push({ id: entry.id, title: entryDisplayName(entry), file });
+    }
+    const stem = dryStemForEntry(entry.id);
+    if (stem) {
+      tracks.push({
+        id: `${entry.id}:dry`,
+        title: dryFileName(stem),
+        file: stem,
+      });
+    }
+  }
+  return tracks;
+});
 let blendWeight = 0.5;
 /** When set, successful analysis updates this library id instead of adding */
 let updatingEntryId = null;
@@ -54,6 +184,9 @@ const progressStages = document.querySelector("[data-progress-stages]");
 const readoutRoot = document.querySelector("[data-readouts]");
 const bandsRoot = document.querySelector("[data-bands]");
 const summaryRoot = document.querySelector("[data-summary]");
+const whyOrderRoot = document.querySelector("[data-why-order]");
+const whyTipEl = document.querySelector("[data-why-tip]");
+const whyIntentEl = document.querySelector("[data-why-intent]");
 const honestyEl = document.querySelector("[data-honesty]");
 const estimateNoteEl = document.querySelector("[data-estimate-note]");
 const highlightsRoot = document.querySelector("[data-highlights]");
@@ -86,6 +219,9 @@ const signatureTitle = document.querySelector("[data-signature-title]");
 const signatureSub = document.querySelector("[data-signature-sub]");
 const emptyEl = document.querySelector("[data-empty]");
 const chainWorkspace = document.querySelector("[data-chain-workspace]");
+const stageRailShell = document.querySelector("[data-stage-rail-shell]");
+const stageRailScroll = document.querySelector("[data-stage-rail-scroll]");
+const stageRailMore = document.querySelector("[data-stage-rail-more]");
 const stageRailInserts = document.querySelector("[data-stage-rail-inserts]");
 const stageRailSends = document.querySelector("[data-stage-rail-sends]");
 const stageFocus = document.querySelector("[data-stage-focus]");
@@ -93,6 +229,17 @@ const stageCount = document.querySelector("[data-stage-count]");
 const stagePrev = document.querySelector("[data-stage-prev]");
 const stageNext = document.querySelector("[data-stage-next]");
 const exportPdfBtn = document.querySelector("[data-export-pdf]");
+const exportAbletonBtn = document.querySelector("[data-export-ableton]");
+const shareChainBtn = document.querySelector("[data-share-chain]");
+const matchFileInput = document.querySelector("[data-match-file]");
+const matchName = document.querySelector("[data-match-name]");
+const matchStatus = document.querySelector("[data-match-status]");
+const matchResults = document.querySelector("[data-match-results]");
+const matchVerdict = document.querySelector("[data-match-verdict]");
+const matchReadouts = document.querySelector("[data-match-readouts]");
+const matchBandsRoot = document.querySelector("[data-match-bands]");
+const matchMoves = document.querySelector("[data-match-moves]");
+const matchNote = document.querySelector("[data-match-note]");
 const previewDryBtn = document.querySelector('[data-preview-mode="dry"]');
 const previewChainBtn = document.querySelector('[data-preview-mode="chain"]');
 const previewHint = document.querySelector("[data-preview-hint]");
@@ -102,7 +249,6 @@ const hearStepDry = document.querySelector("[data-hear-step-dry]");
 const hearStepAb = document.querySelector("[data-hear-step-ab]");
 const hearFileLabel = document.querySelector("[data-hear-file-label]");
 const hearPickLabel = document.querySelector("[data-hear-pick-label]");
-const hearLede = document.querySelector(".hear-strip-lede");
 const viewTabs = document.querySelectorAll("[data-view]");
 const panels = document.querySelectorAll("[data-panel]");
 const masterEmpty = document.querySelector("[data-master-empty]");
@@ -115,16 +261,23 @@ const designEmpty = document.querySelector("[data-design-empty]");
 const designBody = document.querySelector("[data-design-body]");
 const designHeadline = document.querySelector("[data-design-headline]");
 const designBlurb = document.querySelector("[data-design-blurb]");
+const designCues = document.querySelector("[data-design-cues]");
 const designLayers = document.querySelector("[data-design-layers]");
 const designChecklist = document.querySelector("[data-design-checklist]");
+const designChecklistBlock = document.querySelector("[data-design-checklist-block]");
 const libraryList = document.querySelector("[data-library-list]");
 const libraryCount = document.querySelector("[data-library-count]");
 const libraryHint = document.querySelector("[data-library-hint]");
 const blendPanel = document.querySelector("[data-blend-panel]");
+const blendToggle = document.querySelector("[data-blend-toggle]");
+const blendToggleMeta = document.querySelector("[data-blend-toggle-meta]");
 const blendSlotA = document.querySelector('[data-blend-slot="a"]');
 const blendSlotB = document.querySelector('[data-blend-slot="b"]');
+const blendDiff = document.querySelector("[data-blend-diff]");
 const blendGo = document.querySelector("[data-blend-go]");
 const blendWeightBtns = document.querySelectorAll("[data-blend-weight]");
+const sourceCollapseBtn = document.querySelector("[data-source-collapse]");
+const SOURCE_COLLAPSE_KEY = "chainprint.sourceCollapsed";
 
 let pluginMap = null;
 /** @type {{ kind: 'file', file: File } | { kind: 'url', url: string, manualQuery?: string } | null} */
@@ -134,10 +287,6 @@ let shouldConsumeQuota = false;
 let analysisMode = "standard";
 /** @type {'vocal' | 'instrumental' | 'full'} */
 let analysisTarget = "vocal";
-/** @type {File | null} */
-let stemVocalFile = null;
-/** @type {File | null} */
-let stemInstrumentalFile = null;
 /** @type {object | null} */
 let lastAdvice = null;
 /** @type {string} */
@@ -145,13 +294,22 @@ let lastTrackName = "";
 /** @type {Array<{ step: object, kind: 'insert' | 'send', index: number }>} */
 let stages = [];
 let stageIndex = 0;
-/** @type {'chain' | 'signature' | 'design' | 'master' | 'why'} */
+/** @type {'chain' | 'signature' | 'compare' | 'why' | 'instruments' | 'design' | 'master'} */
 let activeView = "chain";
+/** @type {'design' | 'master' | null} */
+let pendingViewAfterAnalysis = null;
+/** @type {File | null} */
+let matchFile = null;
+let matchBusy = false;
+/** Library entry id the current match report was computed against */
+let matchEntryId = null;
 /** @type {(() => void) | null} */
 let unmountHeroMark = null;
 let analyzing = false;
 let analysisGen = 0;
 let blending = false;
+/** Merge panel open state — collapsed by default so it doesn’t eat the rail. */
+let blendPanelOpen = false;
 
 await initAuth();
 
@@ -173,16 +331,8 @@ subscribePlayback((state) => {
 
 function refreshQuotaChrome() {
   const account = getSession();
-  if (!account || !quotaBar) return;
-  const plan = getPlan(account);
-  const left = analysesRemaining(account);
-  quotaBar.classList.remove("hidden");
-  if (quotaLabel) quotaLabel.textContent = plan.label;
-  if (quotaLeft) {
-    quotaLeft.textContent = left === Infinity ? "Unlimited" : `${left} left`;
-  }
-
   const deep = canUseMode("deep", account);
+
   if (modeDeepBtn) {
     const locked = !account || deep.reason === "deep_locked";
     modeDeepBtn.disabled = locked;
@@ -194,6 +344,28 @@ function refreshQuotaChrome() {
       modeDeepBtn.appendChild(lock);
     }
   }
+  syncDeepUnlockCtas(account);
+
+  if (!account || !quotaBar) return;
+  const plan = getPlan(account);
+  const left = analysesRemaining(account);
+  quotaBar.classList.remove("hidden");
+  if (quotaLabel) quotaLabel.textContent = plan.label;
+  if (quotaLeft) {
+    quotaLeft.textContent = left === Infinity ? "Unlimited" : `${left} left`;
+  }
+}
+
+function syncDeepUnlockCtas(account = getSession()) {
+  const deep = canUseMode("deep", account);
+  document.querySelectorAll("[data-unlock-deep]").forEach((btn) => {
+    if (!(btn instanceof HTMLButtonElement)) return;
+    if (!deep.ok && deep.reason === "deep_locked") {
+      btn.textContent = "Deep is Pro";
+    } else {
+      btn.textContent = "Run Deep analysis";
+    }
+  });
 }
 
 function applyAccessGate() {
@@ -205,10 +377,12 @@ function applyAccessGate() {
   if (!account) {
     gateAuth?.classList.remove("hidden");
     gateQuota?.classList.add("hidden");
+    refreshQuotaChrome();
     return false;
   }
 
   gateAuth?.classList.add("hidden");
+  refreshQuotaChrome();
   const access = canAnalyze(account);
   if (!access.ok) {
     gateQuota?.classList.remove("hidden");
@@ -216,7 +390,6 @@ function applyAccessGate() {
   }
 
   gateQuota?.classList.add("hidden");
-  refreshQuotaChrome();
   return true;
 }
 
@@ -231,13 +404,34 @@ document.querySelector("[data-upgrade-soon]")?.addEventListener("click", () => {
 
 function setMode(mode) {
   if (analyzing || blending) return;
-  if (mode === "deep" && !canUseMode("deep").ok) return;
+  if (mode === "deep") {
+    const deep = canUseMode("deep");
+    if (!deep.ok) {
+      if (deep.reason === "deep_locked") {
+        alert("Deep analysis (Design & Master) is a Pro feature — paid plans aren’t live yet.");
+      } else if (deep.reason === "auth") {
+        location.href = "../auth/?mode=signup&next=/analyze/";
+      } else if (deep.reason === "quota") {
+        setStatus("idle", "Out of free analyses");
+        gateQuota?.classList.remove("hidden");
+      }
+      return;
+    }
+  }
   const changed = analysisMode !== mode;
   analysisMode = mode;
   modeStandardBtn?.setAttribute("aria-pressed", String(mode === "standard"));
   modeDeepBtn?.setAttribute("aria-pressed", String(mode === "deep"));
   if (!changed) return;
-  rerunActiveAnalysis();
+  const started = rerunActiveAnalysis();
+  if (!started && library.active()?.result) {
+    setStatus(
+      "idle",
+      mode === "deep"
+        ? "Deep selected — re-upload or re-link this reference to rebuild"
+        : "Mode updated — re-upload or re-link to rebuild"
+    );
+  }
 }
 
 function setTarget(target) {
@@ -250,26 +444,69 @@ function setTarget(target) {
   targetInstrumentalBtn?.setAttribute("aria-pressed", String(next === "instrumental"));
   targetFullBtn?.setAttribute("aria-pressed", String(next === "full"));
   syncSignatureCopy();
+  syncDryInputsFromActive();
   syncChainPreviewUi();
+  renderLibrary();
   if (!changed) return;
   rerunActiveAnalysis();
 }
 
+/** @returns {boolean} whether an analysis was started */
 function rerunActiveAnalysis() {
   const active = library.active();
   if (active?.kind === "blend" && active.blendOf?.length === 2) {
     rebuildBlend(active);
-    return;
+    return true;
   }
-  if (active?.source && active.source.kind !== "blend") {
-    lastSource = active.source;
+
+  const fromEntry = resolveRerunSource(active);
+  if (fromEntry) {
+    lastSource = fromEntry;
     updatingEntryId = active.id;
     shouldConsumeQuota = false;
     runAnalysis();
-  } else if (lastSource && lastSource.kind !== "blend") {
+    return true;
+  }
+
+  if (lastSource && lastSource.kind !== "blend") {
+    if (lastSource.kind === "file" && !(lastSource.file instanceof Blob)) {
+      setStatus("idle", "Reference file missing — upload it again to re-run");
+      return false;
+    }
     shouldConsumeQuota = false;
     runAnalysis();
+    return true;
   }
+
+  return false;
+}
+
+/**
+ * Prefer live source; fall back to persisted audio blob when file source was lost.
+ * @param {import('../session/library.js').LibraryEntry | null | undefined} entry
+ */
+function resolveRerunSource(entry) {
+  if (!entry) return null;
+  if (entry.source?.kind === "url" && entry.source.url) {
+    return {
+      kind: "url",
+      url: entry.source.url,
+      manualQuery: entry.source.manualQuery,
+    };
+  }
+  if (entry.source?.kind === "file" && entry.source.file instanceof Blob) {
+    return { kind: "file", file: entry.source.file };
+  }
+  if (entry.audioFile instanceof Blob) {
+    const file =
+      entry.audioFile instanceof File
+        ? entry.audioFile
+        : new File([entry.audioFile], `${entry.name || "reference"}.wav`, {
+            type: entry.audioFile.type || "audio/wav",
+          });
+    return { kind: "file", file };
+  }
+  return null;
 }
 
 function syncSignatureCopy() {
@@ -284,24 +521,11 @@ function syncSignatureCopy() {
   if (signatureSub) {
     signatureSub.textContent =
       analysisTarget === "instrumental"
-        ? "Measured from the instrumental bed — what dialed every stage."
+        ? "Measured from the instrumental bed — what dialed every stage. Tap any box for a plain-English definition."
         : analysisTarget === "full"
-          ? "Measured from the full mix — mix-bus balance and dynamics."
-          : "Measured from the vocal region — what dialed every stage.";
+          ? "Measured from the full mix — mix-bus balance and dynamics. Tap any box for a plain-English definition."
+          : "Measured from the vocal region — what dialed every stage. Tap any box for a plain-English definition.";
   }
-}
-
-function analysisFileForRun() {
-  if (analysisTarget === "vocal" && stemVocalFile) {
-    return { file: stemVocalFile, sourceKind: /** @type {'stem'} */ ("stem") };
-  }
-  if (analysisTarget === "instrumental" && stemInstrumentalFile) {
-    return { file: stemInstrumentalFile, sourceKind: /** @type {'stem'} */ ("stem") };
-  }
-  if (lastSource?.kind === "file") {
-    return { file: lastSource.file, sourceKind: /** @type {'estimate'} */ ("estimate") };
-  }
-  return null;
 }
 
 modeStandardBtn?.addEventListener("click", () => setMode("standard"));
@@ -322,45 +546,102 @@ targetFullBtn?.addEventListener("click", () => setTarget("full"));
 }
 
 stemVocalInput?.addEventListener("change", () => {
-  stemVocalFile = stemVocalInput.files?.[0] || null;
-  if (stemVocalName) {
-    stemVocalName.textContent = stemVocalFile?.name || "No file yet";
+  const active = library.active();
+  if (!active) {
+    if (stemVocalInput) stemVocalInput.value = "";
+    setStatus("idle", "Select a reference before adding a dry take");
+    return;
   }
+  const file = stemVocalInput.files?.[0] || null;
+  const slot = ensureDrySlot(active.id);
+  slot.vocal = file;
+  if (stemVocalName) stemVocalName.textContent = file?.name || "No file yet";
+  // Dry take is preview-only — never re-analyze / rename the reference
   syncChainPreviewUi();
-  if (analysisTarget === "vocal" && stemVocalFile) rerunActiveAnalysis();
+  renderLibrary();
+  schedulePersist();
 });
 stemInstrumentalInput?.addEventListener("change", () => {
-  stemInstrumentalFile = stemInstrumentalInput.files?.[0] || null;
-  if (stemInstrumentalName) {
-    stemInstrumentalName.textContent = stemInstrumentalFile?.name || "No file yet";
+  const active = library.active();
+  if (!active) {
+    if (stemInstrumentalInput) stemInstrumentalInput.value = "";
+    setStatus("idle", "Select a reference before adding a dry take");
+    return;
   }
+  const file = stemInstrumentalInput.files?.[0] || null;
+  const slot = ensureDrySlot(active.id);
+  slot.instrumental = file;
+  if (stemInstrumentalName) stemInstrumentalName.textContent = file?.name || "No file yet";
   syncChainPreviewUi();
-  if (analysisTarget === "instrumental" && stemInstrumentalFile) rerunActiveAnalysis();
+  renderLibrary();
+  schedulePersist();
 });
 
 function setView(view) {
   if (!lastAdvice && view !== "chain") return;
-  if (view === "master" && !lastAdvice?.master) return;
-  if (view === "design" && !lastAdvice?.design) return;
-  if (view === "instruments") {
-    const target = lastAdvice?.target || analysisTarget;
-    if (target === "vocal") return;
-  }
   activeView = view;
   viewTabs.forEach((tab) => {
     const v = tab.getAttribute("data-view");
     tab.setAttribute("aria-pressed", String(v === view));
   });
   panels.forEach((panel) => {
-    panel.classList.toggle("is-active", panel.getAttribute("data-panel") === view);
+    const on = panel.getAttribute("data-panel") === view;
+    panel.classList.toggle("is-active", on);
+    if (on) {
+      panel.classList.remove("is-entering");
+      // restart enter animation
+      void panel.offsetWidth;
+      panel.classList.add("is-entering");
+    } else {
+      panel.classList.remove("is-entering");
+    }
   });
+}
+
+function readoutHtml(key, value, sub, i = 0) {
+  return readoutCardHtml(key, value, String(sub || "").replace(/_/g, " "), escapeHtml, {
+    meter: meterLevelForReadout(key, value, sub),
+    glyph: glyphHtml(key),
+  }).replace('class="readout', `style="--i:${i}" class="readout`);
 }
 
 viewTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     const v = tab.getAttribute("data-view");
     if (!v || tab.disabled) return;
-    setView(/** @type {'chain' | 'signature' | 'instruments' | 'design' | 'master' | 'why'} */ (v));
+    setView(
+      /** @type {'chain' | 'signature' | 'compare' | 'why' | 'instruments' | 'design' | 'master'} */ (v)
+    );
+  });
+});
+
+document.querySelectorAll("[data-unlock-deep]").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const deep = canUseMode("deep");
+    if (!deep.ok) {
+      if (deep.reason === "deep_locked") {
+        alert("Deep analysis (Design & Master) is a Pro feature — paid plans aren’t live yet.");
+        return;
+      }
+      if (deep.reason === "auth") {
+        location.href = "../auth/?mode=signup&next=/analyze/";
+        return;
+      }
+      alert("You’re out of free analyses for now.");
+      return;
+    }
+    const nextView = btn.getAttribute("data-unlock-deep");
+    if (nextView === "design" || nextView === "master") {
+      pendingViewAfterAnalysis = nextView;
+    }
+    if (analysisMode !== "deep") {
+      setMode("deep");
+      return;
+    }
+    if (!rerunActiveAnalysis()) {
+      setStatus("idle", "Re-upload or re-link this reference to run Deep");
+      pendingViewAfterAnalysis = null;
+    }
   });
 });
 
@@ -369,10 +650,36 @@ function setStatus(state, text) {
   if (statusText) statusText.textContent = text;
 }
 
+function ensureDrySlot(entryId) {
+  let slot = dryByEntryId.get(entryId);
+  if (!slot) {
+    slot = { vocal: null, instrumental: null };
+    dryByEntryId.set(entryId, slot);
+  }
+  return slot;
+}
+
+function dryStemForEntry(entryId) {
+  if (!entryId) return null;
+  const slot = dryByEntryId.get(entryId);
+  if (!slot) return null;
+  if (analysisTarget === "vocal") return slot.vocal;
+  if (analysisTarget === "instrumental") return slot.instrumental;
+  return slot.vocal || slot.instrumental || null;
+}
+
 function dryPreviewStem() {
-  if (analysisTarget === "vocal") return stemVocalFile;
-  if (analysisTarget === "instrumental") return stemInstrumentalFile;
-  return stemVocalFile || stemInstrumentalFile || null;
+  return dryStemForEntry(library.active()?.id);
+}
+
+function syncDryInputsFromActive() {
+  const slot = library.active() ? dryByEntryId.get(library.active().id) : null;
+  if (stemVocalInput) stemVocalInput.value = "";
+  if (stemInstrumentalInput) stemInstrumentalInput.value = "";
+  if (stemVocalName) stemVocalName.textContent = slot?.vocal?.name || "No file yet";
+  if (stemInstrumentalName) {
+    stemInstrumentalName.textContent = slot?.instrumental?.name || "No file yet";
+  }
 }
 
 function syncHearStripFields() {
@@ -391,14 +698,6 @@ function syncHearStripFields() {
         : analysisTarget === "instrumental"
           ? "Add dry instrumental"
           : "Add dry vocal";
-  }
-  if (hearLede) {
-    hearLede.innerHTML =
-      analysisTarget === "instrumental"
-        ? `The reference is already mixed — Chainprint can’t un-process it. Add your <strong>dry instrumental</strong>, then compare Your dry vs Through chain.`
-        : analysisTarget === "full"
-          ? `The reference is already mixed — Chainprint can’t un-process it. Add a <strong>dry take</strong> (vocal or instrumental), then compare Your dry vs Through chain.`
-          : `The reference is already mixed — Chainprint can’t un-process it. Add your <strong>dry vocal</strong>, then compare Your dry vs Through chain.`;
   }
 }
 
@@ -430,14 +729,14 @@ function syncChainPreviewUi() {
     } else if (!stem) {
       previewHint.textContent =
         analysisTarget === "instrumental"
-          ? "Step 2 — add your dry instrumental to unlock A/B"
+          ? "Add your dry instrumental to compare"
           : analysisTarget === "full"
-            ? "Step 2 — add a dry take to unlock A/B"
-            : "Step 2 — add your dry vocal to unlock A/B";
+            ? "Add a dry take to compare"
+            : "Add your dry vocal to compare";
     } else if (previewOn) {
-      previewHint.textContent = "Playing your dry take through the Chainprint chain";
+      previewHint.textContent = "Hearing through chain";
     } else {
-      previewHint.textContent = "Playing your dry take unprocessed — hit Through chain to hear the processing";
+      previewHint.textContent = "Hearing dry — switch to Through chain";
     }
   }
 }
@@ -464,6 +763,52 @@ function syncPlayButtons() {
     btn.classList.toggle("is-playing", on);
     btn.setAttribute("aria-label", on ? "Pause" : "Play");
   });
+}
+
+function dryRoleLabel() {
+  if (analysisTarget === "instrumental") return "Dry instrumental";
+  if (analysisTarget === "full") return "Dry take";
+  return "Dry vocal";
+}
+
+function dryFileName(file) {
+  return file?.name?.replace(/\.[^.]+$/, "") || dryRoleLabel();
+}
+
+async function toggleDryPlayback() {
+  const stem = dryPreviewStem();
+  if (!stem) return;
+  const entry = library.active();
+  const key = entry ? `${entry.id}:dry` : "dry-preview";
+  // Keep current dry/chain mode when re-toggling from the library row
+  const wantChain = isChainPreview() && Boolean(lastAdvice?.chain);
+  setChainPreview(wantChain);
+  syncChainPreviewUi();
+  try {
+    await playAudio(stem, key, {
+      title: wantChain ? `${dryFileName(stem)} · through chain` : dryFileName(stem),
+    });
+  } catch (err) {
+    console.error(err);
+    setStatus("idle", "Couldn’t play your dry take");
+  }
+}
+
+function clearDryStem(entryId = library.active()?.id) {
+  if (!entryId) return;
+  dryByEntryId.delete(entryId);
+  if (library.active()?.id === entryId) {
+    if (stemVocalInput) stemVocalInput.value = "";
+    if (stemInstrumentalInput) stemInstrumentalInput.value = "";
+    if (stemVocalName) stemVocalName.textContent = "No file yet";
+    if (stemInstrumentalName) stemInstrumentalName.textContent = "No file yet";
+    setChainPreview(false);
+  }
+  syncChainPreviewUi();
+  renderLibrary();
+  schedulePersist();
+  const key = playingKey();
+  if (key === `${entryId}:dry`) stopAudio();
 }
 
 async function toggleEntryPlayback(entry) {
@@ -497,10 +842,10 @@ async function setPreviewMode(mode) {
   syncChainPreviewUi();
 
   const entry = library.active();
-  const titleBase = entry ? entryDisplayName(entry) : "Dry take";
+  const titleBase = dryFileName(stem);
   try {
     await playAudio(stem, entry ? `${entry.id}:dry` : "dry-preview", {
-      title: wantChain ? `${titleBase} · through chain` : `${titleBase} · your dry`,
+      title: wantChain ? `${titleBase} · through chain` : titleBase,
     });
   } catch (err) {
     console.warn("[preview] dry take play failed", err);
@@ -614,86 +959,121 @@ function renderLibrary() {
   const entries = library.list();
   const active = library.active();
   const picks = new Set(library.blendPicks().map((e) => e.id));
+  const dryAttached = entries.filter((e) => dryStemForEntry(e.id)).length;
 
-  if (libraryCount) libraryCount.textContent = String(entries.length);
+  if (libraryCount) {
+    libraryCount.textContent = String(entries.length + dryAttached);
+  }
 
   if (libraryList) {
-    libraryList.innerHTML = entries
-      .map((entry) => {
-        const isActive = active?.id === entry.id;
-        const picked = picks.has(entry.id);
-        const canPick = entry.kind === "track" && entry.result;
-        const art = entry.artwork
-          ? `<img class="library-item-art" src="${escapeHtml(entry.artwork)}" alt="" />`
-          : `<span class="library-item-art is-blank">${entry.kind === "blend" ? "×" : "REF"}</span>`;
-        const meta =
-          entry.kind === "blend"
-            ? "Combination mix"
-            : entry.result
-              ? entry.result.mode === "deep"
-                ? "Deep · ready"
-                : "Ready"
-              : "Analyzing…";
-        const canPlay = Boolean(audioFileForEntry(entry));
-        return `
-          <li>
-            <div class="library-item ${isActive ? "is-active" : ""}" data-library-id="${escapeHtml(entry.id)}">
-              ${
-                canPick
-                  ? `<button type="button" class="library-check ${picked ? "is-on" : ""}" data-library-pick="${escapeHtml(entry.id)}" aria-label="Select for combine" aria-pressed="${picked}"></button>`
-                  : `<span class="library-check" style="opacity:0;pointer-events:none"></span>`
-              }
-              <button type="button" class="library-item-main" data-library-select="${escapeHtml(entry.id)}">
-                ${art}
-                <span class="library-item-copy">
-                  <span class="library-item-title">${escapeHtml(entryDisplayName(entry))}</span>
-                  <span class="library-item-meta">${escapeHtml(meta)}</span>
-                </span>
-              </button>
-              <div class="library-item-actions">
+    const pickOrder = library.blendPicks().map((e) => e.id);
+    const rows = [];
+
+    for (const entry of entries) {
+      const isActive = active?.id === entry.id;
+      const picked = picks.has(entry.id);
+      const pickLetter = picked ? (pickOrder[0] === entry.id ? "A" : "B") : "";
+      const canPick = entry.kind === "track" && entry.result;
+      const art = entry.artwork
+        ? `<img class="library-item-art" src="${escapeHtml(entry.artwork)}" alt="" />`
+        : "";
+      const meta =
+        entry.kind === "blend"
+          ? "Combination mix"
+          : entry.result
+            ? entry.result.mode === "deep"
+              ? "Reference · Deep"
+              : "Reference"
+            : "Analyzing…";
+      const canPlay = Boolean(audioFileForEntry(entry));
+      rows.push(`
+        <li>
+          <div class="library-item ${isActive ? "is-active" : ""}" data-library-id="${escapeHtml(entry.id)}">
+            ${
+              canPick
+                ? `<button type="button" class="library-check ${picked ? "is-on" : ""}" data-library-pick="${escapeHtml(entry.id)}" aria-label="${picked ? `Merge pick ${pickLetter}` : "Select for merge"}" aria-pressed="${picked}">${pickLetter}</button>`
+                : `<span class="library-check" style="opacity:0;pointer-events:none"></span>`
+            }
+            <button type="button" class="library-item-main ${art ? "has-art" : ""}" data-library-select="${escapeHtml(entry.id)}">
+              ${art}
+              <span class="library-item-copy">
+                <span class="library-item-title">${escapeHtml(entryDisplayName(entry))}</span>
+                <span class="library-item-meta">${escapeHtml(meta)}</span>
+              </span>
+            </button>
+            <div class="library-item-actions">
+              <div class="library-item-btns">
               ${
                 canPlay
-                  ? `<button type="button" class="library-item-play" data-library-play="${escapeHtml(entry.id)}" aria-label="Play"><span class="library-item-play-icon" aria-hidden="true"></span></button>`
+                  ? `<button type="button" class="library-item-play" data-library-play="${escapeHtml(entry.id)}" aria-label="Play reference"><span class="library-item-play-icon" aria-hidden="true"></span></button>`
                   : ""
               }
               <button type="button" class="library-item-remove" data-library-remove="${escapeHtml(entry.id)}" aria-label="Remove">×</button>
               </div>
+              <span class="library-item-kind is-ref" title="Reference" aria-label="Reference"></span>
             </div>
-          </li>`;
-      })
-      .join("");
+          </div>
+        </li>`);
+
+      const stem = dryStemForEntry(entry.id);
+      if (stem) {
+        const dryKey = `${entry.id}:dry`;
+        rows.push(`
+        <li>
+          <div class="library-item is-dry ${playingKey() === dryKey ? "is-playing-row" : ""}" data-dry-row data-dry-for="${escapeHtml(entry.id)}">
+            <span class="library-check" style="opacity:0;pointer-events:none"></span>
+            <button type="button" class="library-item-main" data-dry-select>
+              <span class="library-item-copy">
+                <span class="library-item-title">${escapeHtml(dryFileName(stem))}</span>
+                <span class="library-item-meta">${escapeHtml(dryRoleLabel())} · for chain preview</span>
+              </span>
+            </button>
+            <div class="library-item-actions">
+              <div class="library-item-btns">
+                <button type="button" class="library-item-play" data-library-play="${escapeHtml(dryKey)}" data-dry-play aria-label="Play dry take"><span class="library-item-play-icon" aria-hidden="true"></span></button>
+                <button type="button" class="library-item-remove" data-dry-remove aria-label="Remove dry take">×</button>
+              </div>
+              <span class="library-item-kind is-dry" title="Dry take" aria-label="Dry take"></span>
+            </div>
+          </div>
+        </li>`);
+      }
+    }
+
+    libraryList.innerHTML = rows.join("");
   }
 
   const trackCount = entries.filter((e) => e.kind === "track" && e.result).length;
   blendPanel?.classList.toggle("hidden", trackCount < 2);
+  blendPanel?.classList.toggle("is-collapsed", !blendPanelOpen);
+  if (blendToggle) blendToggle.setAttribute("aria-expanded", blendPanelOpen ? "true" : "false");
 
   const [a, b] = library.blendPicks();
+  const pickCount = [a, b].filter(Boolean).length;
+  if (blendToggleMeta) blendToggleMeta.textContent = `${pickCount}/2`;
   if (blendSlotA) {
-    blendSlotA.textContent = a ? entryDisplayName(a) : "A · select";
+    blendSlotA.textContent = a ? `A · ${entryDisplayName(a)}` : "A · check a ref";
     blendSlotA.classList.toggle("is-filled", Boolean(a));
   }
   if (blendSlotB) {
-    blendSlotB.textContent = b ? entryDisplayName(b) : "B · select";
+    blendSlotB.textContent = b ? `B · ${entryDisplayName(b)}` : "B · check a ref";
     blendSlotB.classList.toggle("is-filled", Boolean(b));
   }
   if (blendGo) blendGo.disabled = !library.canBlend();
+  renderBlendDiffPreview(a, b);
 
   if (libraryHint) {
     if (!entries.length) {
-      libraryHint.textContent = "Load multiple refs, then click one to view its chain.";
-      libraryHint.classList.remove("is-ready");
-    } else if (trackCount >= 2) {
-      libraryHint.textContent = "Check two tracks below, set balance, then Build combination.";
-      libraryHint.classList.add("is-ready");
+      libraryHint.textContent = "Load a reference to start.";
+      libraryHint.classList.remove("is-ready", "hidden");
     } else {
-      libraryHint.textContent = "Add another reference to unlock Combine mixes.";
-      libraryHint.classList.add("is-ready");
+      libraryHint.textContent = "";
+      libraryHint.classList.add("hidden");
     }
   }
 
   syncPlayButtons();
   notifyPlaylist();
-  // Keep source rail to one identity surface
   if (library.list().length > 0) trackCard?.classList.add("hidden");
 }
 
@@ -749,20 +1129,82 @@ function applyEntryToStudio(entry) {
     });
   }
 
-  if (estimateNoteEl && result.advice?.estimateNote) {
-    estimateNoteEl.textContent = result.advice.estimateNote;
-  } else if (estimateNoteEl && entry.kind === "blend") {
-    estimateNoteEl.textContent = "Combination mix — A/B both source refs while you dial.";
+  if (estimateNoteEl) {
+    estimateNoteEl.textContent =
+      entry.kind === "blend"
+        ? "Exports an Ableton rack from this hybrid — settings blended from both references."
+        : "Exports an Ableton rack with settings dialed from this reference.";
   }
 
   setHasResults(true);
   applyChainFxFromAdvice(lastAdvice);
-  setStatus("live", entry.kind === "blend" ? "Combination ready" : "Chain ready");
+  setStatus("live", entry.kind === "blend" ? "Hybrid chain ready" : "Chain ready");
+  syncMatchToActiveEntry();
+}
+
+/** Live blend preview — A↔B gap at balanced, or how the hybrid shifts when leaning. */
+function renderBlendDiffPreview(entryA, entryB) {
+  if (!blendDiff) return;
+  if (!entryA?.result?.readout || !entryB?.result?.readout) {
+    blendDiff.classList.add("hidden");
+    blendDiff.innerHTML = "";
+    return;
+  }
+
+  const target = analysisTarget || entryA.result.readout.target || "vocal";
+  const readoutA = entryA.result.readout;
+  const readoutB = entryB.result.readout;
+  const lean = blendWeight < 0.4 ? "a" : blendWeight > 0.6 ? "b" : "balanced";
+
+  let label;
+  let report;
+
+  if (lean === "balanced") {
+    label = "A↔B gap";
+    report = compareMixes(readoutA, readoutB, { target });
+  } else {
+    const hybrid = blendReadouts(readoutA, readoutB, blendWeight);
+    const balanced = blendReadouts(readoutA, readoutB, 0.5);
+    // How the hybrid differs from a balanced merge = what this lean changes
+    report = compareMixes(balanced, hybrid, { target });
+    label = lean === "a" ? "Toward A · vs balanced" : "Toward B · vs balanced";
+  }
+
+  const chips = (report.metrics || [])
+    .filter((m) => m.sign !== 0)
+    .slice(0, 5)
+    .map(
+      (m) =>
+        `<span class="blend-diff-chip"><em>${escapeHtml(m.key)}</em> ${escapeHtml(m.value)}</span>`
+    );
+  const bandGaps = (report.bands || [])
+    .filter((b) => Math.abs(b.deltaDb) >= 1.5)
+    .sort((x, y) => Math.abs(y.deltaDb) - Math.abs(x.deltaDb))
+    .slice(0, 2)
+    .map((b) => {
+      const sign = b.deltaDb > 0 ? "+" : "";
+      return `<span class="blend-diff-chip"><em>${escapeHtml(b.label)}</em> ${sign}${b.deltaDb.toFixed(1)} dB</span>`;
+    });
+  const items = [...chips, ...bandGaps];
+
+  if (!items.length) {
+    const empty =
+      lean === "balanced"
+        ? "These refs sit close — hybrid will fine-tune shared traits."
+        : lean === "a"
+          ? "Lean is mild — A and the midpoint already agree on most traits."
+          : "Lean is mild — B and the midpoint already agree on most traits.";
+    blendDiff.innerHTML = `<p class="blend-diff-empty">${escapeHtml(empty)}</p>`;
+  } else {
+    blendDiff.innerHTML = `<p class="blend-diff-label">${escapeHtml(label)}</p><div class="blend-diff-chips">${items.join("")}</div>`;
+  }
+  blendDiff.classList.remove("hidden");
 }
 
 function selectLibraryEntry(id) {
   const entry = library.setActive(id);
   if (!entry) return;
+  syncDryInputsFromActive();
   renderLibrary();
   if (entry.result) applyEntryToStudio(entry);
 }
@@ -787,8 +1229,8 @@ async function rebuildBlend(existing = null) {
     pluginMap = await loadPluginMap();
   }
 
-  setProgress(true, { label: "Blending signatures…", progress: 0.4, stage: "building" });
-  setStatus("live", "Combining mixes");
+  setProgress(true, { label: "Merging signatures…", progress: 0.4, stage: "building" });
+  setStatus("live", "Building hybrid");
 
   try {
     const weight = existing?.weight ?? blendWeight;
@@ -824,15 +1266,16 @@ async function rebuildBlend(existing = null) {
       library.clearBlendPicks();
     }
 
+    blendPanelOpen = false;
     renderLibrary();
     applyEntryToStudio(entry);
     setProgress(false);
-    setStatus("live", "Combination ready");
+    setStatus("live", "Hybrid chain ready");
   } catch (err) {
     console.error(err);
     setProgress(false);
-    alert(err.message || "Could not blend those mixes.");
-    setStatus("idle", "Blend failed");
+    alert(err.message || "Could not merge those mixes.");
+    setStatus("idle", "Merge failed");
   } finally {
     blending = false;
     if (blendGo) blendGo.disabled = !library.canBlend();
@@ -847,32 +1290,152 @@ function setHasResults(on) {
     else chainWorkspace.classList.add("hidden");
   }
   if (exportPdfBtn) exportPdfBtn.disabled = !on;
+  if (exportAbletonBtn) exportAbletonBtn.disabled = !on || !lastAdvice?.chain;
   if (!on) {
     applyChainFxFromAdvice(null);
   } else {
     applyChainFxFromAdvice(lastAdvice);
   }
-  const target = lastAdvice?.target || analysisTarget;
-  const hasInstruments = target === "instrumental" || target === "full";
   viewTabs.forEach((tab) => {
     const v = tab.getAttribute("data-view");
     if (v === "chain") return;
-    if (v === "master") {
-      tab.disabled = !on || !lastAdvice?.master;
-      return;
-    }
-    if (v === "design") {
-      tab.disabled = !on || !lastAdvice?.design;
-      return;
-    }
-    if (v === "instruments") {
-      tab.disabled = !on || !hasInstruments;
-      return;
-    }
+    // All result tabs stay clickable after analysis — Design/Master show a Deep CTA when empty
     tab.disabled = !on;
+    if (v === "design" || v === "master") {
+      const unlocked =
+        v === "design" ? Boolean(lastAdvice?.design) : Boolean(lastAdvice?.master);
+      tab.classList.toggle("is-locked-feature", on && !unlocked);
+    } else {
+      tab.classList.remove("is-locked-feature");
+    }
   });
   if (!on) setView("chain");
 }
+
+// ---------------------------------------------------------------------------
+// Compare — diff the user's mix against the active reference
+// ---------------------------------------------------------------------------
+
+function setMatchStatus(text) {
+  if (!matchStatus) return;
+  matchStatus.textContent = text || "";
+  matchStatus.classList.toggle("hidden", !text);
+}
+
+function resetMatchReport() {
+  matchEntryId = null;
+  matchResults?.classList.add("hidden");
+  setMatchStatus("");
+}
+
+/** Reference changed → the old diff is stale. Re-run if a mix is loaded. */
+function syncMatchToActiveEntry() {
+  const activeId = library.active()?.id || null;
+  if (matchEntryId && matchEntryId !== activeId) {
+    resetMatchReport();
+    if (matchFile) runMatchAnalysis();
+  }
+}
+
+async function runMatchAnalysis() {
+  const entry = library.active();
+  const refReadout = entry?.result?.readout;
+  if (!matchFile || !refReadout || matchBusy) return;
+
+  matchBusy = true;
+  matchResults?.classList.add("hidden");
+  setMatchStatus("Reading your mix…");
+  try {
+    const target = entry.result.target || analysisTarget;
+    // The user's own mix — analyzed with the same target so signatures line up.
+    // No pluginMap: we only need the readout, not a recommended chain.
+    // Deliberately does not consume analysis quota.
+    const res = await analyzeFile(matchFile, {
+      mode: "standard",
+      target,
+      onProgress: ({ label, progress }) => {
+        const pct = Math.round((progress || 0) * 100);
+        setMatchStatus(`${label || "Analyzing your mix"} · ${pct}%`);
+      },
+    });
+    matchEntryId = entry.id;
+    renderMatchReport(compareMixes(refReadout, res.readout, { target }));
+    setMatchStatus("");
+  } catch (err) {
+    console.error(err);
+    setMatchStatus(err.message || "Could not analyze that file — try a WAV or MP3.");
+  } finally {
+    matchBusy = false;
+  }
+}
+
+/** @param {import("../match.js").MatchReport} report */
+function renderMatchReport(report) {
+  if (!matchResults) return;
+  matchResults.classList.remove("hidden");
+  if (matchVerdict) matchVerdict.textContent = report.verdict;
+
+  if (matchReadouts) {
+    matchReadouts.innerHTML = report.metrics
+      .map((m) =>
+        readoutCardHtml(m.key, m.value, m.sub, escapeHtml, {
+          className: m.sign === 0 ? "is-matched" : "",
+          meter: meterLevelForReadout(m.key, m.value, m.sub),
+          glyph: glyphHtml(m.key),
+        })
+      )
+      .join("");
+  }
+
+  if (matchBandsRoot) {
+    const maxDb = Math.max(3, ...report.bands.map((b) => Math.abs(b.deltaDb)));
+    matchBandsRoot.innerHTML = report.bands
+      .map((b) => {
+        const pct = (Math.min(1, Math.abs(b.deltaDb) / maxDb) * 50).toFixed(1);
+        const pos = b.deltaDb >= 0;
+        const style = pos ? `left:50%;width:${pct}%` : `right:50%;width:${pct}%`;
+        return `
+        <div class="match-band-row" title="${escapeHtml(b.label)} · ${b.lo}–${b.hi} Hz · ${
+          pos ? "your mix heavier than reference" : "reference heavier than your mix"
+        }">
+          <span class="name">${escapeHtml(b.label)}</span>
+          <div class="match-band-track" role="img" aria-label="${escapeHtml(b.label)}: ${
+            pos ? "your mix" : "reference"
+          } heavier by ${Math.abs(b.deltaDb).toFixed(1)} dB">
+            <span class="match-band-fill ${pos ? "is-pos" : "is-neg"}" style="${style}"></span>
+          </div>
+          <span class="db ${pos ? "is-pos" : "is-neg"}">${pos ? "+" : ""}${b.deltaDb.toFixed(1)}</span>
+        </div>`;
+      })
+      .join("");
+  }
+
+  if (matchMoves) {
+    matchMoves.innerHTML = report.moves.length
+      ? report.moves
+          .map(
+            (m) => `
+            <li>
+              <strong>${escapeHtml(m.title)}</strong>
+              <span>${escapeHtml(m.detail)}</span>
+            </li>`
+          )
+          .join("")
+      : `<li><strong>No big moves needed</strong><span>Your mix tracks the reference within tolerance on every axis measured.</span></li>`;
+  }
+
+  if (matchNote) {
+    matchNote.textContent = report.note || "";
+    matchNote.classList.toggle("hidden", !report.note);
+  }
+}
+
+matchFileInput?.addEventListener("change", () => {
+  matchFile = matchFileInput.files?.[0] || null;
+  if (matchName) matchName.textContent = matchFile?.name || "No file yet";
+  if (matchFile) runMatchAnalysis();
+  else resetMatchReport();
+});
 
 function bandWidthPct(dbRel) {
   const min = -35;
@@ -980,11 +1543,9 @@ function renderReadouts(readout, traits) {
       items.push(["Space", traits.deep.spaceCharacter.replace(/_/g, " "), "Deep"]);
     }
   }
+  // Pretty-print categorical subs (e.g. heavily_limited → heavily limited)
   readoutRoot.innerHTML = items
-    .map(
-      ([key, value, sub]) =>
-        `<div class="readout"><span class="key">${key}</span><span class="value">${value}</span><span class="sub">${sub}</span></div>`
-    )
+    .map(([key, value, sub], i) => readoutHtml(key, value, sub, i))
     .join("");
 }
 
@@ -994,42 +1555,86 @@ function renderDesign(design) {
   designBody?.classList.toggle("hidden", !has);
   if (!has || !design) return;
 
-  if (designHeadline) designHeadline.textContent = design.headline || "Deep design lane";
+  if (designHeadline) designHeadline.textContent = design.headline || "Vocal production plan";
   if (designBlurb) designBlurb.textContent = design.blurb || "";
+
+  if (designCues) {
+    const cues = design.cues || [];
+    designCues.innerHTML = cues.length
+      ? cues
+          .map(
+            (c) => `
+            <li class="design-cue">
+              <span class="design-cue-label">${escapeHtml(c.label)}</span>
+              <span class="design-cue-text">${escapeHtml(c.text)}</span>
+            </li>`
+          )
+          .join("")
+      : "";
+    designCues.classList.toggle("hidden", !cues.length);
+  }
 
   if (designLayers) {
     designLayers.innerHTML = (design.layers || [])
-      .map((layer) => {
-        const moves = (layer.moves || []).map((m) => `<li>${escapeHtml(m)}</li>`).join("");
-        const tools = (layer.tools || [])
-          .map(
-            (a) => `
-            <div class="pro-pick">
-              <div>
-                <p class="pro-pick-name">${escapeHtml(a.name)}</p>
-                <p class="pro-pick-meta">${escapeHtml(a.brand)} · ${escapeHtml(a.role)}</p>
-                <p class="pro-pick-why">${escapeHtml(a.why)}</p>
-              </div>
-              <a class="pro-pick-buy" href="${escapeHtml(a.url)}" target="_blank" rel="noopener noreferrer sponsored">View deal</a>
-              <p class="pro-pick-note">Affiliate link · we may earn a commission</p>
-            </div>`
-          )
+      .map((layer, i) => {
+        const actions = layer.actions || layer.moves || [];
+        const actionHtml = actions
+          .map((m) => `<li>${escapeHtml(m)}</li>`)
           .join("");
+        const tools = layer.tools || [];
+        const toolsHtml = tools.length
+          ? `<details class="design-tools">
+              <summary>Plugin ideas <span class="design-tools-count">${tools.length}</span></summary>
+              <div class="pro-picks">
+                ${tools
+                  .map(
+                    (a) => `
+                  <div class="pro-pick">
+                    <div>
+                      <p class="pro-pick-name">${escapeHtml(a.name)}</p>
+                      <p class="pro-pick-meta">${escapeHtml(a.brand)} · ${escapeHtml(a.role)}</p>
+                      <p class="pro-pick-why">${escapeHtml(a.why)}</p>
+                    </div>
+                    <a class="pro-pick-buy" href="${escapeHtml(a.url)}" target="_blank" rel="noopener noreferrer sponsored">View deal</a>
+                    <p class="pro-pick-note">Affiliate link · we may earn a commission</p>
+                  </div>`
+                  )
+                  .join("")}
+              </div>
+            </details>`
+          : "";
         return `
-          <article class="design-layer">
-            <h3>${escapeHtml(layer.title)}</h3>
-            <p class="design-intent">${escapeHtml(layer.intent)}</p>
-            ${moves ? `<ul class="rack-copy">${moves}</ul>` : ""}
-            ${tools ? `<div class="pro-picks"><p class="pro-picks-label">Tools</p>${tools}</div>` : ""}
+          <article class="design-layer" style="--i:${i}">
+            <header class="design-layer-head">
+              <span class="design-step" aria-hidden="true">
+                <span class="design-step-glyph">${glyphHtml(layer.title || "layer")}</span>
+                <span class="design-step-n">${i + 1}</span>
+              </span>
+              <div class="design-layer-copy">
+                <h3>${escapeHtml(layer.title)}</h3>
+                <p class="design-goal"><span class="design-goal-label">Goal</span> ${escapeHtml(
+                  layer.goal || layer.intent || ""
+                )}</p>
+              </div>
+            </header>
+            ${
+              actionHtml
+                ? `<div class="design-actions-wrap">
+                    <p class="design-actions-label">Do this</p>
+                    <ol class="design-actions">${actionHtml}</ol>
+                  </div>`
+                : ""
+            }
+            ${toolsHtml}
           </article>`;
       })
       .join("");
   }
 
   if (designChecklist) {
-    designChecklist.innerHTML = (design.checklist || [])
-      .map((c) => `<li>${escapeHtml(c)}</li>`)
-      .join("");
+    const checks = design.checklist || [];
+    designChecklist.innerHTML = checks.map((c) => `<li>${escapeHtml(c)}</li>`).join("");
+    designChecklistBlock?.classList.toggle("hidden", !checks.length);
   }
 }
 
@@ -1060,14 +1665,18 @@ function renderMaster(master) {
   }
   if (masterReadouts) {
     masterReadouts.innerHTML = items
-      .map(
-        ([key, value, sub]) =>
-          `<div class="readout"><span class="key">${key}</span><span class="value">${value}</span><span class="sub">${sub}</span></div>`
-      )
+      .map(([key, value, sub], i) => readoutHtml(key, value, sub, i))
       .join("");
   }
   if (masterNotes) {
-    masterNotes.innerHTML = (master.notes || []).map((n) => `<li>${escapeHtml(n)}</li>`).join("");
+    masterNotes.innerHTML = (master.notes || [])
+      .map(
+        (n, i) =>
+          `<li class="master-note" style="--i:${i}"><span class="master-note-glyph" aria-hidden="true">${glyphHtml(
+            "print"
+          )}</span><span>${escapeHtml(n)}</span></li>`
+      )
+      .join("");
   }
   if (masterBands && master.bands) {
     masterBands.innerHTML = master.bands
@@ -1127,17 +1736,25 @@ function renderInstruments(instruments) {
   const show = list.length > 0;
   instrumentsEmpty?.classList.toggle("hidden", show);
   instrumentsList?.classList.toggle("hidden", !show);
+  if (instrumentsEmpty && !show) {
+    const target = lastAdvice?.target || analysisTarget;
+    instrumentsEmpty.innerHTML =
+      target === "vocal"
+        ? `<p>Vocal mode doesn’t detect bed sources. Switch to <strong>Instrumental</strong> or <strong>Full mix</strong> and re-run.</p>`
+        : `<p>No sources detected on this pass. Try <strong>Full mix</strong> or a clearer instrumental stem.</p>`;
+  }
   if (!instrumentsList) return;
   if (!show) {
     instrumentsList.innerHTML = "";
     return;
   }
   instrumentsList.innerHTML = list
-    .map((item) => {
+    .map((item, i) => {
       const pct = Math.round((item.confidence || 0) * 100);
       return `
-        <li class="instrument-card">
+        <li class="instrument-card" style="--i:${i}">
           <div class="instrument-card-head">
+            <span class="instrument-glyph" aria-hidden="true">${glyphHtml("sources")}</span>
             <strong>${escapeHtml(item.label)}</strong>
             <span class="instrument-conf">${pct}%</span>
           </div>
@@ -1173,11 +1790,91 @@ function renderAffiliates(step) {
     </div>`;
 }
 
+function shortenWhyText(text, maxLen = 92) {
+  const raw = String(text || "").trim();
+  if (!raw) return "";
+  const first = raw.split(/(?<=[.!?])\s+/)[0] || raw;
+  if (first.length <= maxLen) return first;
+  return `${first.slice(0, maxLen - 1).trim()}…`;
+}
+
 function renderSummary(traits, advice) {
-  if (!summaryRoot) return;
-  const extra = advice?.chain?.orderWhy?.map((s) => s) || [];
-  const items = [...traits.summary, ...extra];
-  summaryRoot.innerHTML = items.map((s) => `<li>${escapeHtml(s)}</li>`).join("");
+  const findings = (traits?.findings || [])
+    .filter((f) => f?.label && f.label !== "Target" && f.label !== "Source")
+    .slice(0, 6);
+  const fallback = (traits?.summary || []).slice(0, 6);
+  const order = advice?.chain?.orderWhy;
+
+  if (summaryRoot) {
+    if (findings.length) {
+      summaryRoot.innerHTML = findings
+        .map(
+          (f, i) => `
+            <li class="why-fact" style="--i:${i}">
+              <span class="why-fact-top">
+                <span class="why-fact-glyph">${glyphHtml(f.label)}</span>
+                <span class="why-fact-label">${escapeHtml(f.label)}</span>
+              </span>
+              <p class="why-fact-text">${escapeHtml(shortenWhyText(f.text))}</p>
+            </li>`
+        )
+        .join("");
+    } else if (fallback.length) {
+      summaryRoot.innerHTML = fallback
+        .map((s, i) => {
+          const str = String(s);
+          const hasLabel = str.includes(": ");
+          const label = hasLabel ? str.split(":")[0] : "Note";
+          const text = hasLabel ? str.split(/:\s(.*)/s)[1] || str : str;
+          return `
+            <li class="why-fact" style="--i:${i}">
+              <span class="why-fact-top">
+                <span class="why-fact-glyph">${glyphHtml(label)}</span>
+                <span class="why-fact-label">${escapeHtml(label)}</span>
+              </span>
+              <p class="why-fact-text">${escapeHtml(shortenWhyText(text))}</p>
+            </li>`;
+        })
+        .join("");
+    } else {
+      summaryRoot.innerHTML = `<li class="why-fact is-empty"><p class="why-fact-text">Run an analysis to see measurements.</p></li>`;
+    }
+  }
+
+  if (whyOrderRoot) {
+    const inserts = Array.isArray(order?.inserts)
+      ? order.inserts
+      : advice?.chain?.inserts?.map((s) => s.title).filter(Boolean) || [];
+    const sends = Array.isArray(order?.sends)
+      ? order.sends
+      : advice?.chain?.sends?.map((s) => s.title).filter(Boolean) || [];
+
+    const items = [
+      ...inserts.map((title) => ({ title, kind: "Insert" })),
+      ...sends.map((title) => ({ title, kind: "Send" })),
+    ];
+
+    whyOrderRoot.innerHTML = items.length
+      ? items
+          .map(
+            (item) => `
+            <li>
+              <span class="why-order-kind">${escapeHtml(item.kind)}</span>
+              <span class="why-order-title">${escapeHtml(item.title)}</span>
+            </li>`
+          )
+          .join("")
+      : `<li class="is-empty">Stage order appears once a chain is ready.</li>`;
+  }
+
+  if (whyTipEl) {
+    const tip =
+      (typeof order === "object" && order && !Array.isArray(order) && order.tip) ||
+      (Array.isArray(order) ? order[order.length - 1] : "") ||
+      "";
+    whyTipEl.textContent = tip || "";
+    whyTipEl.classList.toggle("hidden", !tip);
+  }
 }
 
 function tierLabel(tier) {
@@ -1219,11 +1916,11 @@ function renderFocus() {
   const face = renderPluginFace(step);
   const tips =
     step.why || step.how
-      ? `<details class="step-tips">
-          <summary>Why this setting</summary>
+      ? `<div class="step-why">
+          <p class="step-why-label">Why this setting</p>
           ${step.why ? `<p class="why">${escapeHtml(step.why)}</p>` : ""}
           ${step.how ? `<p class="how">${escapeHtml(step.how)}</p>` : ""}
-        </details>`
+        </div>`
       : "";
   const affiliates = analysisMode === "deep" ? renderAffiliates(step) : "";
 
@@ -1238,9 +1935,7 @@ function renderFocus() {
         <h3 class="step-title">${escapeHtml(step.title)}</h3>
         ${gap}
       </header>
-      <div class="step-block">
-        ${face}
-      </div>
+      <div class="step-block">${face}</div>
       <div class="step-block step-block--meta">
         ${tips}
         ${affiliates}
@@ -1263,18 +1958,46 @@ function selectStage(index) {
   if (!stages.length) return;
   stageIndex = Math.max(0, Math.min(stages.length - 1, index));
   renderFocus();
+  updateStageRailMore();
+}
+
+function canScrollMoreRight(el) {
+  if (!el) return false;
+  const max = el.scrollWidth - el.clientWidth;
+  return max > 6 && el.scrollLeft < max - 6;
+}
+
+function updateStageRailMore() {
+  if (!stageRailShell || !stageRailMore) return;
+  const show =
+    canScrollMoreRight(stageRailScroll) ||
+    canScrollMoreRight(stageRailInserts) ||
+    canScrollMoreRight(stageRailSends);
+  stageRailShell.classList.toggle("has-more-right", show);
 }
 
 function bindStageRail(root) {
+  root?.addEventListener("mousedown", (e) => {
+    const btn = e.target.closest("[data-stage-index]");
+    if (!btn) return;
+    // Keep early steps visible — default focus scroll would shove Step 1/2 off-rail
+    e.preventDefault();
+    btn.focus({ preventScroll: true });
+  });
   root?.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-stage-index]");
     if (!btn) return;
     selectStage(Number(btn.getAttribute("data-stage-index")));
+    btn.scrollIntoView({ inline: "nearest", block: "nearest", behavior: "smooth" });
+    requestAnimationFrame(updateStageRailMore);
   });
+  root?.addEventListener("scroll", updateStageRailMore, { passive: true });
 }
 
 bindStageRail(stageRailInserts);
 bindStageRail(stageRailSends);
+stageRailScroll?.addEventListener("scroll", updateStageRailMore, { passive: true });
+window.addEventListener("resize", updateStageRailMore);
 
 exportPdfBtn?.addEventListener("click", async () => {
   if (!lastAdvice?.chain || !exportPdfBtn) return;
@@ -1304,6 +2027,102 @@ exportPdfBtn?.addEventListener("click", async () => {
   }
 });
 
+exportAbletonBtn?.addEventListener("click", async () => {
+  if (!lastAdvice?.chain || !exportAbletonBtn) return;
+  const label = exportAbletonBtn.textContent;
+  exportAbletonBtn.disabled = true;
+  exportAbletonBtn.textContent = "Building…";
+  try {
+    const { buildAbletonRack } = await import("../export/ableton-rack.js");
+    const { blob, included, skipped, eqNotes } = await buildAbletonRack(lastAdvice.chain, {
+      name: lastTrackName || "Chainprint Chain",
+    });
+    if (!included.length && !eqNotes.length) {
+      alert("This chain has no stages that map to Ableton stock devices yet — use the PDF export.");
+      return;
+    }
+    const slug =
+      (lastTrackName || "chainprint-chain")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "")
+        .slice(0, 60) || "chainprint-chain";
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${slug}.adg`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+
+    const tips = [];
+    tips.push("Drag the .adg onto an audio track in Ableton Live (Standard/Suite).");
+    if (eqNotes.length) {
+      tips.push(
+        `EQ / de-ess stages are in the rack's Info View (and macro names) — dial EQ Eight by hand:\n• ${eqNotes.slice(0, 4).join("\n• ")}`
+      );
+    }
+    if (skipped.length && !eqNotes.length) {
+      tips.push(`Add by hand: ${skipped.join(", ")}.`);
+    }
+    if (tips.length > 1 || eqNotes.length) alert(tips.join("\n\n"));
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Could not build the Ableton rack.");
+  } finally {
+    exportAbletonBtn.disabled = false;
+    exportAbletonBtn.textContent = label || "Export Chain";
+  }
+});
+
+shareChainBtn?.addEventListener("click", async () => {
+  if (!lastAdvice?.chain || !shareChainBtn) return;
+  const label = shareChainBtn.textContent;
+  shareChainBtn.disabled = true;
+  shareChainBtn.textContent = "Creating link…";
+  try {
+    const { createSharedChain, sharingAvailable } = await import("../share/chain-share.js");
+    if (!sharingAvailable()) {
+      alert("Sharing needs the cloud backend — it isn't configured in this build.");
+      return;
+    }
+    const readout = library.active()?.result?.readout || null;
+    const { url } = await createSharedChain({
+      advice: lastAdvice,
+      trackName: lastTrackName || undefined,
+      keyLabel: readout?.pitch?.keyLabel || undefined,
+      bpm: readout?.tempo?.bpm ?? undefined,
+      artworkUrl:
+        typeof library.active()?.artwork === "string" && /^https?:/.test(library.active().artwork)
+          ? library.active().artwork
+          : undefined,
+    });
+    let copied = false;
+    try {
+      await navigator.clipboard.writeText(url);
+      copied = true;
+    } catch {
+      /* clipboard can be blocked — fall back to prompt below */
+    }
+    if (copied) {
+      shareChainBtn.textContent = "Link copied";
+      setTimeout(() => {
+        if (shareChainBtn) shareChainBtn.textContent = label || "Share link";
+      }, 2200);
+    } else {
+      prompt("Share this chain:", url);
+    }
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Could not create the share link.");
+  } finally {
+    shareChainBtn.disabled = false;
+    if (shareChainBtn.textContent === "Creating link…") {
+      shareChainBtn.textContent = label || "Share link";
+    }
+  }
+});
+
 stagePrev?.addEventListener("click", () => selectStage(stageIndex - 1));
 stageNext?.addEventListener("click", () => selectStage(stageIndex + 1));
 
@@ -1328,11 +2147,20 @@ function renderChain(advice) {
     stages = [];
     setHasResults(false);
     if (honestyEl) honestyEl.textContent = "";
+    if (whyIntentEl) whyIntentEl.textContent = "";
+    if (whyTipEl) {
+      whyTipEl.textContent = "";
+      whyTipEl.classList.add("hidden");
+    }
     if (estimateNoteEl) estimateNoteEl.textContent = "";
     if (stageRailInserts) stageRailInserts.innerHTML = "";
     if (stageRailSends) stageRailSends.innerHTML = "";
+    stageRailShell?.classList.remove("has-more-right");
     if (stageFocus) stageFocus.innerHTML = "";
     if (highlightsRoot) highlightsRoot.innerHTML = "";
+    if (highlightsWhy) highlightsWhy.innerHTML = "";
+    if (whyOrderRoot) whyOrderRoot.innerHTML = "";
+    if (summaryRoot) summaryRoot.innerHTML = "";
     applyChainFxFromAdvice(null);
     return;
   }
@@ -1341,12 +2169,13 @@ function renderChain(advice) {
 
   const { chain } = advice;
   if (honestyEl) honestyEl.textContent = chain.honesty;
+  if (whyIntentEl) {
+    whyIntentEl.textContent =
+      "Settings match measured roles on this reference — not a claim these were the exact plugins on the record.";
+  }
   if (estimateNoteEl) {
     estimateNoteEl.textContent =
-      advice.estimateNote ||
-      (advice.mode === "deep"
-        ? "Pro chain — match values in your plugins, then open Master for the bus pass."
-        : "Match each stage in order. Switch to Deep for Pro plugins + master analysis.");
+      "Exports an Ableton rack with settings dialed from this reference.";
   }
 
   const insertStages = (chain.inserts || []).map((step, index) => ({
@@ -1369,23 +2198,42 @@ function renderChain(advice) {
     stageRailSends.innerHTML = sendStages.map((e, i) => stageChip(e, offset + i)).join("");
   }
 
+  requestAnimationFrame(updateStageRailMore);
+
   const highlightsHtml = advice.highlights?.length
-    ? `<ul class="summary-list">` +
+    ? `<p class="section-label">Start here</p>
+      <ol class="why-moves">` +
       advice.highlights
-        .map((h) => `<li><strong>${escapeHtml(h.characteristic)}</strong> — ${escapeHtml(h.why)}</li>`)
+        .slice(0, 3)
+        .map(
+          (h, i) => `
+          <li class="why-move" style="--i:${i}">
+            <span class="why-move-glyph" aria-hidden="true">${glyphHtml(h.stage || h.title || "eq")}</span>
+            <div class="why-move-copy">
+              <p class="why-move-stage">${escapeHtml(h.stage || h.title || h.characteristic || "Stage")}</p>
+              <p class="why-move-action">${escapeHtml(shortenWhyText(h.action || h.body || h.why || "", 120))}</p>
+              ${
+                h.because
+                  ? `<p class="why-move-because">${escapeHtml(shortenWhyText(h.because, 110))}</p>`
+                  : ""
+              }
+            </div>
+          </li>`
+        )
         .join("") +
-      `</ul>`
+      `</ol>`
     : "";
   if (highlightsRoot) highlightsRoot.innerHTML = "";
   if (highlightsWhy) {
-    highlightsWhy.innerHTML = highlightsHtml
-      ? `<p class="section-label">Measurement flags</p>${highlightsHtml}`
-      : "";
+    highlightsWhy.innerHTML = highlightsHtml;
+    highlightsWhy.classList.toggle("hidden", !highlightsHtml);
   }
 
   setHasResults(true);
   selectStage(0);
-  setView("chain");
+  const restore = pendingViewAfterAnalysis;
+  pendingViewAfterAnalysis = null;
+  setView(restore === "design" || restore === "master" ? restore : "chain");
 }
 
 function showError(message, meta = null, opts = {}) {
@@ -1457,12 +2305,7 @@ async function runAnalysis() {
     showTrackCard(null);
     lastTrackName = lastSource.file?.name?.replace(/\.[^.]+$/, "") || "";
   }
-  const readingLabel =
-    analysisTarget === "instrumental"
-      ? "Reading the instrumental…"
-      : analysisTarget === "full"
-        ? "Reading the full mix…"
-        : "Reading the vocal…";
+  const readingLabel = "Reading the reference…";
   const readingDetail =
     analysisMode === "deep"
       ? analysisTarget === "vocal"
@@ -1504,18 +2347,8 @@ async function runAnalysis() {
       pluginMap = await loadPluginMap();
     }
 
-    const stemOverride = analysisFileForRun();
     let result;
-    if (stemOverride?.sourceKind === "stem") {
-      result = await analyzeFile(stemOverride.file, {
-        pluginMap,
-        daw,
-        mode: analysisMode,
-        target: analysisTarget,
-        sourceKind: "stem",
-        onProgress,
-      });
-    } else if (lastSource.kind === "url") {
+    if (lastSource.kind === "url") {
       result = await analyzeUrl(lastSource.url, {
         pluginMap,
         daw,
@@ -1623,18 +2456,12 @@ function beginNewSource(source) {
 }
 
 if (dropzone && fileInput) {
-  const openPicker = () => {
-    if (analyzing || blending) return;
-    fileInput.click();
-  };
-  dropzone.addEventListener("click", (e) => {
-    if (e.target === fileInput || analyzing || blending) return;
-    openPicker();
-  });
+  // Invisible file input covers the dropzone (pointer-events: auto) so the
+  // native picker opens on click. Keyboard still goes through the dropzone.
   dropzone.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      openPicker();
+      if (!analyzing && !blending) fileInput.click();
     }
   });
   dropzone.addEventListener("dragover", (e) => {
@@ -1649,6 +2476,9 @@ if (dropzone && fileInput) {
     const file = e.dataTransfer?.files?.[0];
     if (!file) return;
     beginNewSource({ kind: "file", file });
+  });
+  fileInput.addEventListener("click", (e) => {
+    if (analyzing || blending) e.preventDefault();
   });
   fileInput.addEventListener("change", () => {
     const file = fileInput.files?.[0];
@@ -1696,7 +2526,26 @@ libraryList?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
     library.toggleBlendPick(pick.getAttribute("data-library-pick"));
+    if (library.blendPicks().length > 0) blendPanelOpen = true;
     renderLibrary();
+    return;
+  }
+  if (e.target.closest("[data-dry-play]") || e.target.closest("[data-dry-select]")) {
+    e.preventDefault();
+    e.stopPropagation();
+    const dryFor = e.target.closest("[data-dry-for]")?.getAttribute("data-dry-for");
+    if (dryFor && library.active()?.id !== dryFor) {
+      selectLibraryEntry(dryFor);
+    }
+    toggleDryPlayback();
+    return;
+  }
+  if (e.target.closest("[data-dry-remove]")) {
+    e.preventDefault();
+    e.stopPropagation();
+    const dryFor =
+      e.target.closest("[data-dry-for]")?.getAttribute("data-dry-for") || library.active()?.id;
+    clearDryStem(dryFor);
     return;
   }
   const play = e.target.closest("[data-library-play]");
@@ -1704,6 +2553,10 @@ libraryList?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
     const id = play.getAttribute("data-library-play");
+    if (id && id.endsWith(":dry")) {
+      toggleDryPlayback();
+      return;
+    }
     toggleEntryPlayback(library.get(id));
     return;
   }
@@ -1712,39 +2565,48 @@ libraryList?.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (analyzing || blending) return;
-    const id = remove.getAttribute("data-library-remove");
+    // Prefer the row id so we never remove the wrong entry if attributes drift
+    const row = remove.closest("[data-library-id]");
+    const id =
+      row?.getAttribute("data-library-id") || remove.getAttribute("data-library-remove");
+    if (!id || !library.get(id)) return;
+
+    const wasActive = library.active()?.id === id;
     library.remove(id);
+    dryByEntryId.delete(id);
+
     const stillPlaying = playingKey();
-    if (stillPlaying && !library.get(stillPlaying)) stopAudio();
-    const next = library.active();
+    if (stillPlaying && (stillPlaying === id || String(stillPlaying).startsWith(`${id}:`))) {
+      stopAudio();
+    }
     renderLibrary();
-    if (next?.result) applyEntryToStudio(next);
-    else if (library.list().length) {
+    schedulePersist();
+    if (!wasActive) return;
+
+    const next = library.active();
+    syncDryInputsFromActive();
+    if (next?.result) {
+      applyEntryToStudio(next);
+      return;
+    }
+    if (library.list().length) {
       const fallback = library.list().filter((e) => e.result).at(-1);
       if (fallback) {
         library.setActive(fallback.id);
+        syncDryInputsFromActive();
         applyEntryToStudio(fallback);
         renderLibrary();
-      } else {
-        lastAdvice = null;
-        lastSource = null;
-        setHasResults(false);
-        renderMaster(null);
-        renderDesign(null);
-        renderInstruments(null);
-        showTrackCard(null);
-        setStatus("idle", "Waiting for a reference");
+        return;
       }
-    } else {
-      lastAdvice = null;
-      lastSource = null;
-      setHasResults(false);
-      renderMaster(null);
-      renderDesign(null);
-      renderInstruments(null);
-      showTrackCard(null);
-      setStatus("idle", "Waiting for a reference");
     }
+    lastAdvice = null;
+    lastSource = null;
+    setHasResults(false);
+    renderMaster(null);
+    renderDesign(null);
+    renderInstruments(null);
+    showTrackCard(null);
+    setStatus("idle", "Waiting for a reference");
     return;
   }
   const select = e.target.closest("[data-library-select]");
@@ -1761,15 +2623,70 @@ blendWeightBtns.forEach((btn) => {
       b.classList.toggle("is-active", on);
       b.setAttribute("aria-pressed", String(on));
     });
+    const [a, b] = library.blendPicks();
+    renderBlendDiffPreview(a, b);
   });
 });
+
+blendToggle?.addEventListener("click", () => {
+  blendPanelOpen = !blendPanelOpen;
+  blendPanel?.classList.toggle("is-collapsed", !blendPanelOpen);
+  blendToggle.setAttribute("aria-expanded", blendPanelOpen ? "true" : "false");
+});
+
+function setSourceCollapsed(collapsed) {
+  const on = Boolean(collapsed);
+  workspace?.classList.toggle("is-source-collapsed", on);
+  if (sourceCollapseBtn) {
+    sourceCollapseBtn.setAttribute("aria-expanded", String(!on));
+    sourceCollapseBtn.title = on ? "Expand reference panel" : "Collapse reference panel";
+    const sr = sourceCollapseBtn.querySelector(".sr-only");
+    if (sr) sr.textContent = on ? "Expand reference panel" : "Collapse reference panel";
+  }
+  try {
+    localStorage.setItem(SOURCE_COLLAPSE_KEY, on ? "1" : "0");
+  } catch {
+    /* ignore quota / private mode */
+  }
+}
+
+sourceCollapseBtn?.addEventListener("click", () => {
+  setSourceCollapsed(!workspace?.classList.contains("is-source-collapsed"));
+});
+
+try {
+  if (localStorage.getItem(SOURCE_COLLAPSE_KEY) === "1") setSourceCollapsed(true);
+} catch {
+  /* ignore */
+}
 
 blendGo?.addEventListener("click", () => {
   if (!applyAccessGate()) return;
   rebuildBlend();
 });
 
+bindReadoutExplainers();
+
+const restored = await restoreWorkspace();
+persistReady = true;
+await persistWorkspaceNow();
+
 renderLibrary();
-setStatus("idle", "Waiting for a reference");
 applyAccessGate();
+
+const active = library.active();
+if (restored && active?.result) {
+  applyEntryToStudio(active);
+  setStatus("live", "Welcome back — chain ready");
+} else {
+  setStatus("idle", "Waiting for a reference");
+}
 setView("chain");
+
+window.addEventListener("pagehide", () => {
+  if (persistTimer) {
+    clearTimeout(persistTimer);
+    persistTimer = null;
+  }
+  void persistWorkspaceNow();
+});

@@ -29,7 +29,7 @@
   display: flex;
   gap: 14px;
   flex-wrap: wrap;
-  font-size: 0.84rem;
+  font-size: var(--text-sm);
 }
 
 .legal-top-nav a {
@@ -49,7 +49,7 @@
 .legal-doc h1 {
   font-family: var(--font-brand);
   font-size: clamp(1.55rem, 4vw, 1.9rem);
-  font-weight: 750;
+  font-weight: var(--weight-bold);
   letter-spacing: -0.035em;
   color: var(--brand);
   margin: 0 0 8px;
@@ -63,7 +63,7 @@
 
 .legal-doc h2 {
   font-family: var(--font-brand);
-  font-size: 1.05rem;
+  font-size: var(--text-lg);
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--readout);
@@ -72,7 +72,7 @@
 
 .legal-doc p,
 .legal-doc li {
-  font-size: 0.94rem;
+  font-size: var(--text-md);
   line-height: 1.65;
   color: var(--silkscreen);
 }

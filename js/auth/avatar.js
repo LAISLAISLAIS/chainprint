@@ -87,14 +87,11 @@ function blobToDataUrl(blob) {
   });
 }
 
-/** Initials fallback from username / name / email. */
+/** Single-letter fallback from username (logo-style avatar). */
 export function avatarInitials(account) {
   const raw = String(account?.username || account?.displayName || account?.name || account?.email || "?");
   const cleaned = raw.replace(/^@/, "").trim();
   if (!cleaned) return "?";
-  const parts = cleaned.split(/[\s._-]+/).filter(Boolean);
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase().slice(0, 2);
-  }
-  return cleaned.slice(0, 2).toUpperCase();
+  const letter = cleaned.match(/[A-Za-z0-9]/)?.[0] || cleaned[0];
+  return String(letter).toUpperCase();
 }

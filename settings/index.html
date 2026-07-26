@@ -122,7 +122,7 @@
       </section>
 
       <section class="unit settings-card" data-settings-password hidden>
-        <h2>Password</h2>
+        <h2>Change password</h2>
         <form class="settings-form" data-password-form>
           <div class="field">
             <label for="current-password">Current password</label>
@@ -138,8 +138,12 @@
               <li data-req="symbol">1 symbol (!@#$…)</li>
             </ul>
           </div>
+          <div class="field">
+            <label for="confirm-password">Re-enter new password</label>
+            <input id="confirm-password" name="confirmPassword" type="password" autocomplete="new-password" required minlength="8" />
+          </div>
           <p class="settings-status" data-password-status role="status"></p>
-          <button class="btn btn-primary" type="submit">Update password</button>
+          <button class="btn btn-primary" type="submit">Change password</button>
         </form>
       </section>
     </div>

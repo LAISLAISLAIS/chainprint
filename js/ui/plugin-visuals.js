@@ -44,9 +44,9 @@ function bandDbAt(freq, band) {
 
 function eqGraph(bands) {
   const w = 560;
-  const h = 160;
+  const h = 168;
   const padX = 28;
-  const padY = 16;
+  const padY = 22;
   const plotW = w - padX * 2;
   const plotH = h - padY * 2 - 8;
   const minF = 20;
@@ -70,15 +70,42 @@ function eqGraph(bands) {
   const line = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(" ");
   const zeroY = yOf(0);
 
-  const markers = list
-    .map((b) => {
-      const x = xOf(b.freq);
-      const y = yOf(
-        b.type === "hpf" || b.type === "lpf" ? 0 : Math.max(minG, Math.min(maxG, b.gain || 0))
-      );
-      return `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3.5" class="rack-eq-dot"/>
-        <text x="${x.toFixed(1)}" y="${(y - 8).toFixed(1)}" class="rack-eq-lab">${esc(b.label || formatHz(b.freq))}</text>`;
-    })
+  /** @type {Array<{ x: number, y: number, label: string, labelX: number, labelY: number, anchor: string }>} */
+  const markers = list.map((b) => {
+    const x = xOf(b.freq);
+    const y = yOf(
+      b.type === "hpf" || b.type === "lpf" ? 0 : Math.max(minG, Math.min(maxG, b.gain || 0))
+    );
+    return {
+      x,
+      y,
+      label: b.label || formatHz(b.freq),
+      labelX: x,
+      labelY: y - 9,
+      anchor: "middle",
+    };
+  });
+
+  // Stagger labels that sit on nearly the same frequency
+  const byX = [...markers].sort((a, b) => a.x - b.x || a.y - b.y);
+  for (let i = 0; i < byX.length; i++) {
+    const cur = byX[i];
+    let stack = 0;
+    for (let j = 0; j < i; j++) {
+      const prev = byX[j];
+      if (Math.abs(cur.x - prev.x) < 52) stack += 1;
+    }
+    if (stack === 0) continue;
+    cur.labelY = Math.max(padY + 8, cur.y - 9 - stack * 11);
+    cur.anchor = stack % 2 === 1 ? "end" : "start";
+    cur.labelX = cur.x + (stack % 2 === 1 ? -5 : 5);
+  }
+
+  const markerSvg = markers
+    .map(
+      (m) => `<circle cx="${m.x.toFixed(1)}" cy="${m.y.toFixed(1)}" r="3.5" class="rack-eq-dot"/>
+        <text x="${m.labelX.toFixed(1)}" y="${m.labelY.toFixed(1)}" text-anchor="${m.anchor}" class="rack-eq-lab">${esc(m.label)}</text>`
+    )
     .join("");
 
   const ticks = [100, 1000, 10000]
@@ -96,7 +123,7 @@ function eqGraph(bands) {
       <line x1="${padX}" y1="${zeroY}" x2="${padX + plotW}" y2="${zeroY}" class="rack-eq-zero"/>
       ${ticks}
       <path d="${line}" class="rack-eq-curve"/>
-      ${markers}
+      ${markerSvg}
     </svg>`;
 }
 

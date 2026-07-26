@@ -213,6 +213,11 @@ async function bootSettings(account) {
     const fd = new FormData(passwordForm);
     const currentPassword = String(fd.get("currentPassword") || "");
     const newPassword = String(fd.get("newPassword") || "");
+    const confirmPassword = String(fd.get("confirmPassword") || "");
+    if (newPassword !== confirmPassword) {
+      setStatus(status, "New passwords don’t match.", "error");
+      return;
+    }
     const btn = passwordForm.querySelector('button[type="submit"]');
     if (btn) btn.disabled = true;
     setStatus(status, "Updating…");
@@ -225,7 +230,7 @@ async function bootSettings(account) {
       }
       setStatus(status, "Password updated.", "ok");
     } catch (err) {
-      setStatus(status, err.message || "Couldn’t update password.", "error");
+      setStatus(status, err.message || "Couldn’t change password.", "error");
     } finally {
       if (btn) btn.disabled = false;
     }

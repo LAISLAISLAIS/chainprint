@@ -39,6 +39,11 @@
   to = "/settings/"
   status = 301
 
+[[redirects]]
+  from = "/c"
+  to = "/c/"
+  status = 301
+
 [[headers]]
   for = "/*"
   [headers.values]

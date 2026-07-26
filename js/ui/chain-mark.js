@@ -11,7 +11,7 @@ export function mountChainMark(root, opts = {}) {
   if (variant === "cycle") root.classList.add("logo-hero--cycle");
 
   /* Cycle uses chromatic stroke attrs so iOS still shows color if CSS filter is skipped */
-  const strokeAttr = variant === "cycle" ? ' stroke="#5ec4b0"' : "";
+  const strokeAttr = variant === "cycle" ? ' stroke="#c4a574"' : "";
 
   root.innerHTML = `
     <svg class="chain-mark-svg" viewBox="0 0 120 40" aria-hidden="true">

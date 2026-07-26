@@ -3,26 +3,79 @@
 
 :root {
   --ink: #000000;
-  --chassis: #060606;
-  --panel: rgba(12, 12, 12, 0.88);
-  --panel-solid: #0e0e0e;
-  --panel-edge: rgba(255, 255, 255, 0.09);
-  --panel-edge-strong: rgba(255, 255, 255, 0.16);
-  --silkscreen: #8c8c8c;
-  --readout: #d6d6d6;
-  --brand: #f5f5f5;
+  --chassis: #050505;
+  --panel: rgba(10, 10, 10, 0.92);
+  --panel-solid: #0a0a0a;
+  --panel-edge: rgba(255, 255, 255, 0.08);
+  --panel-edge-strong: rgba(255, 255, 255, 0.14);
+  --studio-rule: rgba(255, 255, 255, 0.06);
+  --silkscreen: #8a8a8a;
+  --muted: #6e6e6e;
+  --readout: #e8e8e8;
+  --brand: #f7f7f7;
   --accent: #f2f2f2;
-  --accent-soft: rgba(255, 255, 255, 0.07);
+  --accent-soft: rgba(255, 255, 255, 0.06);
   --accent-dim: #9a9a9a;
+  /*
+   * Accent family — warm metal only (no teal/cool accents).
+   * Use --metal for fills & glyphs, --metal-bright for small text labels.
+   */
+  --metal: #c4a574;
+  --metal-bright: #d8c09a;
+  --metal-soft: rgba(196, 165, 116, 0.35);
+  --metal-dim: #8a7352;
+  --metal-glow: rgba(196, 165, 116, 0.22);
+  --metal-wash: rgba(196, 165, 116, 0.1);
+  --metal-wash-strong: rgba(196, 165, 116, 0.16);
+  --ok: var(--metal-bright);
   --lamp: #f0f0f0;
   --lamp-dim: #6a6a6a;
   --danger: #ff6b6b;
+  --danger-soft: #ffb4b4;
+
+  /* Spacing ladder — prefer these over one-off px */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
   --radius: 14px;
   --radius-sm: 10px;
+  --radius-xs: 8px;
   --radius-btn: 12px;
+
+  /* ——— Type roles (see docs/BRAND_TYPE.md) ——— */
   --font-ui: "DM Sans", "Segoe UI", sans-serif;
   --font-brand: "Syne", "Arial Narrow", sans-serif;
-  --font-readout: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+  /* Alias: meters / console only — never body or decorative counters */
+  --font-readout: var(--font-mono);
+
+  /* Scale — keep to this ladder; don’t invent one-off rem sizes */
+  --text-xs: 0.75rem; /* 12 — labels, kickers */
+  --text-sm: 0.8125rem; /* 13 — ledes, meta */
+  --text-base: 0.875rem; /* 14 — default UI / card body */
+  --text-md: 0.9375rem; /* 15 — primary reading */
+  --text-lg: 1.0625rem; /* 17 — card / layer titles */
+  --text-xl: 1.25rem; /* 20 — in-panel hero lines */
+  --text-display: 1.375rem; /* 22 — panel titles (Syne) */
+
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-body: 1.55;
+
+  --tracking-display: -0.035em;
+  --tracking-title: -0.025em;
+  --tracking-body: -0.011em;
+  --tracking-label: 0.05em;
+
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --focus-ring: 0 0 0 2px #000, 0 0 0 4px rgba(255, 255, 255, 0.45);
 }
@@ -62,9 +115,8 @@ body {
 
 body {
   background:
-    radial-gradient(ellipse 80% 50% at 50% -8%, rgba(255, 255, 255, 0.055) 0%, transparent 52%),
-    radial-gradient(ellipse 50% 35% at 80% 90%, rgba(255, 255, 255, 0.02) 0%, transparent 50%),
-    linear-gradient(180deg, #040404 0%, var(--chassis) 48%, #000 100%);
+    radial-gradient(ellipse 70% 42% at 50% -6%, rgba(255, 255, 255, 0.03) 0%, transparent 55%),
+    linear-gradient(180deg, #000 0%, var(--chassis) 55%, #000 100%);
   background-attachment: scroll;
 }
 
@@ -80,7 +132,7 @@ body::before {
   inset: 0;
   pointer-events: none;
   z-index: 0;
-  opacity: 0.18;
+  opacity: 0.1;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.5'/%3E%3C/svg%3E");
   background-size: 180px;
   mix-blend-mode: soft-light;
@@ -109,7 +161,7 @@ body > * {
 
 .brand {
   font-family: var(--font-brand);
-  font-weight: 800;
+  font-weight: var(--weight-bold);
   letter-spacing: -0.03em;
   text-transform: none;
   color: var(--brand);
@@ -117,17 +169,21 @@ body > * {
 }
 
 .label {
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
   color: var(--silkscreen);
-  font-weight: 500;
 }
 
 .meta {
-  font-size: 0.82rem;
-  letter-spacing: 0.01em;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-regular);
+  letter-spacing: var(--tracking-body);
   color: var(--silkscreen);
-  line-height: 1.5;
+  line-height: var(--leading-body);
 }
 
 .lamp {
@@ -135,7 +191,7 @@ body > * {
   height: 8px;
   border-radius: 50%;
   background: var(--accent);
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.25);
+  box-shadow: none;
   flex-shrink: 0;
 }
 
@@ -146,6 +202,7 @@ body > * {
 }
 
 .lamp[data-state="live"] {
+  background: var(--metal);
   animation: lamp-pulse 2.2s ease-in-out infinite;
 }
 
@@ -153,19 +210,20 @@ body > * {
   0%,
   100% {
     opacity: 1;
-    box-shadow: 0 0 8px rgba(255, 255, 255, 0.35);
+    box-shadow: 0 0 6px var(--metal-glow);
   }
   50% {
     opacity: 0.55;
-    box-shadow: 0 0 3px rgba(255, 255, 255, 0.12);
+    box-shadow: 0 0 2px var(--metal-wash);
   }
 }
 
 .estimate-note {
-  font-size: 0.8rem;
-  letter-spacing: 0.01em;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  letter-spacing: var(--tracking-body);
   color: var(--silkscreen);
-  line-height: 1.5;
+  line-height: var(--leading-body);
 }
 
 .btn {
@@ -173,13 +231,13 @@ body > * {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--space-2);
   border: none;
   border-radius: var(--radius-btn);
   font-family: var(--font-ui);
-  font-size: 0.9rem;
-  font-weight: 600;
-  letter-spacing: -0.015em;
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-body);
   padding: 12px 22px;
   cursor: pointer;
   text-decoration: none;
@@ -201,7 +259,7 @@ body > * {
 
 .btn-primary {
   background: var(--accent);
-  color: #0a0a0a;
+  color: var(--panel-solid);
 }
 
 .btn-primary:hover {
@@ -217,6 +275,52 @@ body > * {
 .btn-ghost:hover {
   border-color: rgba(255, 255, 255, 0.35);
   color: var(--brand);
+}
+
+/* Shared satellite page shell (auth / settings / find / share / legal) */
+.page-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: var(--space-5) var(--space-4) var(--space-6);
+  padding-top: calc(var(--space-5) + env(safe-area-inset-top, 0));
+  padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0));
+  background:
+    radial-gradient(ellipse 55% 36% at 50% 0%, rgba(255, 255, 255, 0.035) 0%, transparent 58%),
+    transparent;
+}
+
+.studio-empty {
+  color: var(--silkscreen);
+  font-family: var(--font-ui);
+  font-size: var(--text-md);
+  font-weight: var(--weight-regular);
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-body);
+  max-width: 36rem;
+  display: grid;
+  gap: var(--space-3);
+  justify-items: start;
+}
+
+.studio-empty .empty-lead {
+  margin: 0;
+  color: var(--readout);
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+  letter-spacing: var(--tracking-body);
+}
+
+.studio-empty p {
+  margin: 0;
+}
+
+.studio-empty strong {
+  color: var(--brand);
+  font-weight: var(--weight-semibold);
+}
+
+.studio-empty .btn {
+  margin-top: var(--space-1);
 }
 
 /* Floating reference player — draggable dock with seek */
@@ -298,9 +402,9 @@ body > * {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.68rem;
-  font-weight: 650;
-  letter-spacing: 0.08em;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
   text-transform: uppercase;
   color: #7a7a7a;
 }
@@ -387,17 +491,17 @@ body > * {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.84rem;
-  font-weight: 550;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
 }
 
 .playback-dock-track-now {
   flex-shrink: 0;
-  font-size: 0.65rem;
-  font-weight: 650;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #8ecfc0;
+  color: var(--metal-bright);
 }
 
 .playback-dock-chrome {
@@ -436,7 +540,7 @@ body > * {
 .playback-dock-title {
   margin: 0;
   min-width: 0;
-  font-size: 0.78rem;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: -0.015em;
   color: #e8e8e8;
@@ -550,7 +654,7 @@ body > * {
 
 .playback-dock-time {
   font-family: var(--font-readout);
-  font-size: 0.68rem;
+  font-size: var(--text-xs);
   font-weight: 500;
   color: #8a8a8a;
   letter-spacing: -0.02em;
@@ -958,23 +1062,12 @@ body > * {
 }
 
 @keyframes playback-wave-color {
-  0% {
-    background: #e8a090;
-  }
-  20% {
-    background: #e8c56a;
-  }
-  40% {
-    background: #6ec8b0;
-  }
-  60% {
-    background: #7eade8;
-  }
-  80% {
-    background: #c4a0e0;
-  }
+  0%,
   100% {
-    background: #e8a090;
+    background: var(--metal-dim);
+  }
+  50% {
+    background: var(--metal-bright);
   }
 }
 

@@ -32,7 +32,8 @@ export function validatePassword(password) {
  * @returns {{ ok: boolean, message?: string, normalized: string }}
  */
 export function validateUsername(username) {
-  const normalized = String(username || "").trim().toLowerCase();
+  // Preserve user casing (LAIS stays LAIS). Uniqueness is checked case-insensitively elsewhere.
+  const normalized = String(username || "").trim();
   if (!normalized) {
     return { ok: false, message: "Choose a username.", normalized: "" };
   }

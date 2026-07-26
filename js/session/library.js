@@ -1,6 +1,6 @@
 /**
  * In-session reference library — multiple analyzed tracks + blends.
- * Lives in memory for the page session (files can't persist to localStorage).
+ * Analyze page persists this to IndexedDB so reloads keep your refs.
  */
 
 function uid() {
@@ -22,12 +22,20 @@ function uid() {
  * @property {string} createdAt
  */
 
-export function createLibrary() {
+/**
+ * @param {{ onChange?: () => void }} [opts]
+ */
+export function createLibrary(opts = {}) {
   /** @type {LibraryEntry[]} */
   const entries = [];
   let activeId = null;
   /** @type {Set<string>} */
   const blendPick = new Set();
+  const onChange = typeof opts.onChange === "function" ? opts.onChange : null;
+
+  function notify() {
+    onChange?.();
+  }
 
   function list() {
     return entries.slice();
@@ -44,6 +52,7 @@ export function createLibrary() {
   function setActive(id) {
     if (!get(id)) return null;
     activeId = id;
+    notify();
     return get(id);
   }
 
@@ -52,7 +61,7 @@ export function createLibrary() {
    */
   function add(partial) {
     const entry = {
-      id: uid(),
+      id: partial.id || uid(),
       kind: partial.kind || "track",
       name: partial.name,
       artwork: partial.artwork ?? null,
@@ -62,10 +71,11 @@ export function createLibrary() {
       result: partial.result ?? null,
       blendOf: partial.blendOf,
       weight: partial.weight,
-      createdAt: new Date().toISOString(),
+      createdAt: partial.createdAt || new Date().toISOString(),
     };
     entries.push(entry);
     activeId = entry.id;
+    notify();
     return entry;
   }
 
@@ -73,26 +83,61 @@ export function createLibrary() {
     const entry = get(id);
     if (!entry) return null;
     Object.assign(entry, patch);
+    // Track updates must not keep stale blend metadata (Object.assign won't clear it)
+    if (entry.kind !== "blend") {
+      delete entry.blendOf;
+      delete entry.weight;
+    }
+    notify();
     return entry;
   }
 
   function remove(id) {
-    const i = entries.findIndex((e) => e.id === id);
-    if (i < 0) return false;
-    entries.splice(i, 1);
-    blendPick.delete(id);
-    // Drop blends that depended on this track
-    for (let j = entries.length - 1; j >= 0; j--) {
-      const e = entries[j];
-      if (e.kind === "blend" && e.blendOf?.includes(id)) {
+    if (!id || typeof id !== "string") return false;
+    if (!entries.some((e) => e.id === id)) return false;
+
+    // Keep everything except this id and blends that explicitly depend on it
+    const kept = entries.filter((e) => {
+      if (e.id === id) return false;
+      if (
+        e.kind === "blend" &&
+        Array.isArray(e.blendOf) &&
+        e.blendOf.includes(id)
+      ) {
         blendPick.delete(e.id);
-        entries.splice(j, 1);
+        return false;
       }
-    }
+      return true;
+    });
+    entries.length = 0;
+    entries.push(...kept);
+    blendPick.delete(id);
+
     if (activeId === id || !get(activeId)) {
       activeId = entries.length ? entries[entries.length - 1].id : null;
     }
+    notify();
     return true;
+  }
+
+  /**
+   * Replace in-memory library from a persisted snapshot.
+   * @param {LibraryEntry[]} nextEntries
+   * @param {string | null} [nextActiveId]
+   */
+  function hydrate(nextEntries, nextActiveId = null) {
+    entries.length = 0;
+    for (const e of nextEntries || []) {
+      if (e?.id) entries.push(e);
+    }
+    blendPick.clear();
+    activeId =
+      nextActiveId && get(nextActiveId)
+        ? nextActiveId
+        : entries.length
+          ? entries[entries.length - 1].id
+          : null;
+    // No notify — caller is restoring, not mutating
   }
 
   function toggleBlendPick(id) {
@@ -109,6 +154,7 @@ export function createLibrary() {
       }
       blendPick.add(id);
     }
+    notify();
     return Array.from(blendPick);
   }
 
@@ -120,6 +166,7 @@ export function createLibrary() {
 
   function clearBlendPicks() {
     blendPick.clear();
+    notify();
   }
 
   function canBlend() {
@@ -134,6 +181,7 @@ export function createLibrary() {
     add,
     update,
     remove,
+    hydrate,
     toggleBlendPick,
     blendPicks,
     clearBlendPicks,

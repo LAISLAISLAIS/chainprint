@@ -544,17 +544,17 @@ export function buildVocalChain(readout, traits, _daw = "universal") {
   return {
     daw: "universal",
     honesty:
-      "Engineered recreation from the measured vocal signature — match these roles and settings in whatever plugins you own. Not a claim these were the exact plugins on the record.",
+      "Built from what we measured on this reference. Match the roles and settings in your own plugins — this is not a claim these were the exact plugins on the record.",
     estimateNote:
-      "Dialed from the vocal region of a finished master. Build the stages in order, set the values, then refine by ear in full mix context.",
+      "From the vocal region of a finished master. Build stages in order, set the values, then refine by ear in the full mix.",
     dial: d,
     signalFlow,
     sendFlow,
     orderWhy: [
-      `Insert order: ${signalFlow.join(" → ")}`,
-      `Sends: ${sendFlow.join(" → ")}`,
-      "Brightening before de-ess, or compressing muddy mids, is how unfinished chains fall apart.",
-    ],
+      `Build inserts in this order: ${inserts.map((s) => s.title).join(" → ")}.`,
+      sends.length ? `Then sends: ${sends.map((s) => s.title).join(" → ")}.` : null,
+      "Cut mud and harshness before compressing. De-ess after compression — compressors make S’s louder.",
+    ].filter(Boolean),
     inserts,
     sends,
     paidUpgrades: [

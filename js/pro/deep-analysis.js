@@ -38,41 +38,63 @@ export function deepenTraits(readout, traits) {
   const spaceCharacter =
     side > 0.3 ? "wet_wide" : side > 0.15 ? "supported" : "dry_forward";
 
-  const summary = [...traits.summary];
+  const findings = [...(traits.findings || [])];
+  const pushFinding = (label, text) => {
+    findings.push({ label, text });
+  };
+
   if (denseness === "radio_dense") {
-    summary.push("Full-mix crest is smashy — expect serial compression + light limiting on the vocal.");
+    pushFinding(
+      "Density",
+      "The full mix is very smashed. Use two light compressors on the vocal, then a light limiter — not one heavy smash."
+    );
   }
   if (delivery === "hot_stream" || delivery === "streaming_loud") {
-    summary.push("Loudness proxy sits near/above typical streaming targets — don’t chase louder on the vocal alone.");
+    pushFinding(
+      "Loudness",
+      "Already near streaming loudness. Don’t try to make the vocal louder on its own."
+    );
   }
   if (attackFeel === "bright_transients") {
-    summary.push("Transient top is forward — watch de-ess and FET attack so S/T don’t spit.");
+    pushFinding(
+      "Transients",
+      "Bright attacks up top. Ease FET attack and de-ess so S/T don’t spit."
+    );
   }
   if (monoCompat === "wide_risk") {
-    summary.push("Wide side energy — keep the lead centered; put width on doubles / FX returns.");
+    pushFinding(
+      "Width",
+      "Wide sides. Keep the lead mono-centered; put width on doubles and FX returns."
+    );
   }
   if (designLane === "atmospheric") {
-    summary.push("Deep read: atmospheric lane — shimmer / ambient sends likely carry the record’s mood.");
+    pushFinding("Vibe", "Atmospheric record — ambient/shimmer sends carry a lot of the mood.");
   } else if (designLane === "aggressive_pop") {
-    summary.push("Deep read: aggressive pop lane — designed grit + tight FX throws fit this pocket.");
+    pushFinding("Vibe", "Aggressive pop pocket — grit and tight FX throws fit this reference.");
   } else if (designLane === "intimate") {
-    summary.push("Deep read: intimate lane — short space, almost dry lead, micro-moves only.");
+    pushFinding("Vibe", "Intimate / dry lead — short space only, small moves.");
   } else if (designLane === "wide_fx") {
-    summary.push("Deep read: FX-wide lane — doubles, microshift, and send width do the stereo work.");
+    pushFinding("Vibe", "FX-wide production — doubles and send width do the stereo work.");
   }
   if (mud === "elevated") {
-    summary.push("Deep: low-mid weight suggests a parallel ‘body’ bus or multiband tame before additive air.");
+    pushFinding(
+      "Body",
+      "Heavy low-mids. Tame body (EQ or multiband) before adding air on top."
+    );
   }
   if (readout.tempo?.bpm && readout.tempo.reliable) {
-    summary.push(`Deep tempo sync: ~${readout.tempo.bpm} BPM for throws / granular lengths.`);
+    pushFinding("Tempo sync", `~${readout.tempo.bpm} BPM — use for delay and throw lengths.`);
   }
   if (readout.pitch?.keyLabel && readout.pitch.keyReliable) {
-    summary.push(
-      `Deep pitch lane: scale center ≈ ${readout.pitch.keyLabel}${
-        readout.pitch.relativeKey ? ` (rel. ${readout.pitch.relativeKey})` : ""
+    pushFinding(
+      "Scale",
+      `Center around ${readout.pitch.keyLabel}${
+        readout.pitch.relativeKey ? ` (relative ${readout.pitch.relativeKey})` : ""
       }.`
     );
   }
+
+  const summary = findings.map((f) => f.text);
 
   return {
     ...traits,
@@ -90,6 +112,7 @@ export function deepenTraits(readout, traits) {
       keyLabel: readout.pitch?.keyReliable ? readout.pitch.keyLabel ?? null : null,
       register: readout.pitch?.register ?? null,
     },
+    findings,
     summary,
   };
 }
@@ -576,85 +599,116 @@ export function deepSendExtras(readout, traits) {
 
 /**
  * Deep sound-design brief for the Design tab.
+ * Plain-language production plan — not a plugin dump.
  */
 export function buildDesignBrief(readout, traits) {
   const lane = traits.deep?.designLane || "polished_lead";
   const space = traits.deep?.spaceCharacter || "supported";
   const delivery = traits.deep?.delivery || "competitive";
 
-  const laneCopy = {
-    polished_lead: "Clean contemporary lead — FX support the vocal; they don’t become the song.",
-    atmospheric: "Atmosphere-forward — shimmer, long tails, and designed space are part of the hook.",
-    aggressive_pop: "Aggressive pop/R&B edge — tighter FX, dirt parallel, sharper pitch character.",
-    intimate: "Close and dry — micro space only; any wash should feel like a whisper.",
-    wide_fx: "Width comes from doubles, microshift, and sends — keep the dry lead mono and solid.",
+  const laneMeta = {
+    polished_lead: {
+      title: "Clean contemporary lead",
+      blurb: "FX support the vocal — they shouldn’t become the song. Keep the dry lead clear and centered.",
+    },
+    atmospheric: {
+      title: "Atmosphere-first vocal",
+      blurb: "Long tails, shimmer, and designed space are part of the hook. Build depth with sends, not by soaking the dry lead.",
+    },
+    aggressive_pop: {
+      title: "Aggressive pop edge",
+      blurb: "Tighter FX, optional grit, and sharper pitch character. Keep energy high without washing out the lyric.",
+    },
+    intimate: {
+      title: "Close and dry",
+      blurb: "Almost no wash. Micro space only — silence and proximity are the effect.",
+    },
+    wide_fx: {
+      title: "Width from arrangement",
+      blurb: "Doubles, microshift, and FX returns create the stereo image. Keep the dry lead mono and solid in the center.",
+    },
   };
+
+  const spaceCue = {
+    wet_wide: "Wide, wet space — use two sends (short body + long bloom).",
+    dry_forward: "Dry and forward — one short plate/room at a low send.",
+    supported: "Natural support — plate for glue, throws on phrase ends.",
+  };
+
+  const meta = laneMeta[lane] || laneMeta.polished_lead;
+
+  const spaceGoal =
+    space === "wet_wide"
+      ? "Depth is part of the hook — build it on sends so the dry lead stays intelligible."
+      : space === "dry_forward"
+        ? "Keep space short and quiet so the lyric stays right up front."
+        : "Space should glue the vocal without becoming a wash.";
 
   const layers = [
     {
       id: "space",
-      title: "Space architecture",
-      intent: laneCopy[lane] || laneCopy.polished_lead,
-      moves: [
+      title: "Reverb & delay",
+      goal: spaceGoal,
+      actions: [
         space === "wet_wide"
-          ? "Two-send system: short plate for body + ambient shimmer/Blackhole for bloom"
+          ? "Use two sends: a short plate for body, plus a longer ambient/shimmer send for bloom."
           : space === "dry_forward"
-            ? "One short plate or room · pre-delay ~15–25 ms · low send"
-            : "Plate for glue · delay throws on phrase ends · optional shimmer bed under hooks",
-        "Filter every return hard — bright tails fight de-ess and air",
-        "Pre-delay so consonants stay dry; wash arrives after the lyric",
+            ? "One short plate or room only. Pre-delay about 15–25 ms. Keep the send low."
+            : "Plate for glue. Add delay throws on phrase ends. Optional shimmer under hooks only.",
+        "Filter every return — bright tails fight de-ess and air.",
+        "Set pre-delay so consonants stay dry; the wash arrives after the lyric.",
       ],
       tools: affiliatesForRole("ambient"),
     },
     {
       id: "ambient_bed",
-      title: "Ambient bed & pads",
-      intent:
+      title: "Ambient bed",
+      goal:
         lane === "intimate"
-          ? "Skip beds — intimacy dies when pads fill the pocket."
-          : "A quiet atmospheric bed under hooks sells ‘record’ depth without drowning the lead.",
-      moves: [
+          ? "Skip pads. Intimacy dies when beds fill the pocket."
+          : "A quiet bed under hooks adds record depth without drowning the lead.",
+      actions: [
         lane === "intimate"
-          ? "No pad bed — leave air around the voice"
-          : "Dedicated ambient return (Shimmer / Supermassive / Blackhole) under choruses only",
-        "HPF ~200–300 Hz on the bed · LPF ~6–8 kHz so S’s stay clean",
-        "Sidechain or automate the bed −3 to −6 dB under dense lines",
+          ? "No pad bed — leave air around the voice."
+          : "Add a dedicated ambient return under choruses only (not always on).",
+        "High-pass the bed around 200–300 Hz and low-pass around 6–8 kHz so S sounds stay clean.",
+        "Automate or sidechain the bed down 3–6 dB under dense lines.",
       ],
       tools: affiliatesForRole("ambient_bed"),
     },
     {
       id: "design",
-      title: "Sound design & transitions",
-      intent:
+      title: "Section moments",
+      goal:
         lane === "intimate"
           ? "Almost no design moments — silence is the effect."
-          : "Granular / reverse / Portal-style one-shots mark section changes like a finished record.",
-      moves: [
+          : "Short design hits (reverse, granular, throws) mark section changes like a finished record.",
+      actions: [
         lane === "intimate"
-          ? "Skip always-on design layers"
-          : "Automate throws into choruses, bridges, and outros only",
-        "Print FX to audio and arrange — treat design like production, not a live preset",
-        "Reverse reverb into downbeats · short granular sprays after hooks",
+          ? "Skip always-on design layers."
+          : "Automate throws into choruses, bridges, and outros only.",
+        "Print FX to audio and arrange them — treat design like production, not a live preset.",
+        "Try reverse reverb into downbeats and short sprays after hooks.",
       ],
       tools: affiliatesForRole("granular"),
     },
     {
       id: "character",
       title: "Vocal character",
-      intent:
+      goal:
         lane === "aggressive_pop"
-          ? "Allow a harder pitch lane + parallel grit."
+          ? "Harder pitch + a little parallel grit is fair game."
           : lane === "atmospheric"
-            ? "Optional formant / VocalSynth bed under hooks."
-            : "Transparent pitch · natural formant — character comes from saturation and doubles.",
-      moves: [
-        "Decide pitch personality before saturation so harmonics match",
+            ? "Optional formant / synth-vocal color under hooks."
+            : "Keep pitch natural. Character comes from saturation and doubles, not heavy effects.",
+      actions: [
+        "Decide pitch personality before saturation so harmonics match.",
         traits.tone.air === "elevated"
-          ? "Air is already up — Fresh Air / Maag only if the lead still feels veiled"
-          : "Gentle air tool after de-ess if presence needs lift",
+          ? "Air is already bright — only add more top if the lead still feels veiled."
+          : "After de-ess, a gentle air lift is fine if presence needs help.",
         lane === "aggressive_pop"
-          ? "Parallel dirt (Trash / RC-20) at 10–25% under the clean lead"
-          : "Keep grit optional — mute often",
+          ? "Parallel dirt at about 10–25% under the clean lead."
+          : "Keep grit optional — mute it often.",
       ],
       tools: [
         ...affiliatesForRole("pitch").slice(0, 2),
@@ -663,39 +717,39 @@ export function buildDesignBrief(readout, traits) {
     },
     {
       id: "layers",
-      title: "Designed vocal layers",
-      intent:
+      title: "Extra vocal layers",
+      goal:
         lane === "atmospheric" || space === "wet_wide"
-          ? "Stack quiet octaves, choir, or talkbox under hooks — felt more than heard."
-          : "Doubles and ad-libs first; synth-vocal layers only if the ref clearly uses them.",
-      moves: [
-        "Separate track for design layers — never insert VocalSynth on the dry lead",
-        "Duck under lead consonants; mute in dry verses",
-        "Match formant / pitch personality to the lead lane",
+          ? "Quiet octaves, choir, or talkbox under hooks — felt more than heard."
+          : "Doubles and ad-libs first. Synth-vocal layers only if the reference clearly uses them.",
+      actions: [
+        "Put design layers on a separate track — never insert them on the dry lead.",
+        "Duck under lead consonants; mute them in dry verses.",
+        "Match pitch/formant personality to the lead.",
       ],
       tools: affiliatesForRole("vocal_design"),
     },
     {
       id: "width",
-      title: "Stereo & doubles",
-      intent: "Lead stays centered. Width is arrangement + FX returns.",
-      moves: [
+      title: "Stereo width",
+      goal: "Lead stays centered. Width comes from doubles and FX returns — not a widener on the dry vocal.",
+      actions: [
         traits.deep?.monoCompat === "wide_risk"
-          ? "Priority: mono-check every widen move"
-          : "Real or stacked doubles panned L/R under the hook",
-        "MicroShift-style thicken at low mix if doubles aren’t available",
-        "Keep sub / body mono; open width above ~2–3 kHz on returns",
+          ? "Priority: mono-check every widen move."
+          : "Stack doubles panned left/right under the hook.",
+        "If you don’t have doubles, a light microshift thicken is enough.",
+        "Keep low end mono. Open width above about 2–3 kHz on returns only.",
       ],
       tools: affiliatesForRole("microshift"),
     },
     {
       id: "delivery",
-      title: "Loudness & print discipline",
-      intent: `Delivery pocket reads ${delivery.replace(/_/g, " ")} — don’t chase loudness on the vocal alone.`,
-      moves: [
-        "A/B wet vs dry against the reference at matched loudness",
-        "Print FX returns before the master limiter so bloom isn’t crushed",
-        "Leave true-peak headroom for the master pass (Design → Master tab)",
+      title: "Print & loudness",
+      goal: `This mix already sits in a ${delivery.replace(/_/g, " ")} loudness pocket — don’t chase volume on the vocal alone.`,
+      actions: [
+        "A/B wet vs dry against the reference at matched loudness.",
+        "Print FX returns before the master limiter so bloom isn’t crushed.",
+        "Leave true-peak headroom for the Master tab.",
       ],
       tools: affiliatesForRole("master_meter"),
     },
@@ -704,16 +758,23 @@ export function buildDesignBrief(readout, traits) {
   return {
     lane,
     space,
-    headline: `Deep lane · ${lane.replace(/_/g, " ")}`,
-    blurb: laneCopy[lane],
+    headline: meta.title,
+    blurb: meta.blurb,
+    cues: [
+      { label: "Space", text: spaceCue[space] || spaceCue.supported },
+      {
+        label: "Loudness",
+        text: `Reads ${delivery.replace(/_/g, " ")} — finish tone before chasing level.`,
+      },
+    ],
     layers,
     checklist: [
-      "Dry lead centered and mono-safe",
-      "FX on filtered sends — never 100% wet on the lead",
-      "Ambient bed automated under hooks, not always-on",
-      "Design moments (granular / reverse) printed and arranged",
-      "Vocal design layers ducked under consonants",
-      "A/B wet and dry against the reference at matched loudness",
+      "Dry lead is centered and still sounds good in mono",
+      "FX are on filtered sends — not 100% wet on the lead",
+      "Ambient bed only under hooks (or skipped for intimate mixes)",
+      "Design moments are printed and arranged, not always running",
+      "Extra vocal layers are ducked under consonants",
+      "Wet and dry A/B’d against the reference at matched loudness",
       "Master image checked after vocal FX are printed",
     ],
   };

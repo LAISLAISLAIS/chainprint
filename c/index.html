@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Shared chain | Chainprint</title>
+  <meta name="description" content="A mix chain reverse-engineered with Chainprint — every stage, every setting." />
+  <meta name="robots" content="noindex, follow" />
+  <meta name="theme-color" content="#000000" />
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="../assets/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png" sizes="180x180" />
+  <link rel="manifest" href="../site.webmanifest" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Chainprint" />
+  <meta property="og:title" content="Shared chain · Chainprint" />
+  <meta property="og:image" content="https://chainprint.app/assets/og-image.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" />
+  <link rel="stylesheet" href="../css/chassis.css" />
+  <link rel="stylesheet" href="../css/logo.css" />
+  <link rel="stylesheet" href="../css/share.css" />
+</head>
+<body>
+  <div class="share-page">
+    <div class="share-shell">
+      <header class="share-top">
+        <a class="logo" href="../" aria-label="Chainprint home">
+          <span class="logo-mark" aria-hidden="true"></span>
+          <span class="logo-word">Chainprint</span>
+        </a>
+        <a class="share-cta-btn" href="../analyze/">Recreate this — analyze your own</a>
+      </header>
+
+      <div class="share-loading" data-share-loading>
+        <p>Loading chain…</p>
+      </div>
+
+      <div class="share-error hidden" data-share-error>
+        <h1>Chain not found</h1>
+        <p data-share-error-msg>This link may have been deleted, or it never existed.</p>
+        <a class="share-cta-btn" href="../analyze/">Analyze your own reference</a>
+      </div>
+
+      <article class="share-card hidden" data-share-card>
+        <header class="share-head">
+          <img class="share-art hidden" data-share-art alt="" />
+          <div class="share-head-copy">
+            <p class="share-kicker" data-share-kicker>Vocal chain</p>
+            <h1 class="share-title" data-share-title>Reference mix</h1>
+            <p class="share-chips" data-share-chips></p>
+          </div>
+        </header>
+
+        <p class="share-lede">
+          Reverse-engineered with Chainprint. Open each processor in order and set the values below.
+        </p>
+
+        <div class="share-columns">
+          <section class="share-col">
+            <h2>Inserts</h2>
+            <div class="share-stack" data-share-inserts></div>
+          </section>
+          <section class="share-col">
+            <h2>Sends</h2>
+            <div class="share-stack" data-share-sends></div>
+          </section>
+        </div>
+
+        <footer class="share-foot">
+          <div>
+            <p class="share-foot-title">Want this on your own track?</p>
+            <p class="share-foot-sub">Drop in a reference — Chainprint dials the whole chain and lets you hear it.</p>
+          </div>
+          <a class="share-cta-btn is-solid" href="../auth/?mode=signup&next=/analyze/">Try Chainprint free</a>
+        </footer>
+      </article>
+    </div>
+  </div>
+
+  <script type="module" src="../js/ui/chain-view.js"></script>
+</body>
+</html>

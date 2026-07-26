@@ -1,10 +1,18 @@
 /**
  * Build a Web Audio approximation of a Chainprint chain from step.visual params.
+ *
+ * Tuned for *preview* clarity — dials are scaled gentler than the written chain
+ * so A/B against dry stays musical instead of washed / pumped / phasey.
  */
 
 /**
  * @typedef {{ input: AudioNode, output: AudioNode, dispose: () => void }} ChainFxGraph
  */
+
+/** Preview intensity — keep below 1 so the chain suggests rather than replaces the take */
+const PREVIEW_EQ = 0.62;
+const PREVIEW_COMP_MAKEUP = 0.35;
+const PREVIEW_SEND = 0.55;
 
 /**
  * @param {AudioContext} ctx
@@ -24,16 +32,20 @@ export function buildChainFx(ctx, chain) {
   nodes.push(input);
 
   let cursor = input;
+  let usedCompressor = false;
 
   for (const step of inserts) {
+    const kind = String(step?.visual?.kind || "");
+    // One compressor in the preview is enough — stacked DynamicsCompressors pump hard
+    if ((kind === "compressor" || kind === "limiter") && usedCompressor) continue;
     const built = buildStepNodes(ctx, step?.visual, "insert");
     if (!built) continue;
+    if (kind === "compressor" || kind === "limiter") usedCompressor = true;
     cursor.connect(built.input);
     cursor = built.output;
     nodes.push(...built.nodes);
   }
 
-  // Split: dry insert path continues; sends are parallel wet returns blended in
   const insertOut = ctx.createGain();
   insertOut.gain.value = 1;
   cursor.connect(insertOut);
@@ -44,20 +56,24 @@ export function buildChainFx(ctx, chain) {
   insertOut.connect(mix);
   nodes.push(mix);
 
+  let sendCount = 0;
   for (const step of sends) {
+    if (sendCount >= 2) break; // cap wet clutter
     const built = buildStepNodes(ctx, step?.visual, "send");
     if (!built) continue;
     const sendGain = ctx.createGain();
-    // Keep sends subtle so the preview doesn't wash out the lead
-    sendGain.gain.value = typeof built.sendLevel === "number" ? built.sendLevel : 0.28;
+    const base = typeof built.sendLevel === "number" ? built.sendLevel : 0.16;
+    sendGain.gain.value = base * PREVIEW_SEND;
     insertOut.connect(sendGain);
     sendGain.connect(built.input);
     built.output.connect(mix);
     nodes.push(sendGain, ...built.nodes);
+    sendCount += 1;
   }
 
+  // Soft ceiling so stacked stages don't clip into the speakers
   const output = ctx.createGain();
-  output.gain.value = 0.92; // slight headroom after FX stack
+  output.gain.value = 0.85;
   mix.connect(output);
   nodes.push(output);
 
@@ -103,11 +119,11 @@ function buildStepNodes(ctx, visual, placement) {
     case "saturator":
       return buildSaturator(ctx, visual);
     case "width":
-      return buildWidth(ctx, visual);
-    case "modulation":
-      return buildModulation(ctx, visual);
     case "imaging":
-      return buildWidth(ctx, { mode: "fx_wide" });
+      // Mid-side width is unreliable on mono vocals and often sounds phasey — skip in preview
+      return placement === "send" ? null : passThrough(ctx);
+    case "modulation":
+      return buildModulation(ctx, visual, placement);
     default:
       return placement === "send" ? null : passThrough(ctx);
   }
@@ -121,9 +137,9 @@ function passThrough(ctx) {
 
 function buildGain(ctx, visual) {
   const g = ctx.createGain();
-  // Peak targets are instructional; apply a gentle trim so later stages have headroom
+  // Instructional peak targets — tiny trim only so we don't starve later stages
   const headroom = Number(visual.headroomDb);
-  const trim = Number.isFinite(headroom) ? Math.min(0, -Math.min(6, headroom) * 0.15) : -0.5;
+  const trim = Number.isFinite(headroom) ? Math.min(0, -Math.min(4, headroom) * 0.08) : -0.2;
   g.gain.value = dbToGain(trim);
   return { input: g, output: g, nodes: [g] };
 }
@@ -149,15 +165,28 @@ function buildEq(ctx, visual) {
     filter.frequency.value = freq;
 
     if (filter.type === "peaking" || filter.type === "lowshelf" || filter.type === "highshelf") {
-      filter.gain.value = clamp(Number(band.gain) || 0, -18, 18);
+      // Scale cuts/boosts so preview doesn't gut the take
+      filter.gain.value = clamp((Number(band.gain) || 0) * PREVIEW_EQ, -10, 8);
     }
     if (filter.type === "peaking" || filter.type === "lowpass" || filter.type === "highpass") {
       const q = Number(band.q);
-      filter.Q.value = Number.isFinite(q) && q > 0 ? clamp(q, 0.1, 18) : type === "hpf" ? 0.7 : 1;
+      filter.Q.value = Number.isFinite(q) && q > 0 ? clamp(q, 0.3, 8) : type === "hpf" ? 0.7 : 0.9;
     }
-    // Approximate steep HPF slope with higher Q on first order (Web Audio is 12dB/oct)
     if ((type === "hpf" || type === "highpass") && Number(band.slope) >= 24) {
-      filter.Q.value = 0.9;
+      // Cascade a second gentle HPF instead of resonant Q
+      filter.Q.value = 0.707;
+      nodes.push(filter);
+      if (!input) input = filter;
+      if (prev) prev.connect(filter);
+      prev = filter;
+      const steep = ctx.createBiquadFilter();
+      steep.type = "highpass";
+      steep.frequency.value = freq;
+      steep.Q.value = 0.707;
+      prev.connect(steep);
+      nodes.push(steep);
+      prev = steep;
+      continue;
     }
 
     nodes.push(filter);
@@ -177,20 +206,20 @@ function buildCompressor(ctx, visual, isLimiter) {
   const grDb = Number(visual.grDb ?? visual.catchDb);
 
   comp.ratio.value = clamp(
-    isLimiter ? Math.max(12, ratio || 20) : Number.isFinite(ratio) ? ratio : 3,
-    1,
-    20
+    isLimiter ? Math.max(8, ratio || 12) : Number.isFinite(ratio) ? Math.min(ratio, 6) : 3,
+    1.5,
+    12
   );
-  comp.attack.value = clamp((Number.isFinite(attackMs) ? attackMs : isLimiter ? 1 : 15) / 1000, 0, 1);
-  comp.release.value = clamp((Number.isFinite(releaseMs) ? releaseMs : 80) / 1000, 0.01, 1);
-  comp.knee.value = visual.knee === "hard" || isLimiter ? 3 : 12;
+  comp.attack.value = clamp((Number.isFinite(attackMs) ? attackMs : isLimiter ? 2 : 18) / 1000, 0.001, 0.2);
+  comp.release.value = clamp((Number.isFinite(releaseMs) ? releaseMs : 120) / 1000, 0.04, 0.6);
+  comp.knee.value = isLimiter ? 4 : 12;
 
-  // Heuristic threshold: more GR target → lower threshold
-  const targetGr = Number.isFinite(grDb) ? grDb : isLimiter ? 2 : 4;
-  comp.threshold.value = clamp(isLimiter ? -6 - targetGr : -18 - targetGr * 1.5, -60, 0);
+  // Softer threshold than the written chain — preview shouldn't squash
+  const targetGr = Number.isFinite(grDb) ? Math.min(grDb, isLimiter ? 2.5 : 4) : isLimiter ? 1.5 : 3;
+  comp.threshold.value = clamp(isLimiter ? -4 - targetGr : -14 - targetGr, -40, -6);
 
   const makeup = ctx.createGain();
-  makeup.gain.value = dbToGain(Math.min(targetGr * 0.55, isLimiter ? 2 : 5));
+  makeup.gain.value = dbToGain(Math.min(targetGr * PREVIEW_COMP_MAKEUP, isLimiter ? 1.2 : 2.5));
 
   comp.connect(makeup);
   return { input: comp, output: makeup, nodes: [comp, makeup] };
@@ -203,19 +232,19 @@ function buildDelay(ctx, visual) {
 
   const input = ctx.createGain();
   const delay = ctx.createDelay(Math.min(2, delayMs / 1000 + 0.05));
-  delay.delayTime.value = clamp(delayMs / 1000, 0.02, 1.8);
+  delay.delayTime.value = clamp(delayMs / 1000, 0.02, 1.5);
 
   const feedback = ctx.createGain();
-  feedback.gain.value = clamp((Number.isFinite(feedbackPct) ? feedbackPct : 20) / 100, 0, 0.55);
+  feedback.gain.value = clamp((Number.isFinite(feedbackPct) ? feedbackPct : 18) / 100, 0, 0.4);
 
   const filter = ctx.createBiquadFilter();
   filter.type = "lowpass";
-  filter.frequency.value = clamp(Number.isFinite(lowpassHz) ? lowpassHz : 4500, 800, 16000);
+  filter.frequency.value = clamp(Number.isFinite(lowpassHz) ? lowpassHz : 4200, 1200, 10000);
   filter.Q.value = 0.7;
 
   const hpf = ctx.createBiquadFilter();
   hpf.type = "highpass";
-  hpf.frequency.value = 220;
+  hpf.frequency.value = 280;
 
   input.connect(delay);
   delay.connect(filter);
@@ -227,7 +256,7 @@ function buildDelay(ctx, visual) {
     input,
     output: hpf,
     nodes: [input, delay, feedback, filter, hpf],
-    sendLevel: 0.32,
+    sendLevel: 0.18,
   };
 }
 
@@ -237,14 +266,18 @@ function buildReverb(ctx, visual) {
 
   const input = ctx.createGain();
   const pre = ctx.createDelay(0.25);
-  pre.delayTime.value = clamp((Number.isFinite(preDelayMs) ? preDelayMs : 40) / 1000, 0, 0.2);
+  pre.delayTime.value = clamp((Number.isFinite(preDelayMs) ? preDelayMs : 28) / 1000, 0, 0.12);
 
   const convolver = ctx.createConvolver();
   convolver.buffer = makeImpulse(ctx, size);
 
   const hpf = ctx.createBiquadFilter();
   hpf.type = "highpass";
-  hpf.frequency.value = 280;
+  hpf.frequency.value = 350;
+
+  const lpf = ctx.createBiquadFilter();
+  lpf.type = "lowpass";
+  lpf.frequency.value = 6500;
 
   const wet = ctx.createGain();
   wet.gain.value = 1;
@@ -252,113 +285,89 @@ function buildReverb(ctx, visual) {
   input.connect(pre);
   pre.connect(convolver);
   convolver.connect(hpf);
-  hpf.connect(wet);
+  hpf.connect(lpf);
+  lpf.connect(wet);
 
   return {
     input,
     output: wet,
-    nodes: [input, pre, convolver, hpf, wet],
-    sendLevel: size.includes("hall") || size.includes("large") ? 0.22 : 0.26,
+    nodes: [input, pre, convolver, hpf, lpf, wet],
+    sendLevel: size.includes("hall") || size.includes("large") ? 0.12 : 0.15,
   };
 }
 
 function buildDeesser(ctx, visual) {
-  // Light static HF cut as approximation (true de-ess needs dynamics)
-  const freq = clamp(Number(visual.freq) || 6500, 3000, 12000);
-  const reduction = clamp(Number(visual.reductionDb) || 3, 0, 12);
+  const freq = clamp(Number(visual.freq) || 6500, 4000, 11000);
+  const reduction = clamp(Number(visual.reductionDb) || 3, 0, 8);
 
   const filter = ctx.createBiquadFilter();
   filter.type = "peaking";
   filter.frequency.value = freq;
-  filter.Q.value = 2.2;
-  filter.gain.value = -Math.min(reduction * 0.55, 5);
+  filter.Q.value = 1.8;
+  filter.gain.value = -Math.min(reduction * 0.4, 3.5);
 
   return { input: filter, output: filter, nodes: [filter] };
 }
 
 function buildSaturator(ctx, visual) {
   const driveLabel = String(visual.drive || "low").toLowerCase();
-  let amount = 0.12;
-  if (driveLabel.includes("high") || driveLabel.includes("hot")) amount = 0.35;
-  else if (driveLabel.includes("med")) amount = 0.22;
+  let amount = 0.06;
+  if (driveLabel.includes("high") || driveLabel.includes("hot")) amount = 0.16;
+  else if (driveLabel.includes("med")) amount = 0.1;
 
   const shaper = ctx.createWaveShaper();
   shaper.curve = makeSaturationCurve(amount);
   shaper.oversample = "2x";
 
   const makeup = ctx.createGain();
-  makeup.gain.value = 0.92;
+  makeup.gain.value = 0.96;
 
   shaper.connect(makeup);
   return { input: shaper, output: makeup, nodes: [shaper, makeup] };
 }
 
-function buildWidth(ctx, visual) {
-  // Mid-side-ish width via channel splitter (center mode ≈ mono-ish mild)
-  const mode = String(visual.mode || "center");
-  const splitter = ctx.createChannelSplitter(2);
-  const merger = ctx.createChannelMerger(2);
-  const midL = ctx.createGain();
-  const midR = ctx.createGain();
-  const sideL = ctx.createGain();
-  const sideR = ctx.createGain();
-
-  const width = mode === "center" ? 0.15 : 0.55;
-  midL.gain.value = 1 - width * 0.35;
-  midR.gain.value = 1 - width * 0.35;
-  sideL.gain.value = width;
-  sideR.gain.value = width;
-
-  splitter.connect(midL, 0);
-  splitter.connect(midR, 1);
-  splitter.connect(sideL, 0);
-  splitter.connect(sideR, 1);
-  // Cross-feed for width illusion
-  midL.connect(merger, 0, 0);
-  midR.connect(merger, 0, 1);
-  sideL.connect(merger, 0, 1);
-  sideR.connect(merger, 0, 0);
-
-  return {
-    input: splitter,
-    output: merger,
-    nodes: [splitter, merger, midL, midR, sideL, sideR],
-  };
-}
-
-function buildModulation(ctx, visual) {
+function buildModulation(ctx, visual, placement) {
+  const input = ctx.createGain();
   const delay = ctx.createDelay(0.05);
-  delay.delayTime.value = 0.018;
+  delay.delayTime.value = 0.014;
   const lfo = ctx.createOscillator();
   lfo.type = "sine";
-  lfo.frequency.value = String(visual.rate || "").includes("fast") ? 1.8 : 0.35;
+  lfo.frequency.value = String(visual.rate || "").includes("fast") ? 1.2 : 0.3;
   const lfoGain = ctx.createGain();
-  lfoGain.gain.value = 0.004;
+  lfoGain.gain.value = 0.0025;
   lfo.connect(lfoGain);
   lfoGain.connect(delay.delayTime);
   lfo.start();
 
   const wet = ctx.createGain();
-  wet.gain.value = 0.7;
+  wet.gain.value = placement === "send" ? 1 : 0.22;
+  const dry = ctx.createGain();
+  dry.gain.value = placement === "send" ? 0 : 0.85;
+  const out = ctx.createGain();
+
+  input.connect(delay);
   delay.connect(wet);
+  wet.connect(out);
+  input.connect(dry);
+  dry.connect(out);
 
   return {
-    input: delay,
-    output: wet,
-    nodes: [delay, lfo, lfoGain, wet],
-    sendLevel: 0.18,
+    input,
+    output: out,
+    nodes: [input, delay, lfo, lfoGain, wet, dry, out],
+    sendLevel: 0.12,
   };
 }
 
 function makeImpulse(ctx, sizeLabel) {
   const sr = ctx.sampleRate;
-  let seconds = 0.55;
+  let seconds = 0.4;
   if (sizeLabel.includes("hall") || sizeLabel.includes("large") || sizeLabel.includes("ambient")) {
-    seconds = 1.4;
+    seconds = 0.95;
   } else if (sizeLabel.includes("room") || sizeLabel.includes("chamber")) {
-    seconds = 0.85;
+    seconds = 0.55;
   } else if (sizeLabel.includes("plate") || sizeLabel.includes("short")) {
-    seconds = 0.45;
+    seconds = 0.32;
   }
 
   const length = Math.floor(sr * seconds);
@@ -367,8 +376,9 @@ function makeImpulse(ctx, sizeLabel) {
     const data = buffer.getChannelData(ch);
     for (let i = 0; i < length; i++) {
       const t = i / length;
-      const decay = Math.pow(1 - t, 2.2);
-      data[i] = (Math.random() * 2 - 1) * decay * (ch === 0 ? 1 : 0.92);
+      // Faster decay + softer noise = less wash on vocals
+      const decay = Math.pow(1 - t, 2.8) * (1 - t * 0.35);
+      data[i] = (Math.random() * 2 - 1) * decay * (ch === 0 ? 0.55 : 0.5);
     }
   }
   return buffer;
@@ -377,7 +387,7 @@ function makeImpulse(ctx, sizeLabel) {
 function makeSaturationCurve(amount) {
   const n = 256;
   const curve = new Float32Array(n);
-  const k = 1 + amount * 8;
+  const k = 1 + amount * 5;
   for (let i = 0; i < n; i++) {
     const x = (i * 2) / (n - 1) - 1;
     curve[i] = ((1 + k) * x) / (1 + k * Math.abs(x));
@@ -390,7 +400,7 @@ function parseDelayMs(time) {
   const s = String(time || "");
   const m = s.match(/(\d+(?:\.\d+)?)\s*ms/i);
   if (m) return Number(m[1]);
-  if (/dotted\s*1\/8/i.test(s)) return 375;
+  if (/dotted/i.test(s) && /1\/8/.test(s)) return 375;
   if (/1\/8/i.test(s)) return 250;
   if (/1\/4/i.test(s)) return 500;
   if (/1\/16/i.test(s)) return 125;
