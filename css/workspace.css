@@ -4096,7 +4096,8 @@
 @media (max-width: 960px) {
   .studio-body {
     height: auto;
-    min-height: 100dvh;
+    /* svh, not dvh — dvh reflows every frame while the mobile URL bar animates */
+    min-height: 100svh;
     overflow: auto;
     overflow-x: clip;
   }
@@ -4106,7 +4107,7 @@
     --studio-top-height: auto;
     --studio-sticky-offset: calc(48px + 44px + env(safe-area-inset-top, 0px));
     height: auto;
-    min-height: 100dvh;
+    min-height: 100svh;
     grid-template-rows: auto 1fr;
     max-width: 100%;
     overflow-x: clip;
@@ -4119,9 +4120,8 @@
     grid-template-rows: 48px auto;
     height: auto;
     padding-top: env(safe-area-inset-top, 0);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    background: rgba(6, 6, 6, 0.92);
+    /* No backdrop blur on the sticky header — repaints every scroll frame on mobile */
+    background: #060606;
   }
 
   .studio-brand {
@@ -4222,9 +4222,32 @@
     margin-right: 2px;
   }
 
+  /* One scroll container on mobile — nothing clipped, every row reachable */
   .source-stack {
     padding: 14px 14px 10px;
-    overflow: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  .library-list {
+    overflow: visible;
+    max-height: none;
+    scrollbar-gutter: auto;
+    padding-right: 0;
+  }
+
+  .library-item-play {
+    width: 38px;
+    height: 38px;
+  }
+
+  .library-item-remove {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    padding: 0;
   }
 
   .source-dock {

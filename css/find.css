@@ -3,7 +3,7 @@
 .find-body {
   background: #000;
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100svh;
 }
 
 .find-body::before {
@@ -12,7 +12,7 @@
 
 .find-page {
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
   padding: var(--space-5) var(--space-5) var(--space-6);

@@ -54,6 +54,10 @@ export function mountPlaybackPulse(parent = document.body) {
       </span>
       <button type="button" class="playback-dock-title-btn" data-player-expand-title>
         <p class="playback-dock-title" data-player-title>Reference</p>
+        <span class="playback-dock-queue-hint" data-player-queue-hint hidden>
+          <span data-player-queue-count></span>
+          <i class="playback-dock-queue-chev" aria-hidden="true"></i>
+        </span>
       </button>
       <button type="button" class="playback-dock-close" data-player-close aria-label="Close player">
         <span aria-hidden="true"></span>
@@ -108,6 +112,8 @@ export function mountPlaybackPulse(parent = document.body) {
 
   const titleEl = el.querySelector("[data-player-title]");
   const titleBtn = el.querySelector("[data-player-expand-title]");
+  const queueHint = el.querySelector("[data-player-queue-hint]");
+  const queueCount = el.querySelector("[data-player-queue-count]");
   const playBtn = el.querySelector("[data-player-play]");
   const seek = el.querySelector("[data-player-seek]");
   const currentEl = el.querySelector("[data-player-current]");
@@ -181,6 +187,8 @@ export function mountPlaybackPulse(parent = document.body) {
     if (titleBtn) {
       titleBtn.title = multi ? "Show tracks" : "";
     }
+    if (queueHint) queueHint.hidden = !multi;
+    if (queueCount) queueCount.textContent = multi ? String(tracks.length) : "";
     if (!multi && expanded) setExpanded(false);
     else if (expanded) renderQueue();
   }

@@ -299,7 +299,7 @@ body > * {
 /* Shared satellite page shell (auth / settings / find / share / legal) */
 .page-shell {
   min-height: 100vh;
-  min-height: 100dvh;
+  min-height: 100svh;
   padding: var(--space-5) var(--space-4) var(--space-6);
   padding-top: calc(var(--space-5) + env(safe-area-inset-top, 0));
   padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom, 0));
@@ -401,6 +401,45 @@ body > * {
   cursor: inherit;
   color: inherit;
   font: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.playback-dock.has-queue .playback-dock-title-btn {
+  cursor: pointer;
+}
+
+.playback-dock-queue-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(110, 196, 180, 0.28);
+  background: rgba(110, 196, 180, 0.08);
+  color: var(--teal, #6ec4b4);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.playback-dock-queue-hint[hidden] {
+  display: none !important;
+}
+
+.playback-dock-queue-chev {
+  width: 7px;
+  height: 7px;
+  border-left: 1.5px solid currentColor;
+  border-top: 1.5px solid currentColor;
+  transform: rotate(45deg) translateY(1px);
+  transition: transform 0.18s ease;
+}
+
+.playback-dock.is-expanded .playback-dock-queue-chev {
+  transform: rotate(225deg) translateY(1px);
 }
 
 .playback-dock-sheet {

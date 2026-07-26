@@ -125,7 +125,6 @@
   flex: 0 0 auto;
   animation: chain-flow-color 1.5s ease-in-out infinite;
   animation-delay: calc(var(--i, 0) * -0.3s);
-  will-change: border-color, opacity, box-shadow;
 }
 
 .chain-flow-link--v {
@@ -147,34 +146,31 @@
   100% {
     border-color: #1f524c;
     opacity: 0.7;
-    box-shadow: 0 0 0 rgba(110, 196, 180, 0);
   }
   25% {
     border-color: #3f8f84;
     opacity: 0.9;
-    box-shadow: 0 0 6px rgba(110, 196, 180, 0.2);
   }
   50% {
     border-color: #6ec4b4;
     opacity: 1;
-    box-shadow: 0 0 12px rgba(110, 196, 180, 0.55);
   }
   75% {
     border-color: #e8fffa;
     opacity: 1;
-    box-shadow: 0 0 16px rgba(232, 255, 250, 0.45);
   }
 }
 
+/* Scale + opacity only — filter stays static so this composites on mobile */
 @keyframes chain-flow-breathe {
   0%,
   100% {
     transform: scale(1);
-    filter: drop-shadow(0 0 10px rgba(110, 196, 180, 0.28));
+    opacity: 0.9;
   }
   50% {
     transform: scale(1.05);
-    filter: drop-shadow(0 0 18px rgba(142, 217, 203, 0.55));
+    opacity: 1;
   }
 }
 
@@ -188,7 +184,5 @@
     animation: none;
     border-color: #6ec4b4;
     opacity: 0.92;
-    box-shadow: none;
-    will-change: auto;
   }
 }

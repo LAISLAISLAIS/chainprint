@@ -2447,6 +2447,14 @@ async function runAnalysis() {
     renderLibrary();
     applyEntryToStudio(entry);
 
+    // On stacked mobile layout the new row can land past the rail's scroll edge
+    if (window.matchMedia("(max-width: 960px)").matches && entry) {
+      document
+        .querySelector(`[data-library-select="${entry.id}"]`)
+        ?.closest("li")
+        ?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+
     if (shouldConsumeQuota) {
       await consumeAnalysis();
       shouldConsumeQuota = false;
