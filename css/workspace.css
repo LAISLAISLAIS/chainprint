@@ -2329,86 +2329,41 @@
   }
 }
 
-/* Stage rail */
+/* Stage rail — wrap chips so every stage stays visible (no horizontal cutoff) */
 .stage-rail-shell {
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 4;
   flex-shrink: 0;
   border-bottom: 1px solid var(--studio-rule);
   background: #080808;
+  overflow: visible;
 }
 
 .stage-rail-wrap {
   display: flex;
-  align-items: stretch;
-  gap: 0;
-  padding: 8px var(--studio-gutter);
-  overflow-x: auto;
-  scrollbar-width: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 2px;
+  padding: 10px var(--studio-gutter) 12px;
+  overflow: visible;
   scroll-behavior: smooth;
-  overscroll-behavior-x: contain;
-}
-
-.stage-rail-wrap::-webkit-scrollbar {
-  display: none;
 }
 
 .stage-rail {
-  display: flex;
-  gap: 2px;
-  flex: 0 0 auto;
-  min-width: 0;
+  display: contents;
 }
 
 .stage-rail-divider {
   width: 1px;
-  margin: 4px 8px;
-  background: rgba(255, 255, 255, 0.12);
+  height: 1.35rem;
+  margin: 0 8px;
+  background: rgba(255, 255, 255, 0.14);
   flex-shrink: 0;
+  align-self: center;
 }
 
 .stage-rail-more {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding: 0 12px 0 40px;
-  font-size: 1.15rem;
-  font-weight: 400;
-  line-height: 1;
-  color: rgba(220, 220, 220, 0.7);
-  background: linear-gradient(to right, transparent, #080808 55%);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.stage-rail-shell.has-more-right .stage-rail-more {
-  opacity: 1;
-  animation: none;
-  color: rgba(220, 220, 220, 0.55);
-}
-
-@keyframes stage-rail-more-pulse {
-  0%,
-  100% {
-    color: rgba(220, 220, 220, 0.28);
-  }
-  50% {
-    color: rgba(240, 240, 240, 0.75);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .stage-rail-shell.has-more-right .stage-rail-more {
-    animation: none;
-    color: rgba(220, 220, 220, 0.55);
-  }
+  display: none !important;
 }
 
 .stage-chip {
@@ -2417,29 +2372,29 @@
   border: none;
   background: transparent;
   color: #8a8a8a;
-  border-radius: 0;
-  padding: 8px 12px;
+  border-radius: 8px;
+  padding: 8px 11px;
   cursor: pointer;
   text-align: left;
-  max-width: 11rem;
-  transition: color 0.15s ease;
+  max-width: none;
+  transition: color 0.15s ease, background 0.15s ease;
   box-shadow: none;
 }
 
 .stage-chip:hover {
   color: #d8d8d8;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .stage-chip[aria-selected="true"] {
-  background: transparent;
+  background: rgba(255, 255, 255, 0.09);
   color: #f5f5f5;
 }
 
 .stage-chip:focus,
 .stage-chip:focus-visible {
   outline: none;
-  box-shadow: none;
+  box-shadow: var(--focus-ring);
 }
 
 .stage-chip-n {
@@ -2452,8 +2407,8 @@
   font-weight: 600;
   letter-spacing: -0.015em;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .stage-chip-type {
@@ -2463,9 +2418,8 @@
 .stage-focus {
   min-height: 0;
   overflow: auto;
-  display: grid;
-  align-content: start;
-  padding: clamp(18px, 3.2vh, 36px) var(--studio-gutter) clamp(16px, 2.8vh, 32px);
+  display: block;
+  padding: clamp(20px, 3.2vh, 36px) var(--studio-gutter) clamp(20px, 3vh, 36px);
 }
 
 .stage-focus .chain-step {
@@ -2475,15 +2429,14 @@
   border: none;
   background: transparent;
   padding: 0;
-  max-width: none;
+  max-width: 70rem;
   width: 100%;
   margin: 0;
-  /* Auto height so Pro plugin cards aren't clipped by vertical centering */
   min-height: 0;
   height: auto;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
-  gap: clamp(18px, 3.5vh, 40px) clamp(22px, 3.5vw, 44px);
+  grid-template-columns: minmax(0, 1fr) minmax(16rem, 1.1fr);
+  gap: clamp(20px, 3vh, 36px) clamp(24px, 3.5vw, 48px);
   align-items: start;
   align-content: start;
   box-sizing: border-box;
@@ -2496,7 +2449,7 @@
 
 .stage-focus .step-copy {
   display: grid;
-  gap: clamp(12px, 2vh, 22px);
+  gap: clamp(14px, 2vh, 22px);
   align-content: start;
   min-width: 0;
   overflow: visible;
@@ -2513,6 +2466,8 @@
   display: flex;
   flex-direction: column;
   justify-content: start;
+  position: sticky;
+  top: 0;
 }
 
 .stage-focus .step-head {
@@ -2559,9 +2514,27 @@
   line-height: var(--leading-body);
 }
 
-.stage-focus .plugin-face {
-  margin: 0;
-  width: 100%;
+@media (max-width: 1100px) {
+  .stage-focus .chain-step {
+    grid-template-columns: 1fr;
+  }
+
+  .stage-focus .step-rack {
+    position: static;
+  }
+
+  .stage-focus .pro-pick {
+    grid-template-columns: 1fr;
+  }
+
+  .stage-focus .pro-pick-buy {
+    justify-self: start;
+  }
+}
+
+.stage-focus .step-why .why,
+.stage-focus .step-why .how {
+  overflow-wrap: break-word;
 }
 
 .stage-focus .plugin-face .rack-body {
@@ -4280,39 +4253,31 @@
   }
 
   .stage-rail-shell {
-    top: var(--studio-sticky-offset);
+    top: auto;
+    position: relative;
   }
 
   .stage-rail-wrap {
-    flex-direction: column;
-    gap: 6px;
-    padding: 8px var(--studio-gutter);
-    overflow-x: hidden;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px 2px;
+    padding: 10px var(--studio-gutter) 12px;
+    overflow: visible;
   }
 
   .stage-rail {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    padding-bottom: 2px;
-    flex: 1 1 auto;
-    min-width: 0;
-    width: 100%;
-  }
-
-  .stage-rail::-webkit-scrollbar {
-    display: none;
+    display: contents;
   }
 
   .stage-rail-divider {
-    width: 24px;
-    height: 1px;
-    margin: 2px auto;
+    width: 1px;
+    height: 1.25rem;
+    margin: 0 6px;
   }
 
   .stage-chip {
-    padding: 10px 12px;
-    min-height: 44px;
+    padding: 9px 11px;
+    min-height: 40px;
   }
 
   .stage-focus {
@@ -4327,6 +4292,7 @@
     height: auto;
     align-items: start;
     align-content: start;
+    max-width: none;
   }
 
   .stage-focus .step-copy {
@@ -4336,6 +4302,7 @@
 
   .stage-focus .step-rack {
     justify-content: start;
+    position: static;
   }
 
   .stage-focus .step-title {

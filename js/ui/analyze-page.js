@@ -1979,6 +1979,8 @@ function selectStage(index) {
   stageIndex = Math.max(0, Math.min(stages.length - 1, index));
   renderFocus();
   updateStageRailMore();
+  const activeChip = document.querySelector(`[data-stage-index="${stageIndex}"]`);
+  activeChip?.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
 }
 
 function canScrollMoreRight(el) {
