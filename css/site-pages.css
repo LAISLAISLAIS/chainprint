@@ -1,6 +1,7 @@
 /* Shared marketing pages — Tools, Help */
 
 .site-page {
+  --site-content-width: 960px;
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
@@ -20,7 +21,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  width: min(960px, 100%);
+  width: min(var(--site-content-width), 100%);
   margin: 0 auto var(--space-6);
   min-width: 0;
 }
@@ -51,7 +52,7 @@
 }
 
 .site-main {
-  width: min(960px, 100%);
+  width: min(var(--site-content-width), 100%);
   margin: 0 auto;
   flex: 1;
   display: grid;
@@ -169,6 +170,7 @@ a.tool-card:hover {
 
 /* —— Tools page: highlights + glyphs —— */
 .tools-page {
+  --site-content-width: 1040px;
   background:
     radial-gradient(ellipse 55% 32% at 18% 0%, rgba(110, 196, 180, 0.1) 0%, transparent 58%),
     radial-gradient(ellipse 50% 28% at 88% 8%, rgba(255, 255, 255, 0.04) 0%, transparent 52%),
@@ -176,7 +178,6 @@ a.tool-card:hover {
 }
 
 .tools-main {
-  width: min(1040px, 100%);
   gap: clamp(2.25rem, 5vw, 3.25rem);
 }
 
@@ -460,7 +461,7 @@ a.tool-card:hover {
 }
 
 .site-foot {
-  width: min(960px, 100%);
+  width: min(var(--site-content-width), 100%);
   margin: var(--space-6) auto 0;
   padding-top: var(--space-4);
   border-top: 1px solid rgba(255, 255, 255, 0.08);
