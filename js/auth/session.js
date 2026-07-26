@@ -33,7 +33,8 @@ const SESSION_KEY_V1 = "chainprint.session.v1";
 
 /** @type {Account | null} */
 let memoryAccount = null;
-let initialized = false;
+/** @type {Promise<Account | null> | null} */
+let initPromise = null;
 let migrated = false;
 
 function cacheAccount(account) {
@@ -210,30 +211,36 @@ function mapProfileRow(user, profile) {
 
 /** Warm session cache (call once per page). */
 export async function initAuth() {
-  if (initialized && memoryAccount !== undefined) {
-    return getSession();
-  }
-  initialized = true;
+  if (initPromise) return initPromise;
 
-  if (!isSupabaseConfigured()) {
-    return getSession();
-  }
-
-  try {
-    const supabase = await getSupabase();
-    if (!supabase) return getSession();
-
-    const { data, error } = await supabase.auth.getSession();
-    if (error || !data.session?.user) {
-      cacheAccount(null);
-      return null;
+  initPromise = (async () => {
+    if (!isSupabaseConfigured()) {
+      return getSession();
     }
 
-    const profile = await fetchProfile(supabase, data.session.user.id);
-    return cacheAccount(mapProfileRow(data.session.user, profile));
+    try {
+      const supabase = await getSupabase();
+      if (!supabase) return getSession();
+
+      const { data, error } = await supabase.auth.getSession();
+      if (error || !data.session?.user) {
+        cacheAccount(null);
+        return null;
+      }
+
+      const profile = await fetchProfile(supabase, data.session.user.id);
+      return cacheAccount(mapProfileRow(data.session.user, profile));
+    } catch (err) {
+      console.warn("[auth] init failed", err);
+      return getSession();
+    }
+  })();
+
+  try {
+    return await initPromise;
   } catch (err) {
-    console.warn("[auth] init failed", err);
-    return getSession();
+    initPromise = null;
+    throw err;
   }
 }
 
@@ -267,6 +274,7 @@ export function getSession() {
 export async function logout() {
   cacheAccount(null);
   localStorage.removeItem(SESSION_KEY);
+  initPromise = null;
   if (isSupabaseConfigured()) {
     try {
       const supabase = await getSupabase();

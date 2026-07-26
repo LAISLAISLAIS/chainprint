@@ -11,7 +11,7 @@ import { getSession, updateAccount } from "./session.js";
  * Flip to true while developing / testing to unlock Deep + unlimited free analyses.
  * Keep false for a public launch with real quotas.
  */
-export const DEV_UNLOCK_PRO = true;
+export const DEV_UNLOCK_PRO = false;
 
 export const PLANS = {
   free: {
@@ -21,14 +21,14 @@ export const PLANS = {
     deepAnalysis: DEV_UNLOCK_PRO,
     blurb: DEV_UNLOCK_PRO
       ? "Dev unlock · unlimited + Deep"
-      : "One free vocal analysis · upgrade for Deep / Pro",
+      : "One free analysis · upgrade for Deep / Pro",
   },
   pro: {
     id: "pro",
     label: "Pro",
     analysesIncluded: Infinity,
     deepAnalysis: true,
-    blurb: "Unlimited analyses + deep vocal, design & master analysis",
+    blurb: "Unlimited analyses + deep vocal, design, instrumental & master analysis",
   },
 };
 

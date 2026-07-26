@@ -303,10 +303,12 @@ setTarget("vocal");
 stemVocalInput?.addEventListener("change", () => {
   stemVocalFile = stemVocalInput.files?.[0] || null;
   if (stemVocalName) stemVocalName.textContent = stemVocalFile?.name || "None";
+  if (analysisTarget === "vocal") rerunActiveAnalysis();
 });
 stemInstrumentalInput?.addEventListener("change", () => {
   stemInstrumentalFile = stemInstrumentalInput.files?.[0] || null;
   if (stemInstrumentalName) stemInstrumentalName.textContent = stemInstrumentalFile?.name || "None";
+  if (analysisTarget === "instrumental") rerunActiveAnalysis();
 });
 
 function setView(view) {
@@ -566,9 +568,16 @@ function applyEntryToStudio(entry) {
   lastAdvice = result.advice || null;
   if (result.target) analysisTarget = result.target;
   else if (result.advice?.target) analysisTarget = result.advice.target;
+  if (result.mode === "standard" || result.mode === "deep") {
+    analysisMode = result.mode;
+  } else if (result.advice?.mode === "standard" || result.advice?.mode === "deep") {
+    analysisMode = result.advice.mode;
+  }
   targetVocalBtn?.setAttribute("aria-pressed", String(analysisTarget === "vocal"));
   targetInstrumentalBtn?.setAttribute("aria-pressed", String(analysisTarget === "instrumental"));
   targetFullBtn?.setAttribute("aria-pressed", String(analysisTarget === "full"));
+  modeStandardBtn?.setAttribute("aria-pressed", String(analysisMode === "standard"));
+  modeDeepBtn?.setAttribute("aria-pressed", String(analysisMode === "deep"));
   syncSignatureCopy();
   lastSource = entry.source?.kind === "blend" ? { kind: "blend" } : entry.source;
   lastTrackName = entryDisplayName(entry);
@@ -1409,16 +1418,19 @@ async function runAnalysis() {
     applyEntryToStudio(entry);
 
     if (shouldConsumeQuota) {
-      consumeAnalysis();
+      await consumeAnalysis();
       shouldConsumeQuota = false;
       refreshQuotaChrome();
+      applyAccessGate();
     }
 
     setProgress(true, { label: "Chain ready", progress: 1, stage: "done" });
     await new Promise((r) => setTimeout(r, 220));
     if (gen !== analysisGen) return;
     setProgress(false);
-    console.log("[chainprint]", result);
+    if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+      console.log("[chainprint]", result);
+    }
   } catch (err) {
     if (gen !== analysisGen) return;
     console.error(err);

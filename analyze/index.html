@@ -88,6 +88,15 @@
           </span>
         </header>
 
+        <div class="analyze-target" data-target-row>
+          <p class="analyze-target-label">What to analyze</p>
+          <div class="target-row compact" role="group" aria-label="Analysis target">
+            <button type="button" class="mode-seg" data-target="vocal" aria-pressed="true">Vocal</button>
+            <button type="button" class="mode-seg" data-target="instrumental" aria-pressed="false">Instrumental</button>
+            <button type="button" class="mode-seg" data-target="full" aria-pressed="false">Full mix</button>
+          </div>
+        </div>
+
         <div class="source-block">
           <div class="dropzone compact" data-dropzone role="button" tabindex="0">
             <span class="drop-main">Drop a mix</span>
@@ -158,12 +167,6 @@
         </div>
 
         <div class="source-footer">
-          <div class="target-row compact" data-target-row role="group" aria-label="Analysis target">
-            <button type="button" class="mode-seg" data-target="vocal" aria-pressed="true">Vocal</button>
-            <button type="button" class="mode-seg" data-target="instrumental" aria-pressed="false">Instrumental</button>
-            <button type="button" class="mode-seg" data-target="full" aria-pressed="false">Full</button>
-          </div>
-
           <details class="stems-panel compact" data-stems-panel>
             <summary>Have stems? <span class="stems-soon">Auto-separate — coming</span></summary>
             <p class="stems-hint">Optional. Analyzes your stem instead of estimating from the full master.</p>
@@ -214,7 +217,7 @@
           <div class="chain-empty" data-empty>
             <p class="empty-kicker">Ready</p>
             <h2>Drop a reference mix</h2>
-            <p>Choose Vocal, Instrumental, or Full — then load a ref. Optional stems improve accuracy. Select two library tracks to combine.</p>
+            <p>Pick <strong>Vocal</strong>, <strong>Instrumental</strong>, or <strong>Full mix</strong> at the top of the left rail, then drop a reference.</p>
           </div>
 
           <div class="chain-workspace hidden" data-chain-workspace>

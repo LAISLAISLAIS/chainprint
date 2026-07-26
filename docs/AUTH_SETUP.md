@@ -1,21 +1,15 @@
 # Chainprint auth (Supabase)
 
-## 1. Create a project
-https://supabase.com → New project
+## Launch checklist
+1. Set `DEV_UNLOCK_PRO = false` in `js/auth/quota.js` (already off for production builds).
+2. Create a Supabase project and run `supabase/migrations/001_profiles.sql`.
+3. Put Project URL + anon key in `js/auth/config.js` (or inject at deploy).
+4. Auth → Email enabled; optionally disable “Confirm email” while testing.
+5. Match password policy: min 8, upper, number, symbol.
+6. Google / Apple: add Client IDs in `config.js` *and* enable providers in Supabase before showing those buttons.
 
-## 2. Run the migration
-SQL Editor → paste and run `supabase/migrations/001_profiles.sql`
+Until keys are set, accounts stay in **this browser only**.
 
-## 3. Wire the frontend
-In `js/auth/config.js` set:
-- `supabaseUrl` → Project URL
-- `supabaseAnonKey` → `anon` `public` key
-
-## 4. Email auth settings
-Authentication → Providers → Email: enabled  
-Optional: disable “Confirm email” while testing so signup logs in immediately.
-
-## 5. Password policy (dashboard)
-Authentication → Settings → match: min 8 chars, require letters/digits/symbols as available.
-
-Until keys are set, accounts still work in **this browser only** (local store) with the same Username + password rules.
+## Notes
+- Quota updates from the client are a soft gate until you add a privileged `consume_analysis` RPC.
+- Local password hashes are demo-only; use Supabase Auth in production.

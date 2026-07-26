@@ -55,7 +55,9 @@ async function handleFiles(fileList) {
       try {
         const result = await analyzeFile(file);
         rows.push(readoutToCsvRow(result.source.name, result.readout));
-        console.log("[chainprint:cal]", result.source.name, result.readout, result.traits);
+        if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
+          console.log("[chainprint:cal]", result.source.name, result.readout, result.traits);
+        }
       } catch (err) {
         console.error(file.name, err);
         rows.push(`# ERROR ${file.name}: ${err.message || err}`);

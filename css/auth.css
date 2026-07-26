@@ -239,6 +239,10 @@
   margin-bottom: 4px;
 }
 
+.hidden {
+  display: none !important;
+}
+
 .btn-social {
   appearance: none;
   display: flex;

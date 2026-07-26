@@ -787,13 +787,34 @@
 
 .target-row.compact {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: 1fr 1.35fr 1.1fr;
   gap: 0;
-  margin: 0 0 8px;
+  margin: 0;
   padding: 2px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.analyze-target {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 4px;
+}
+
+.analyze-target-label {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7a7a7a;
+}
+
+.analyze-target .mode-seg {
+  font-size: 0.75rem;
+  padding: 9px 4px;
+  white-space: nowrap;
 }
 
 .stems-panel.compact {

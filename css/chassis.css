@@ -886,12 +886,14 @@ body > * {
   }
 
   .playback-dock-foot {
-    display: none;
+    display: flex;
+    padding-top: 4px;
+    gap: 8px;
+    align-items: center;
   }
 
-  .playback-dock.is-expanded .playback-dock-foot {
-    display: flex;
-    padding-top: 6px;
+  .playback-dock-foot .playback-pulse-wave {
+    display: none;
   }
 
   .playback-mute {
@@ -901,6 +903,7 @@ body > * {
 
   .playback-vol {
     width: min(140px, 100%);
+    flex: 1;
   }
 
   /* Colored analyzer bars on mobile */
