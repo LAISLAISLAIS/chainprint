@@ -32,7 +32,7 @@ function stepCard(step, index, kind) {
           <h3>${esc(step.title)}</h3>
           <p>${esc(step.plugin)}</p>
         </div>
-        <span class="xp-type"><span class="xp-type-text">${esc(step.type || (kind === "send" ? "Send" : "Insert"))}</span></span>
+        <span class="xp-type">${esc(step.type || (kind === "send" ? "Send" : "Insert"))}</span>
       </div>
       ${lines ? `<ul class="xp-lines">${lines}</ul>` : ""}
     </article>`;
@@ -261,28 +261,22 @@ export const EXPORT_SHEET_CSS = `
   }
 
   .xp-type {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    /* html2canvas centers more reliably with line-height than flex */
+    display: inline-block;
     height: 20px;
-    padding: 0 9px;
+    line-height: 20px;
+    padding: 0 10px 0 11px;
     border-radius: 999px;
     background: #f0f0f0;
     color: #0a0a0a;
-    white-space: nowrap;
-    align-self: start;
-  }
-
-  .xp-type-text {
-    display: block;
     font-size: 9px;
     font-weight: 700;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    line-height: 1;
-    /* Optical center: letter-spacing adds trailing space */
-    padding-left: 0.05em;
-    transform: translateY(0.5px);
+    text-align: center;
+    white-space: nowrap;
+    vertical-align: top;
+    align-self: start;
   }
 
   .xp-lines {

@@ -65,11 +65,19 @@ export async function downloadChainPdf(advice, meta = {}) {
     width: sheet.offsetWidth,
     height: sheet.offsetHeight,
     onclone: (_doc, el) => {
-      // Force type pills to paint centered in the clone (html2canvas quirks)
+      // html2canvas often mis-paints flex pills — force line-box centering
       el.querySelectorAll(".xp-type").forEach((node) => {
-        node.style.display = "inline-flex";
-        node.style.alignItems = "center";
-        node.style.justifyContent = "center";
+        node.style.display = "inline-block";
+        node.style.height = "20px";
+        node.style.lineHeight = "20px";
+        node.style.padding = "0 10px 0 11px";
+        node.style.textAlign = "center";
+        node.style.verticalAlign = "top";
+        node.style.fontSize = "9px";
+        node.style.fontWeight = "700";
+        node.style.letterSpacing = "0.04em";
+        node.style.textTransform = "uppercase";
+        node.style.transform = "none";
       });
     },
   });
