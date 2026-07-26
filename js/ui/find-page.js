@@ -197,7 +197,11 @@ function openPicker() {
 playBtn?.addEventListener("click", async () => {
   if (!lastAudioFile) return;
   try {
-    await playAudio(lastAudioFile, "find");
+    const title =
+      (sourceEl?.textContent || "").trim() ||
+      (lastAudioFile instanceof File && lastAudioFile.name) ||
+      "Key · BPM preview";
+    await playAudio(lastAudioFile, "find", { title: String(title).replace(/\.[a-z0-9]+$/i, "") });
   } catch (err) {
     console.error(err);
     setStatus("Couldn’t play this clip.", true);

@@ -11,8 +11,14 @@
   <link rel="stylesheet" href="css/app.css" />
   <link rel="stylesheet" href="css/auth.css" />
   <style>
+    html {
+      overflow-x: clip;
+    }
+
     body.landing-body {
       background: #000;
+      overflow-x: clip;
+      max-width: 100%;
     }
 
     body.landing-body::before {
@@ -27,11 +33,15 @@
       --accent-soft: rgba(255, 255, 255, 0.07);
       min-height: 100vh;
       min-height: 100dvh;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
       display: flex;
       flex-direction: column;
       padding: 22px 28px 32px;
       position: relative;
-      overflow: hidden;
+      overflow-x: clip;
+      overflow-y: auto;
       background:
         radial-gradient(ellipse 72% 48% at 50% 42%, rgba(255, 255, 255, 0.05) 0%, transparent 62%),
         radial-gradient(ellipse 40% 30% at 15% 85%, rgba(255, 255, 255, 0.025) 0%, transparent 55%),
@@ -60,8 +70,32 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
+      gap: 12px;
       width: min(1120px, 100%);
       margin: 0 auto;
+      min-width: 0;
+    }
+
+    .landing-nav .logo {
+      min-width: 0;
+      flex-shrink: 1;
+    }
+
+    .landing-nav .nav-links {
+      display: flex;
+      align-items: center;
+      flex-wrap: nowrap;
+      justify-content: flex-end;
+      gap: 2px;
+      min-width: 0;
+      flex: 0 1 auto;
+    }
+
+    .landing-nav .nav-auth {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+      min-width: 0;
     }
 
     .landing-nav .logo-word {
@@ -117,9 +151,12 @@
     .hero-copy {
       text-align: center;
       width: min(40rem, 100%);
+      max-width: 100%;
       display: flex;
       flex-direction: column;
       align-items: center;
+      padding: 0 2px;
+      box-sizing: border-box;
     }
 
     .logo-hero {
@@ -130,18 +167,26 @@
     .hero-brand {
       font-family: var(--font-brand);
       font-weight: 800;
-      font-size: clamp(3rem, 11vw, 5.25rem);
-      letter-spacing: -0.065em;
-      line-height: 0.88;
+      font-size: clamp(2.4rem, 9vw, 5.25rem);
+      letter-spacing: -0.055em;
+      line-height: 0.95;
       color: #f8f8f8;
       margin: 0 0 20px;
+      max-width: 100%;
+      width: 100%;
+      padding-inline: 0.06em;
+      box-sizing: border-box;
+      overflow: visible;
+      text-align: center;
       animation: hero-in 1.2s var(--ease-out) 0.06s both;
     }
 
     .hero-line {
       margin: 0 0 42px;
-      max-width: none;
-      white-space: nowrap;
+      max-width: 22rem;
+      width: 100%;
+      white-space: normal;
+      text-wrap: balance;
       font-size: clamp(0.9rem, 2.5vw, 1.15rem);
       font-weight: 400;
       letter-spacing: -0.018em;
@@ -232,53 +277,89 @@
       }
     }
 
-    @media (max-width: 560px) {
+    @media (max-width: 640px) {
       .landing {
-        padding: 14px 16px calc(20px + env(safe-area-inset-bottom, 0));
-        padding-top: calc(14px + env(safe-area-inset-top, 0));
+        padding:
+          calc(12px + env(safe-area-inset-top, 0))
+          max(16px, env(safe-area-inset-right, 0px))
+          calc(20px + env(safe-area-inset-bottom, 0))
+          max(16px, env(safe-area-inset-left, 0px));
       }
 
       .landing-nav {
         gap: 10px;
+        width: 100%;
+      }
+
+      .landing-nav .logo {
+        gap: 7px;
+        flex: 0 1 auto;
+      }
+
+      .landing-nav .logo-mark {
+        width: 22px;
+        height: 11px;
       }
 
       .landing-nav .logo-word {
-        font-size: 0.95rem;
+        font-size: 0.88rem;
+      }
+
+      /* Key · BPM is already in the hero CTA — free header space */
+      .landing-nav .nav-links > a[href="find/"] {
+        display: none;
       }
 
       .landing .nav-links a,
       .landing .account-menu-trigger,
       .landing .nav-cta {
-        font-size: 0.8rem !important;
-        padding: 8px 11px !important;
-        min-height: 40px;
+        font-size: 0.76rem !important;
+        padding: 6px 10px !important;
+        min-height: 34px;
+      }
+
+      .landing .nav-cta {
+        padding: 6px 12px !important;
+        flex-shrink: 0;
       }
 
       .hero {
-        padding: 6vh 0 10vh;
+        width: 100%;
+        max-width: 100%;
+        padding: 4vh 0 7vh;
         align-content: center;
+        min-width: 0;
+      }
+
+      .hero-copy {
+        width: 100%;
+        max-width: 100%;
+        padding: 0;
+        min-width: 0;
       }
 
       .logo-hero {
-        --mark-w: min(128px, 42vw);
-        margin-bottom: 22px;
+        --mark-w: min(112px, 36vw);
+        margin-bottom: 18px;
       }
 
       .hero-brand {
-        font-size: clamp(2.6rem, 14vw, 3.6rem);
-        margin-bottom: 16px;
+        /* Fit “Chainprint” on narrow phones without clipping glyphs */
+        font-size: clamp(1.85rem, 11.2vw, 2.55rem);
+        letter-spacing: -0.045em;
+        line-height: 1.05;
+        margin-bottom: 14px;
+        padding-inline: 0.12em;
       }
 
       .hero-line {
-        margin-bottom: 30px;
-        white-space: normal;
-        max-width: 17rem;
-        text-wrap: balance;
-        font-size: 1rem;
+        margin-bottom: 26px;
+        max-width: 17.5rem;
+        font-size: 0.92rem;
       }
 
       .landing .btn-primary {
-        width: min(100%, 18rem);
+        width: min(100%, 17rem);
         min-height: 48px;
         justify-content: center;
       }
@@ -297,12 +378,19 @@
 
     @media (max-width: 380px) {
       .landing {
-        padding-left: 14px;
-        padding-right: 14px;
+        padding-left: max(14px, env(safe-area-inset-left, 0px));
+        padding-right: max(14px, env(safe-area-inset-right, 0px));
       }
 
-      .landing-nav .nav-links {
-        gap: 4px;
+      .landing-nav .logo-word {
+        max-width: 6.75rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .hero-brand {
+        font-size: clamp(1.7rem, 10.5vw, 2.15rem);
       }
     }
   </style>

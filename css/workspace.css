@@ -921,7 +921,8 @@
 
 /* Studio ambient while measuring */
 .studio.is-analyzing .studio-main {
-  animation: analyze-main-breathe 2.8s ease-in-out infinite;
+  /* Avoid filter on this ancestor — it flattens child hue-rotate on iOS Safari */
+  animation: none;
 }
 
 .studio.is-analyzing .studio-source {
@@ -963,15 +964,16 @@
 .studio.is-analyzing [data-analyze-hero] {
   --mark-w: clamp(140px, 28vw, 200px);
   margin-bottom: 8px;
+  color: #5ec4b0;
 }
 
 @keyframes analyze-main-breathe {
   0%,
   100% {
-    filter: brightness(1);
+    opacity: 1;
   }
   50% {
-    filter: brightness(1.04);
+    opacity: 0.98;
   }
 }
 

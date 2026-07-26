@@ -29,7 +29,17 @@
   justify-content: space-between;
   width: min(640px, 100%);
   margin: 0 auto 36px;
-  gap: 16px;
+  gap: 12px;
+  min-width: 0;
+}
+
+.find-nav .nav-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  min-width: 0;
 }
 
 .find-nav .logo-word {
@@ -104,6 +114,8 @@
   width: 100%;
   min-height: 40px;
   margin-bottom: 8px;
+  overflow: visible;
+  color: #5ec4b0;
 }
 
 .find-drop.is-busy .find-alive {
@@ -111,16 +123,20 @@
 }
 
 .find-drop.is-busy .find-alive.logo-hero--cycle,
+.find-drop.is-busy .find-alive.logo-hero,
 .find-drop.is-busy .find-alive .logo-hero--cycle {
   --mark-w: min(148px, 56vw);
+  color: #5ec4b0;
 }
 
 .find-drop.is-busy {
   border-style: solid;
-  border-color: rgba(255, 255, 255, 0.28);
-  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(94, 196, 176, 0.35);
+  background: rgba(94, 196, 176, 0.04);
   pointer-events: none;
   cursor: default;
+  /* Allow hue-rotated chain to paint; clip was unnecessary */
+  overflow: visible;
 }
 
 .find-drop:focus-visible {
@@ -426,9 +442,21 @@
   }
 
   .find-nav {
-    flex-wrap: wrap;
-    gap: 10px 12px;
+    flex-wrap: nowrap;
+    gap: 8px;
     margin-bottom: 28px;
+  }
+
+  .find-nav .logo-word {
+    font-size: 0.9rem;
+  }
+
+  .find-nav .nav-links a,
+  .find-nav .account-menu-trigger,
+  .find-nav .nav-cta {
+    font-size: 0.78rem !important;
+    padding: 7px 10px !important;
+    min-height: 36px;
   }
 
   .find-main {
@@ -502,6 +530,7 @@
     font-size: clamp(1.45rem, 6vw, 1.75rem);
   }
 
+  .find-drop.is-busy .find-alive.logo-hero--cycle,
   .find-drop.is-busy .find-alive .logo-hero--cycle {
     --mark-w: 112px;
   }

@@ -269,7 +269,7 @@ async function toggleEntryPlayback(entry) {
   const file = audioFileForEntry(entry);
   if (!file || !entry) return;
   try {
-    await playAudio(file, entry.id);
+    await playAudio(file, entry.id, { title: entryDisplayName(entry) });
   } catch (err) {
     console.error(err);
     setStatus("idle", "Couldn’t play this reference");
