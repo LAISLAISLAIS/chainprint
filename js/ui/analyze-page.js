@@ -73,6 +73,17 @@ const quotaLabel = document.querySelector("[data-quota-label]");
 const quotaLeft = document.querySelector("[data-quota-left]");
 const modeStandardBtn = document.querySelector('[data-mode="standard"]');
 const modeDeepBtn = document.querySelector('[data-mode="deep"]');
+const targetVocalBtn = document.querySelector('[data-target="vocal"]');
+const targetInstrumentalBtn = document.querySelector('[data-target="instrumental"]');
+const targetFullBtn = document.querySelector('[data-target="full"]');
+const stemVocalInput = document.querySelector("[data-stem-vocal]");
+const stemInstrumentalInput = document.querySelector("[data-stem-instrumental]");
+const stemVocalName = document.querySelector("[data-stem-vocal-name]");
+const stemInstrumentalName = document.querySelector("[data-stem-instrumental-name]");
+const instrumentsEmpty = document.querySelector("[data-instruments-empty]");
+const instrumentsList = document.querySelector("[data-instruments-list]");
+const signatureTitle = document.querySelector("[data-signature-title]");
+const signatureSub = document.querySelector("[data-signature-sub]");
 const emptyEl = document.querySelector("[data-empty]");
 const chainWorkspace = document.querySelector("[data-chain-workspace]");
 const stageRailInserts = document.querySelector("[data-stage-rail-inserts]");
@@ -111,6 +122,12 @@ let lastSource = null;
 let shouldConsumeQuota = false;
 /** @type {'standard' | 'deep'} */
 let analysisMode = "standard";
+/** @type {'vocal' | 'instrumental' | 'full'} */
+let analysisTarget = "vocal";
+/** @type {File | null} */
+let stemVocalFile = null;
+/** @type {File | null} */
+let stemInstrumentalFile = null;
 /** @type {object | null} */
 let lastAdvice = null;
 /** @type {string} */
@@ -209,7 +226,24 @@ function setMode(mode) {
   modeStandardBtn?.setAttribute("aria-pressed", String(mode === "standard"));
   modeDeepBtn?.setAttribute("aria-pressed", String(mode === "deep"));
   if (!changed) return;
+  rerunActiveAnalysis();
+}
 
+function setTarget(target) {
+  if (analyzing || blending) return;
+  const next =
+    target === "instrumental" || target === "full" ? target : "vocal";
+  const changed = analysisTarget !== next;
+  analysisTarget = next;
+  targetVocalBtn?.setAttribute("aria-pressed", String(next === "vocal"));
+  targetInstrumentalBtn?.setAttribute("aria-pressed", String(next === "instrumental"));
+  targetFullBtn?.setAttribute("aria-pressed", String(next === "full"));
+  syncSignatureCopy();
+  if (!changed) return;
+  rerunActiveAnalysis();
+}
+
+function rerunActiveAnalysis() {
   const active = library.active();
   if (active?.kind === "blend" && active.blendOf?.length === 2) {
     rebuildBlend(active);
@@ -226,14 +260,63 @@ function setMode(mode) {
   }
 }
 
+function syncSignatureCopy() {
+  if (signatureTitle) {
+    signatureTitle.textContent =
+      analysisTarget === "instrumental"
+        ? "Instrumental signature"
+        : analysisTarget === "full"
+          ? "Full-mix signature"
+          : "Vocal signature";
+  }
+  if (signatureSub) {
+    signatureSub.textContent =
+      analysisTarget === "instrumental"
+        ? "Measured from the instrumental bed — what dialed every stage."
+        : analysisTarget === "full"
+          ? "Measured from the full mix — mix-bus balance and dynamics."
+          : "Measured from the vocal region — what dialed every stage.";
+  }
+}
+
+function analysisFileForRun() {
+  if (analysisTarget === "vocal" && stemVocalFile) {
+    return { file: stemVocalFile, sourceKind: /** @type {'stem'} */ ("stem") };
+  }
+  if (analysisTarget === "instrumental" && stemInstrumentalFile) {
+    return { file: stemInstrumentalFile, sourceKind: /** @type {'stem'} */ ("stem") };
+  }
+  if (lastSource?.kind === "file") {
+    return { file: lastSource.file, sourceKind: /** @type {'estimate'} */ ("estimate") };
+  }
+  return null;
+}
+
 modeStandardBtn?.addEventListener("click", () => setMode("standard"));
 modeDeepBtn?.addEventListener("click", () => setMode("deep"));
+targetVocalBtn?.addEventListener("click", () => setTarget("vocal"));
+targetInstrumentalBtn?.addEventListener("click", () => setTarget("instrumental"));
+targetFullBtn?.addEventListener("click", () => setTarget("full"));
 setMode(canUseMode("deep").ok ? "deep" : "standard");
+setTarget("vocal");
+
+stemVocalInput?.addEventListener("change", () => {
+  stemVocalFile = stemVocalInput.files?.[0] || null;
+  if (stemVocalName) stemVocalName.textContent = stemVocalFile?.name || "None";
+});
+stemInstrumentalInput?.addEventListener("change", () => {
+  stemInstrumentalFile = stemInstrumentalInput.files?.[0] || null;
+  if (stemInstrumentalName) stemInstrumentalName.textContent = stemInstrumentalFile?.name || "None";
+});
 
 function setView(view) {
   if (!lastAdvice && view !== "chain") return;
   if (view === "master" && !lastAdvice?.master) return;
   if (view === "design" && !lastAdvice?.design) return;
+  if (view === "instruments") {
+    const target = lastAdvice?.target || analysisTarget;
+    if (target === "vocal") return;
+  }
   activeView = view;
   viewTabs.forEach((tab) => {
     const v = tab.getAttribute("data-view");
@@ -248,7 +331,7 @@ viewTabs.forEach((tab) => {
   tab.addEventListener("click", () => {
     const v = tab.getAttribute("data-view");
     if (!v || tab.disabled) return;
-    setView(/** @type {'chain' | 'signature' | 'design' | 'master' | 'why'} */ (v));
+    setView(/** @type {'chain' | 'signature' | 'instruments' | 'design' | 'master' | 'why'} */ (v));
   });
 });
 
@@ -296,6 +379,9 @@ function setProgress(on, { label = "", progress = 0, stage = "" } = {}) {
   if (identityGo) identityGo.disabled = on;
   modeStandardBtn && (modeStandardBtn.disabled = on || blending);
   modeDeepBtn && (modeDeepBtn.disabled = on || blending || !canUseMode("deep").ok);
+  targetVocalBtn && (targetVocalBtn.disabled = on || blending);
+  targetInstrumentalBtn && (targetInstrumentalBtn.disabled = on || blending);
+  targetFullBtn && (targetFullBtn.disabled = on || blending);
   if (blendGo) blendGo.disabled = on || blending || !library.canBlend();
 
   if (!on) {
@@ -473,10 +559,17 @@ function applyEntryToStudio(entry) {
     setHasResults(false);
     renderMaster(null);
     renderDesign(null);
+    renderInstruments(null);
     return;
   }
   const { result } = entry;
   lastAdvice = result.advice || null;
+  if (result.target) analysisTarget = result.target;
+  else if (result.advice?.target) analysisTarget = result.advice.target;
+  targetVocalBtn?.setAttribute("aria-pressed", String(analysisTarget === "vocal"));
+  targetInstrumentalBtn?.setAttribute("aria-pressed", String(analysisTarget === "instrumental"));
+  targetFullBtn?.setAttribute("aria-pressed", String(analysisTarget === "full"));
+  syncSignatureCopy();
   lastSource = entry.source?.kind === "blend" ? { kind: "blend" } : entry.source;
   lastTrackName = entryDisplayName(entry);
 
@@ -492,6 +585,7 @@ function applyEntryToStudio(entry) {
   renderChain(result.advice);
   renderMaster(result.advice?.master || null);
   renderDesign(result.advice?.design || null);
+  renderInstruments(result.advice?.instruments || result.readout?.instruments || []);
   renderSummary(result.traits, result.advice);
   renderReadouts(result.readout, result.traits);
   renderBands(result.readout.bands);
@@ -501,6 +595,7 @@ function applyEntryToStudio(entry) {
       readout: result.readout,
       traits: result.traits,
       advice: result.advice,
+      target: result.target || analysisTarget,
     });
   }
 
@@ -546,7 +641,12 @@ async function rebuildBlend(existing = null) {
 
   try {
     const weight = existing?.weight ?? blendWeight;
-    const blended = blendTracks(a, b, { weight, pluginMap, mode: analysisMode });
+    const blended = blendTracks(a, b, {
+      weight,
+      pluginMap,
+      mode: analysisMode,
+      target: analysisTarget,
+    });
     const name = `${a.name} × ${b.name}`;
     const payload = {
       kind: "blend",
@@ -596,6 +696,8 @@ function setHasResults(on) {
     else chainWorkspace.classList.add("hidden");
   }
   if (exportPdfBtn) exportPdfBtn.disabled = !on;
+  const target = lastAdvice?.target || analysisTarget;
+  const hasInstruments = target === "instrumental" || target === "full";
   viewTabs.forEach((tab) => {
     const v = tab.getAttribute("data-view");
     if (v === "chain") return;
@@ -605,6 +707,10 @@ function setHasResults(on) {
     }
     if (v === "design") {
       tab.disabled = !on || !lastAdvice?.design;
+      return;
+    }
+    if (v === "instruments") {
+      tab.disabled = !on || !hasInstruments;
       return;
     }
     tab.disabled = !on;
@@ -676,7 +782,15 @@ function renderReadouts(readout, traits) {
     ]);
   }
   items.push(
-    ["Centroid", `${readout.centroidHz.toFixed(0)} Hz`, "vocal-weighted"],
+    [
+      "Centroid",
+      `${readout.centroidHz.toFixed(0)} Hz`,
+      readout.target === "full"
+        ? "full mix"
+        : readout.target === "instrumental"
+          ? "instrumental-weighted"
+          : "vocal-weighted",
+    ],
     ["Crest", `${readout.dynamics.crestDb.toFixed(1)} dB`, traits.dynamics],
     ["RMS", `${readout.dynamics.rmsDb.toFixed(1)} dB`, "level"],
     ["Range", `${readout.dynamics.shortTermRangeDb.toFixed(1)} dB`, "short-term"],
@@ -850,6 +964,34 @@ function renderMaster(master) {
       })
       .join("");
   }
+}
+
+function renderInstruments(instruments) {
+  const list = Array.isArray(instruments) ? instruments : [];
+  const show = list.length > 0;
+  instrumentsEmpty?.classList.toggle("hidden", show);
+  instrumentsList?.classList.toggle("hidden", !show);
+  if (!instrumentsList) return;
+  if (!show) {
+    instrumentsList.innerHTML = "";
+    return;
+  }
+  instrumentsList.innerHTML = list
+    .map((item) => {
+      const pct = Math.round((item.confidence || 0) * 100);
+      return `
+        <li class="instrument-card">
+          <div class="instrument-card-head">
+            <strong>${escapeHtml(item.label)}</strong>
+            <span class="instrument-conf">${pct}%</span>
+          </div>
+          <div class="instrument-meter" aria-hidden="true">
+            <span style="width:${pct}%"></span>
+          </div>
+          <p class="instrument-tip">${escapeHtml(item.tip || "")}</p>
+        </li>`;
+    })
+    .join("");
 }
 
 function renderAffiliates(step) {
@@ -1081,6 +1223,7 @@ function showError(message, meta = null, opts = {}) {
   lastAdvice = null;
   renderMaster(null);
   renderDesign(null);
+  renderInstruments(null);
   setHasResults(false);
   if (meta) showTrackCard(meta);
   showIdentity(Boolean(opts.needsIdentity), opts.prefill || "");
@@ -1137,22 +1280,37 @@ async function runAnalysis() {
   setHasResults(false);
   renderMaster(null);
   renderDesign(null);
+  renderInstruments(null);
   showIdentity(false);
   stopAudio();
   if (lastSource.kind === "file") {
     showTrackCard(null);
     lastTrackName = lastSource.file?.name?.replace(/\.[^.]+$/, "") || "";
   }
+  const readingLabel =
+    analysisTarget === "instrumental"
+      ? "Reading the instrumental…"
+      : analysisTarget === "full"
+        ? "Reading the full mix…"
+        : "Reading the vocal…";
+  const readingDetail =
+    analysisMode === "deep"
+      ? analysisTarget === "vocal"
+        ? "Measuring vocal + master bus to build a Pro chain."
+        : analysisTarget === "instrumental"
+          ? "Measuring the bed + master bus for a Pro instrumental chain."
+          : "Measuring mix-bus balance + master delivery targets."
+      : analysisTarget === "vocal"
+        ? "Measuring tone, dynamics, and stereo to build your vocal chain."
+        : analysisTarget === "instrumental"
+          ? "Measuring low end, glue, and width to build the instrumental chain."
+          : "Measuring full-mix balance to build the mix-bus chain.";
   if (emptyEl) {
     emptyEl.classList.remove("hidden");
     emptyEl.innerHTML = `
       <div data-analyze-hero aria-hidden="true"></div>
-      <h2>${analysisMode === "deep" ? "Deep analysis…" : "Reading the vocal…"}</h2>
-      <p>${
-        analysisMode === "deep"
-          ? "Measuring vocal + master bus to build a Pro chain."
-          : "Measuring tone, dynamics, and stereo to build your chain."
-      }</p>`;
+      <h2>${analysisMode === "deep" ? "Deep analysis…" : readingLabel}</h2>
+      <p>${readingDetail}</p>`;
     unmountHeroMark?.();
     unmountHeroMark = mountChainMark(emptyEl.querySelector("[data-analyze-hero]"), { variant: "cycle" });
   }
@@ -1176,16 +1334,35 @@ async function runAnalysis() {
       pluginMap = await loadPluginMap();
     }
 
-    const result =
-      lastSource.kind === "url"
-        ? await analyzeUrl(lastSource.url, {
-            pluginMap,
-            daw,
-            mode: analysisMode,
-            manualQuery: lastSource.manualQuery,
-            onProgress,
-          })
-        : await analyzeFile(lastSource.file, { pluginMap, daw, mode: analysisMode, onProgress });
+    const stemOverride = analysisFileForRun();
+    let result;
+    if (stemOverride?.sourceKind === "stem") {
+      result = await analyzeFile(stemOverride.file, {
+        pluginMap,
+        daw,
+        mode: analysisMode,
+        target: analysisTarget,
+        sourceKind: "stem",
+        onProgress,
+      });
+    } else if (lastSource.kind === "url") {
+      result = await analyzeUrl(lastSource.url, {
+        pluginMap,
+        daw,
+        mode: analysisMode,
+        target: analysisTarget,
+        manualQuery: lastSource.manualQuery,
+        onProgress,
+      });
+    } else {
+      result = await analyzeFile(lastSource.file, {
+        pluginMap,
+        daw,
+        mode: analysisMode,
+        target: analysisTarget,
+        onProgress,
+      });
+    }
 
     if (gen !== analysisGen) return;
 
@@ -1216,6 +1393,7 @@ async function runAnalysis() {
         traits: result.traits,
         advice: result.advice,
         mode: analysisMode,
+        target: analysisTarget,
       },
     };
 
@@ -1380,6 +1558,7 @@ libraryList?.addEventListener("click", (e) => {
         setHasResults(false);
         renderMaster(null);
         renderDesign(null);
+        renderInstruments(null);
         showTrackCard(null);
         setStatus("idle", "Waiting for a reference");
       }
@@ -1389,6 +1568,7 @@ libraryList?.addEventListener("click", (e) => {
       setHasResults(false);
       renderMaster(null);
       renderDesign(null);
+      renderInstruments(null);
       showTrackCard(null);
       setStatus("idle", "Waiting for a reference");
     }

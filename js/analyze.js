@@ -1,9 +1,9 @@
 /**
- * Decode local audio → measure → characterize → full vocal chain.
+ * Decode local audio → measure → characterize → chain for the selected target.
  * Audio never leaves the machine (file upload or user-initiated URL fetch).
  */
 
-import { measureBufferAsync } from "./dsp/metrics.js";
+import { measureBufferAsync, normalizeTarget } from "./dsp/metrics.js";
 import { characterize, recommend } from "./recommend.js";
 import { resolveReferenceUrl } from "./source.js";
 import { decodeFile } from "./audio-decode.js";
@@ -14,12 +14,65 @@ function tick() {
   return new Promise((r) => requestAnimationFrame(() => r()));
 }
 
+const MEASURE_LABELS = {
+  vocal: {
+    standard: "Measuring vocal signature…",
+    deep: "Deep measuring vocal + master…",
+  },
+  instrumental: {
+    standard: "Measuring instrumental bed…",
+    deep: "Deep measuring instrumental + master…",
+  },
+  full: {
+    standard: "Measuring full mix…",
+    deep: "Deep measuring mix bus + master…",
+  },
+};
+
+const BUILD_LABELS = {
+  vocal: {
+    standard: "Building vocal chain…",
+    deep: "Building Pro vocal + master chain…",
+  },
+  instrumental: {
+    standard: "Building instrumental chain…",
+    deep: "Building Pro instrumental + master…",
+  },
+  full: {
+    standard: "Building mix-bus chain…",
+    deep: "Building Pro mix-bus + master…",
+  },
+};
+
 /**
  * @param {File} file
- * @param {{ pluginMap?: object, daw?: string, meta?: object, mode?: string, onProgress?: (p: {stage:string,label:string,progress:number}) => void }} [options]
+ * @param {{
+ *   pluginMap?: object,
+ *   daw?: string,
+ *   meta?: object,
+ *   mode?: string,
+ *   target?: string,
+ *   sourceKind?: 'estimate' | 'stem',
+ *   onProgress?: (p: {stage:string,label:string,progress:number}) => void
+ * }} [options]
  */
-export async function analyzeFile(file, { pluginMap = null, daw = "universal", meta = null, mode = "standard", onProgress } = {}) {
+export async function analyzeFile(
+  file,
+  {
+    pluginMap = null,
+    daw = "universal",
+    meta = null,
+    mode = "standard",
+    target = "vocal",
+    sourceKind = "estimate",
+    onProgress,
+  } = {}
+) {
   const report = (stage, label, progress) => onProgress?.({ stage, label, progress });
+  const resolvedTarget = normalizeTarget(target);
+  const deep = mode === "deep";
+  const measureLabel = MEASURE_LABELS[resolvedTarget][deep ? "deep" : "standard"];
+  const buildLabel = BUILD_LABELS[resolvedTarget][deep ? "deep" : "standard"];
 
   report("loading", "Loading audio…", 0.08);
   await tick();
@@ -28,19 +81,25 @@ export async function analyzeFile(file, { pluginMap = null, daw = "universal", m
   report("decoding", "Decoding waveform…", 0.28);
   await tick();
 
-  report("measuring", mode === "deep" ? "Deep measuring vocal + master…" : "Measuring vocal signature…", 0.4);
+  report("measuring", measureLabel, 0.4);
   await tick();
-  const readout = await measureBufferAsync(buffer, (t) => {
-    report("measuring", mode === "deep" ? "Deep measuring vocal + master…" : "Measuring vocal signature…", 0.4 + t * 0.28);
-  });
+  const readout = await measureBufferAsync(
+    buffer,
+    (t) => {
+      report("measuring", measureLabel, 0.4 + t * 0.28);
+    },
+    { target: resolvedTarget, sourceKind }
+  );
 
-  report("characterizing", "Reading tone, tempo & pitch…", 0.74);
+  report("characterizing", "Reading tone, tempo & sources…", 0.74);
   await tick();
   const traits = characterize(readout);
 
-  report("building", mode === "deep" ? "Building Pro vocal + master chain…" : "Building vocal chain…", 0.88);
+  report("building", buildLabel, 0.88);
   await tick();
-  const advice = pluginMap ? recommend(traits, pluginMap, daw, readout, mode) : null;
+  const advice = pluginMap
+    ? recommend(traits, pluginMap, daw, readout, mode, resolvedTarget)
+    : null;
 
   report("done", "Chain ready", 1);
 
@@ -53,12 +112,14 @@ export async function analyzeFile(file, { pluginMap = null, daw = "universal", m
       type: file.type || "audio/*",
       origin: file._chainprintOrigin || meta?.platform || "upload",
       meta,
+      sourceKind,
     },
     file,
     readout,
     traits: advice?.traits || traits,
     advice,
     mode,
+    target: resolvedTarget,
   };
 }
 
@@ -72,12 +133,14 @@ export async function analyzeUrl(url, options = {}) {
 export function formatReadoutConsole(result) {
   const { source, readout: r, traits, advice } = result;
   const metaNote = source.meta?.note ? `\nMETA    ${source.meta.note}` : "";
+  const target = r.target || result.target || "vocal";
   const lines = [
     `SOURCE  ${source.name} (${source.origin || "upload"})${metaNote}`,
+    `TARGET  ${target}${r.sourceKind === "stem" ? " · stem" : " · estimate"}`,
     `NOTE    ${r.note}`,
     `SR      ${r.sampleRate} Hz · ${r.durationSec.toFixed(2)} s · ${r.frames} frames`,
     "",
-    "BANDS (dB rel total · vocal-weighted estimate)",
+    "BANDS (dB rel total · target-weighted)",
     ...r.bands.map((b) => `  ${b.label.padEnd(12)} ${b.dbRelTotal.toFixed(2)}`),
     "",
     `CENTROID  ${r.centroidHz.toFixed(1)} Hz`,
@@ -85,6 +148,16 @@ export function formatReadoutConsole(result) {
     `DYNAMICS  peak ${r.dynamics.peakDb.toFixed(2)}  rms ${r.dynamics.rmsDb.toFixed(2)}  crest ${r.dynamics.crestDb.toFixed(2)}  range ${r.dynamics.shortTermRangeDb.toFixed(2)}`,
     `STEREO    corr ${r.stereo.correlation.toFixed(3)}  side/mid ${r.stereo.sideMidRatio.toFixed(3)}`,
   ];
+
+  if (r.instruments?.length) {
+    lines.push(
+      "",
+      "INSTRUMENTS",
+      ...r.instruments.map(
+        (i) => `  ${i.label.padEnd(18)} ${(i.confidence * 100).toFixed(0)}% — ${i.tip}`
+      )
+    );
+  }
 
   if (r.tempo?.bpm) {
     lines.push(
@@ -118,7 +191,7 @@ export function formatReadoutConsole(result) {
   }
 
   if (advice?.chain) {
-    lines.push("", `VOCAL CHAIN (${advice.daw}) — build this in order`);
+    lines.push("", `CHAIN (${advice.target || target} · ${advice.daw}) — build this in order`);
     lines.push(`  ${advice.honesty}`);
     advice.chain.inserts.forEach((step, i) => {
       lines.push(`  ${i + 1}. [${step.type || "Insert"}] ${step.title} — ${step.plugin}`);

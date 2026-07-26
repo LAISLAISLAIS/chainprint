@@ -109,8 +109,9 @@ export async function downloadChainPdf(advice, meta = {}) {
   pdf.addImage(img, "PNG", x, y, drawW, drawH, undefined, "FAST");
 
   const daw = advice.chain?.daw || "daw";
-  const name = slug(meta.trackName) || "vocal";
-  pdf.save(`chainprint-${daw}-${name}.pdf`);
+  const target = advice.target || "vocal";
+  const name = slug(meta.trackName) || target;
+  pdf.save(`chainprint-${target}-${name}.pdf`);
 
   mount.innerHTML = "";
 }

@@ -60,6 +60,13 @@ export function buildExportSheetHtml(advice, meta = {}) {
   });
   const track = meta.trackName || "Reference mix";
   const modeLabel = advice.mode === "deep" ? "Pro / Deep" : "Standard";
+  const target = advice.target || advice.chain?.target || "vocal";
+  const targetLabel =
+    target === "instrumental" ? "Instrumental chain" : target === "full" ? "Full-mix chain" : "Vocal chain";
+  const instruments = (advice.instruments || [])
+    .slice(0, 4)
+    .map((i) => i.label)
+    .join(" · ");
 
   const inserts = (chain.inserts || [])
     .map((s, i) => stepCard(s, i, "insert"))
@@ -76,8 +83,9 @@ export function buildExportSheetHtml(advice, meta = {}) {
           <span class="xp-word">Chainprint</span>
         </div>
         <div class="xp-meta">
-          <p class="xp-doc">Vocal chain</p>
+          <p class="xp-doc">${esc(targetLabel)}</p>
           <p class="xp-sub">${esc(modeLabel)} · ${esc(track)} · ${esc(when)}</p>
+          ${instruments ? `<p class="xp-sub">Sources · ${esc(instruments)}</p>` : ""}
         </div>
       </header>
 

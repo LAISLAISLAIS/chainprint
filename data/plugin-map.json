@@ -190,6 +190,90 @@
         "ableton": { "plugin": "Soundtoys MicroShift", "notes": "Optional." },
         "pro_tools": { "plugin": "Soundtoys MicroShift", "notes": "Optional." }
       }
+    },
+    "low_end_mask": {
+      "description": "Sub/bass vs low-mid masking on an instrumental or mix bus",
+      "orderNote": "Carve kick vs bass and HPF non-bass groups before bus glue.",
+      "teaching": "On modern beds the kick and 808 share the bottom. A narrow carve (often 40–80 Hz or a mid-bass dip) plus mono lows keeps the instrumental clear under a vocal.",
+      "stock": {
+        "logic": {
+          "plugin": "Channel EQ / Linear Phase EQ",
+          "settings": "HPF non-bass groups ~80–120 Hz. Bell carve where kick and bass fight. Keep master/sub mono.",
+          "notes": null
+        },
+        "ableton": {
+          "plugin": "EQ Eight",
+          "settings": "Group HPFs on non-bass. Opposite bells on kick vs bass. Utility mono below ~120 Hz on the bus.",
+          "notes": null
+        },
+        "pro_tools": {
+          "plugin": "EQ3 7-Band",
+          "settings": "HPF non-bass paths. Surgical carve between kick and bass fundamentals.",
+          "notes": null
+        }
+      },
+      "free": {},
+      "paid": {
+        "logic": { "plugin": "FabFilter Pro-Q", "notes": "Dynamic bands help when mud only blooms on hits." },
+        "ableton": { "plugin": "FabFilter Pro-Q", "notes": "Dynamic bands help when mud only blooms on hits." },
+        "pro_tools": { "plugin": "FabFilter Pro-Q", "notes": "Dynamic bands help when mud only blooms on hits." }
+      }
+    },
+    "bus_glue": {
+      "description": "Mix/instrumental bus compression from crest density",
+      "orderNote": "Glue after corrective EQ; before aggressive limiting.",
+      "teaching": "1–2 dB of SSL-style bus compression is what makes a bed feel finished. Stacking another limiter on an already-dense master just kills transients.",
+      "stock": {
+        "logic": {
+          "plugin": "Compressor (Platinum) / Multipressor lightly",
+          "settings": "Ratio 2:1–4:1, attack 10–40 ms, ~1–2 dB GR. Mix/parallel if available.",
+          "notes": null
+        },
+        "ableton": {
+          "plugin": "Glue Compressor",
+          "settings": "Soft clip off at first. 2:1–4:1, slow-ish attack, 1–2 dB GR.",
+          "notes": null
+        },
+        "pro_tools": {
+          "plugin": "Dyn3 Compressor/Limiter",
+          "settings": "2:1–3:1, attack ~30 ms, gentle GR. Save brickwall for the master.",
+          "notes": null
+        }
+      },
+      "free": {},
+      "paid": {
+        "logic": { "plugin": "Cytomic The Glue / FabFilter Pro-C 2", "notes": "Finer timing and mix control." },
+        "ableton": { "plugin": "Cytomic The Glue / FabFilter Pro-C 2", "notes": "Optional upgrade." },
+        "pro_tools": { "plugin": "FabFilter Pro-C 2", "notes": "Optional upgrade." }
+      }
+    },
+    "stereo_image": {
+      "description": "Side/mid balance for instrumental and mix-bus imaging",
+      "orderNote": "Mono the lows; open width above the low-mids only.",
+      "teaching": "Finished instrumentals keep sub/bass mono and put width on hats, pads, and FX. A single widener on the whole bus is how mixes fall apart on phones.",
+      "stock": {
+        "logic": {
+          "plugin": "Direction Mixer / Utility equivalents",
+          "settings": "Narrow below ~120–180 Hz. Optional width above 5 kHz. Always check mono.",
+          "notes": null
+        },
+        "ableton": {
+          "plugin": "Utility",
+          "settings": "Bass mono. Width on return tracks more than the master bus.",
+          "notes": null
+        },
+        "pro_tools": {
+          "plugin": "Air Stereo Width / Trim + pan law discipline",
+          "settings": "Keep low end centered. Restrict wideners to FX/buses.",
+          "notes": null
+        }
+      },
+      "free": {},
+      "paid": {
+        "logic": { "plugin": "iZotope Imager / Ozone Imager", "notes": "Multiband control when stock feels blunt." },
+        "ableton": { "plugin": "iZotope Imager", "notes": "Optional." },
+        "pro_tools": { "plugin": "iZotope Imager", "notes": "Optional." }
+      }
     }
   }
 }

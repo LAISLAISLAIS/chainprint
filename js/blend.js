@@ -4,6 +4,8 @@
  */
 
 import { characterize, recommend } from "./recommend.js";
+import { detectInstruments } from "./dsp/instruments.js";
+import { normalizeTarget } from "./dsp/metrics.js";
 
 function lerp(a, b, t) {
   return a + (b - a) * t;
@@ -69,6 +71,8 @@ export function blendReadouts(readoutA, readoutB, t = 0.5) {
     estimate: true,
     blend: true,
     blendWeight: w,
+    target: normalizeTarget(readoutA.target || readoutB.target || "vocal"),
+    sourceKind: "estimate",
     note: "Hybrid target from two references — interpolate settings, then A/B both sources by ear.",
     sampleRate: readoutA.sampleRate || readoutB.sampleRate,
     durationSec: lerp(readoutA.durationSec || 0, readoutB.durationSec || 0, w),
@@ -92,6 +96,11 @@ export function blendReadouts(readoutA, readoutB, t = 0.5) {
       note: readoutA.loudness?.note || "Approximate loudness proxy — not certified LUFS.",
     },
     transientIndex: lerp(readoutA.transientIndex ?? 0, readoutB.transientIndex ?? 0, w),
+    transientIndexFull: lerp(
+      readoutA.transientIndexFull ?? readoutA.transientIndex ?? 0,
+      readoutB.transientIndexFull ?? readoutB.transientIndex ?? 0,
+      w
+    ),
     tempo: {
       bpm:
         readoutA.tempo?.bpm && readoutB.tempo?.bpm
@@ -100,6 +109,7 @@ export function blendReadouts(readoutA, readoutB, t = 0.5) {
       confidence: lerp(readoutA.tempo?.confidence ?? 0, readoutB.tempo?.confidence ?? 0, w),
       feel: w < 0.5 ? readoutA.tempo?.feel : readoutB.tempo?.feel,
       note: "Blended tempo estimate — verify against both refs.",
+      reliable: Boolean(readoutA.tempo?.reliable || readoutB.tempo?.reliable),
     },
     pitch: {
       f0Hz:
@@ -110,6 +120,7 @@ export function blendReadouts(readoutA, readoutB, t = 0.5) {
       register: w < 0.5 ? readoutA.pitch?.register : readoutB.pitch?.register,
       noteName: w < 0.5 ? readoutA.pitch?.noteName : readoutB.pitch?.noteName,
       keyConfidence: lerp(readoutA.pitch?.keyConfidence ?? 0, readoutB.pitch?.keyConfidence ?? 0, w),
+      keyReliable: Boolean(readoutA.pitch?.keyReliable || readoutB.pitch?.keyReliable),
       note: "Blended pitch estimate — prefer the clearer of the two refs.",
     },
     eqTargets: {
@@ -205,6 +216,9 @@ export function blendTracks(entryA, entryB, opts = {}) {
   }
 
   const readout = blendReadouts(readoutA, readoutB, weight);
+  readout.instruments = detectInstruments(readout);
+  const target = normalizeTarget(opts.target || readout.target || "vocal");
+  readout.target = target;
   let traits = characterize(readout);
   const blendNotes = pullNotes(entryA.name, entryB.name, readoutA, readoutB, weight);
   traits = {
@@ -213,7 +227,7 @@ export function blendTracks(entryA, entryB, opts = {}) {
   };
 
   const advice = pluginMap
-    ? recommend(traits, pluginMap, "universal", readout, mode)
+    ? recommend(traits, pluginMap, "universal", readout, mode, target)
     : null;
 
   if (advice) {
@@ -235,6 +249,7 @@ export function blendTracks(entryA, entryB, opts = {}) {
     traits: advice?.traits || traits,
     advice,
     mode,
+    target,
     blendNotes,
   };
 }

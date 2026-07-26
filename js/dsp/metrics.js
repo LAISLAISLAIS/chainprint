@@ -1,11 +1,13 @@
 /**
  * Measurement layer — spectral, tone, dynamics, stereo, tempo, pitch.
- * All values are estimates of the vocal region on a finished master, not an isolated stem.
+ * Target regions estimate vocal / instrumental / full-mix character on a finished master
+ * (or a provided stem). Not the true plugin chain.
  */
 
 import { FFT_SIZE, hannWindow, magnitudeSpectrum } from "./fft.js";
 import { estimateTempo } from "./tempo.js";
 import { estimatePitchProfile } from "./pitch.js";
+import { detectInstruments } from "./instruments.js";
 
 export const BANDS = [
   { id: "sub", label: "Sub", lo: 20, hi: 60 },
@@ -20,6 +22,29 @@ export const BANDS = [
 
 /** Approximate band where lead vocals usually live on a finished mix. */
 export const VOCAL_REGION = { lo: 200, hi: 8000 };
+
+/** @typedef {'vocal' | 'instrumental' | 'full'} AnalysisTarget */
+
+export const ANALYSIS_TARGETS = /** @type {const} */ (["vocal", "instrumental", "full"]);
+
+/**
+ * @param {string} [t]
+ * @returns {AnalysisTarget}
+ */
+export function normalizeTarget(t) {
+  const v = String(t || "vocal").toLowerCase();
+  if (v === "instrumental" || v === "full") return v;
+  return "vocal";
+}
+
+const TARGET_NOTES = {
+  vocal:
+    "Estimate of the vocal region on a finished master — not an isolated stem, not the true chain.",
+  instrumental:
+    "Estimate of the instrumental bed on a finished master — vocal presence attenuated. Upload an instrumental stem for higher accuracy.",
+  full: "Full-mix measurement of the finished master — mix-bus and mastering guidance, not the true chain.",
+  stem: "Measured from your uploaded stem — still a reconstruction of settings, not the original plugins.",
+};
 
 const EPS = 1e-12;
 const HOP = FFT_SIZE / 4; // 75% overlap
@@ -171,6 +196,44 @@ export function vocalWeightedSpectrum(mag, sampleRate) {
   return weighted;
 }
 
+/**
+ * Emphasize bed / rhythm / air; attenuate typical lead-vocal presence on a full master.
+ */
+export function instrumentalWeightedSpectrum(mag, sampleRate) {
+  const binHz = sampleRate / FFT_SIZE;
+  const weighted = new Float64Array(mag.length);
+  for (let i = 0; i < mag.length; i++) {
+    const hz = i * binHz;
+    let w = 0.55;
+    if (hz < 80) w = 1;
+    else if (hz < 250) w = 1;
+    else if (hz < 500) w = 0.9;
+    else if (hz < 1500) w = 0.7;
+    else if (hz < 5000) w = 0.28; // duck vocal presence pocket
+    else if (hz < 9000) w = 0.95;
+    else w = 1;
+    weighted[i] = mag[i] * w;
+  }
+  return weighted;
+}
+
+/** Flat / full-mix weight (identity). */
+export function fullWeightedSpectrum(mag) {
+  return Float64Array.from(mag);
+}
+
+/**
+ * @param {Float64Array | Float32Array} mag
+ * @param {number} sampleRate
+ * @param {AnalysisTarget} target
+ */
+export function regionWeightedSpectrum(mag, sampleRate, target) {
+  const t = normalizeTarget(target);
+  if (t === "instrumental") return instrumentalWeightedSpectrum(mag, sampleRate);
+  if (t === "full") return fullWeightedSpectrum(mag);
+  return vocalWeightedSpectrum(mag, sampleRate);
+}
+
 export function spectralBalance(mag, sampleRate) {
   const powers = BANDS.map((b) => bandPower(mag, sampleRate, b.lo, b.hi));
   const total = powers.reduce((a, p) => a + p, 0);
@@ -295,18 +358,20 @@ export function transientIndex(mag, sampleRate) {
 
 /**
  * Full readout for a decoded AudioBuffer.
- * Label everywhere in UI: estimate of vocal region on a finished master.
+ * @param {AudioBuffer} audioBuffer
+ * @param {{ target?: AnalysisTarget, sourceKind?: 'estimate' | 'stem' }} [opts]
  */
-export function measureBuffer(audioBuffer) {
-  return measureFromChannels(audioBuffer);
+export function measureBuffer(audioBuffer, opts = {}) {
+  return measureFromChannels(audioBuffer, opts);
 }
 
 /**
  * Async measure with progress yields so the UI can breathe mid-analysis.
  * @param {AudioBuffer} audioBuffer
  * @param {(t: number) => void} [onProgress] 0–1 within measure stage
+ * @param {{ target?: AnalysisTarget, sourceKind?: 'estimate' | 'stem' }} [opts]
  */
-export async function measureBufferAsync(audioBuffer, onProgress) {
+export async function measureBufferAsync(audioBuffer, onProgress, opts = {}) {
   const yieldMain = () =>
     new Promise((r) => {
       if (typeof scheduler !== "undefined" && scheduler.postTask) {
@@ -315,6 +380,9 @@ export async function measureBufferAsync(audioBuffer, onProgress) {
         setTimeout(r, 0);
       }
     });
+
+  const target = normalizeTarget(opts.target);
+  const sourceKind = opts.sourceKind === "stem" ? "stem" : "estimate";
 
   onProgress?.(0.05);
   await yieldMain();
@@ -326,6 +394,9 @@ export async function measureBufferAsync(audioBuffer, onProgress) {
 
   onProgress?.(0.45);
   await yieldMain();
+  // Stem uploads are already isolated — use flat weight for the primary target spectrum
+  const primaryMag =
+    sourceKind === "stem" ? fullWeightedSpectrum(mag) : regionWeightedSpectrum(mag, partial.sampleRate, target);
   const vocalMag = vocalWeightedSpectrum(mag, partial.sampleRate);
   const loud = loudnessProxy(partial.mono);
   const dyn = dynamics(partial.mono, partial.sampleRate);
@@ -338,10 +409,24 @@ export async function measureBufferAsync(audioBuffer, onProgress) {
   onProgress?.(0.8);
   await yieldMain();
   const pitch = estimatePitchProfile(partial.mono, partial.sampleRate, mag);
-  const eqTargets = eqTargetsFromSpectrum(vocalMag, partial.sampleRate);
+  const eqTargets = eqTargetsFromSpectrum(primaryMag, partial.sampleRate);
 
   onProgress?.(1);
-  return buildReadout(partial, { mag, frames, hop, vocalMag, loud, dyn, stereo, tempo, pitch, eqTargets });
+  return buildReadout(partial, {
+    mag,
+    frames,
+    hop,
+    primaryMag,
+    vocalMag,
+    loud,
+    dyn,
+    stereo,
+    tempo,
+    pitch,
+    eqTargets,
+    target,
+    sourceKind,
+  });
 }
 
 /** Cap mono mix to ~60s so dynamics/tempo/pitch stay responsive on long masters. */
@@ -375,41 +460,79 @@ function prepareChannels(audioBuffer) {
   };
 }
 
-function measureFromChannels(audioBuffer) {
+function measureFromChannels(audioBuffer, opts = {}) {
+  const target = normalizeTarget(opts.target);
+  const sourceKind = opts.sourceKind === "stem" ? "stem" : "estimate";
   const partial = prepareChannels(audioBuffer);
   const { mag, frames, hop } = averageSpectrum(partial.mono, partial.sampleRate);
+  const primaryMag =
+    sourceKind === "stem" ? fullWeightedSpectrum(mag) : regionWeightedSpectrum(mag, partial.sampleRate, target);
   const vocalMag = vocalWeightedSpectrum(mag, partial.sampleRate);
   const loud = loudnessProxy(partial.mono);
   const dyn = dynamics(partial.mono, partial.sampleRate);
   const stereo = stereoMetrics(partial.leftWin, partial.rightWin);
   const tempo = estimateTempo(partial.mono, partial.sampleRate);
   const pitch = estimatePitchProfile(partial.mono, partial.sampleRate, mag);
-  const eqTargets = eqTargetsFromSpectrum(vocalMag, partial.sampleRate);
-  return buildReadout(partial, { mag, frames, hop, vocalMag, loud, dyn, stereo, tempo, pitch, eqTargets });
+  const eqTargets = eqTargetsFromSpectrum(primaryMag, partial.sampleRate);
+  return buildReadout(partial, {
+    mag,
+    frames,
+    hop,
+    primaryMag,
+    vocalMag,
+    loud,
+    dyn,
+    stereo,
+    tempo,
+    pitch,
+    eqTargets,
+    target,
+    sourceKind,
+  });
 }
 
 function buildReadout(partial, parts) {
-  const { mag, frames, hop, vocalMag, loud, dyn, stereo, tempo, pitch, eqTargets } = parts;
+  const {
+    mag,
+    frames,
+    hop,
+    primaryMag,
+    vocalMag,
+    loud,
+    dyn,
+    stereo,
+    tempo,
+    pitch,
+    eqTargets,
+    target = "vocal",
+    sourceKind = "estimate",
+  } = parts;
   const { sampleRate, durationSec } = partial;
+  const t = normalizeTarget(target);
+  const primary = primaryMag || vocalMag;
+  const note = sourceKind === "stem" ? TARGET_NOTES.stem : TARGET_NOTES[t];
 
-  return {
-    estimate: true,
-    note: "Estimate of the vocal region on a finished master — not an isolated stem, not the true chain.",
+  const readout = {
+    estimate: sourceKind !== "stem",
+    sourceKind,
+    target: t,
+    note,
     sampleRate,
     durationSec,
     frames,
     hop,
     fftSize: FFT_SIZE,
-    bands: spectralBalance(vocalMag, sampleRate),
+    bands: spectralBalance(primary, sampleRate),
     bandsFullMix: spectralBalance(mag, sampleRate),
-    centroidHz: spectralCentroidHz(vocalMag, sampleRate),
+    centroidHz: spectralCentroidHz(primary, sampleRate),
     centroidFullHz: spectralCentroidHz(mag, sampleRate),
-    tone: toneIndices(vocalMag, sampleRate),
+    tone: toneIndices(primary, sampleRate),
     toneFull: toneIndices(mag, sampleRate),
     dynamics: dyn,
     stereo,
     loudness: loud,
-    transientIndex: transientIndex(vocalMag, sampleRate),
+    transientIndex: transientIndex(primary, sampleRate),
+    transientIndexFull: transientIndex(mag, sampleRate),
     tempo,
     pitch,
     eqTargets,
@@ -428,4 +551,7 @@ function buildReadout(partial, parts) {
       streamingTarget: "Aim integrated ≈ −14 LUFS / −1 dBTP for most DSPs (verify with a real meter).",
     },
   };
+
+  readout.instruments = detectInstruments(readout);
+  return readout;
 }

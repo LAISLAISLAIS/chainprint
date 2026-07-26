@@ -270,42 +270,6 @@ body > * {
   font: inherit;
 }
 
-.playback-dock-expand {
-  appearance: none;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: #9a9a9a;
-  cursor: pointer;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  flex-shrink: 0;
-  transition: background 0.15s ease, color 0.15s ease, transform 0.2s var(--ease-out);
-}
-
-.playback-dock-expand:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #f0f0f0;
-}
-
-.playback-dock-chevron {
-  width: 8px;
-  height: 8px;
-  border-right: 1.5px solid currentColor;
-  border-bottom: 1.5px solid currentColor;
-  transform: rotate(-135deg);
-  margin-top: 3px;
-  transition: transform 0.2s var(--ease-out);
-}
-
-.playback-dock.is-expanded .playback-dock-chevron {
-  transform: rotate(45deg);
-  margin-top: -2px;
-}
-
 .playback-dock-sheet {
   display: grid;
   gap: 8px;

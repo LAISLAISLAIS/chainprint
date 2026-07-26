@@ -1,9 +1,11 @@
 /**
- * Characterize measurements, then build a full vocal chain.
+ * Characterize measurements, then build a chain for the selected target.
  * Honesty rule: plausible reconstruction — never "this is what they used."
  */
 
 import { buildVocalChain } from "./chain.js";
+import { buildFullMixChain, buildInstrumentalChain } from "./mix-chains.js";
+import { normalizeTarget } from "./dsp/metrics.js";
 import {
   attachAffiliates,
   buildDesignBrief,
@@ -52,6 +54,7 @@ export function characterize(readout) {
 
   const dynamics = crestCharacter(readout.dynamics.crestDb);
   const stereo = widthCharacter(readout.stereo.sideMidRatio, readout.stereo.correlation);
+  const target = normalizeTarget(readout.target);
 
   const tempo = {
     bpm: readout.tempo?.bpm ?? null,
@@ -70,6 +73,17 @@ export function characterize(readout) {
   };
 
   const summary = [];
+  if (target === "instrumental") {
+    summary.push("Target: instrumental bed — mix tips favor low-end carve, glue, and width-by-band.");
+  } else if (target === "full") {
+    summary.push("Target: full mix — mix-bus order + master translation.");
+  } else {
+    summary.push("Target: vocal chain from the vocal region estimate.");
+  }
+  if (readout.sourceKind === "stem") {
+    summary.push("Source: uploaded stem (higher accuracy than a full-master estimate).");
+  }
+
   if (tempo.bpm && tempo.reliable) {
     summary.push(`Pulse ≈ ${tempo.bpm} BPM (${tempo.feel || "tempo"}).`);
   } else if (tempo.bpm) {
@@ -97,7 +111,6 @@ export function characterize(readout) {
     );
   }
 
-  // Continuous-aware notes (not only elevated/recessed)
   const mud = readout.tone.mud;
   const sib = readout.tone.sibilance;
   const harsh = readout.tone.harshness;
@@ -105,62 +118,86 @@ export function characterize(readout) {
   const crest = readout.dynamics.crestDb;
   const targets = readout.eqTargets;
 
-  if (tone.air === "elevated") summary.push("Air is up — top end is carrying presence.");
-  else if (tone.air === "recessed") summary.push("Air is down — vocal sits darker / closer.");
-  else if (air < -14) summary.push("Top end sits slightly dark — gentle air shelf likely.");
+  if (target === "vocal") {
+    if (tone.air === "elevated") summary.push("Air is up — top end is carrying presence.");
+    else if (tone.air === "recessed") summary.push("Air is down — vocal sits darker / closer.");
+    else if (air < -14) summary.push("Top end sits slightly dark — gentle air shelf likely.");
 
-  if (tone.sibilance === "elevated") summary.push("Sibilance region is hot relative to body.");
-  else if (sib > -5) summary.push(`Sibilance leaning forward (index ${sib.toFixed(1)}).`);
+    if (tone.sibilance === "elevated") summary.push("Sibilance region is hot relative to body.");
+    else if (sib > -5) summary.push(`Sibilance leaning forward (index ${sib.toFixed(1)}).`);
 
-  if (tone.harshness === "elevated") summary.push("Upper-mid bite is forward (harshness band).");
-  else if (harsh > -7) summary.push(`Upper-mid bite present — cut near ${targets?.harshHz || 3e3} Hz.`);
+    if (tone.harshness === "elevated") summary.push("Upper-mid bite is forward (harshness band).");
+    else if (harsh > -7) summary.push(`Upper-mid bite present — cut near ${targets?.harshHz || 3e3} Hz.`);
 
-  if (tone.mud === "elevated") summary.push("Low-mids are heavy — body may be masking clarity.");
-  else if (mud > -3) summary.push(`Low-mid weight — mud cut near ${targets?.mudHz || 320} Hz.`);
+    if (tone.mud === "elevated") summary.push("Low-mids are heavy — body may be masking clarity.");
+    else if (mud > -3) summary.push(`Low-mid weight — mud cut near ${targets?.mudHz || 320} Hz.`);
+  } else {
+    const fullTone = readout.toneFull || readout.tone;
+    if (fullTone.mud > -2) summary.push("Low-mid bed is heavy — expect kick/bass carve + group HPFs.");
+    if (fullTone.harshness > -6) summary.push("Top/harsh energy is forward — tame hats before brightening.");
+    if (readout.stereo.sideMidRatio > 0.25) summary.push("Wide side energy — mono the lows; manage width by band.");
+  }
 
-  if (dynamics === "heavily_limited") summary.push("Crest is low — dense, limited vocal region.");
+  if (dynamics === "heavily_limited") summary.push("Crest is low — dense, limited print.");
   if (dynamics === "open") summary.push("Crest is high — more transient / less smashed.");
   if (dynamics === "controlled" || dynamics === "dynamic") {
     summary.push(`Crest ${crest.toFixed(1)} dB — compression dialed to this density.`);
   }
 
   if (stereo === "wide") summary.push("Stereo image is wide in the side channel.");
-  if (stereo === "narrow") summary.push("Image is mono-leaning — centered vocal pocket.");
+  if (stereo === "narrow") summary.push("Image is mono-leaning — centered pocket.");
 
   if (targets) {
     summary.push(
-      `EQ centers from this spectrum: mud ${targets.mudHz} · harsh ${targets.harshHz} · de-ess ${targets.deessHz} Hz.`
+      `EQ centers from this spectrum: mud ${targets.mudHz} · harsh ${targets.harshHz} · air ${targets.airHz} Hz.`
     );
   }
 
-  if (!summary.length) summary.push("Balance sits near a typical contemporary vocal pocket.");
+  const instruments = readout.instruments || [];
+  if (instruments.length && target !== "vocal") {
+    const top = instruments
+      .slice(0, 3)
+      .map((i) => i.label)
+      .join(", ");
+    summary.push(`Likely sources: ${top}.`);
+  }
 
-  return { tone, dynamics, stereo, tempo, pitch, summary };
+  if (!summary.length) summary.push("Balance sits near a typical contemporary pocket.");
+
+  return { tone, dynamics, stereo, tempo, pitch, summary, target, instruments };
+}
+
+function buildChainForTarget(target, readout, traits, daw) {
+  if (target === "instrumental") return buildInstrumentalChain(readout, traits, daw);
+  if (target === "full") return buildFullMixChain(readout, traits, daw);
+  return buildVocalChain(readout, traits, daw);
 }
 
 /**
  * Full chain + short corrective highlights for the UI.
  * @param {'standard' | 'deep'} [mode]
+ * @param {'vocal' | 'instrumental' | 'full'} [target]
  */
-export function recommend(traits, pluginMap, daw = "universal", readout = null, mode = "standard") {
+export function recommend(traits, pluginMap, daw = "universal", readout = null, mode = "standard", target = "vocal") {
   if (!readout) {
     return {
       daw,
       mode,
+      target: normalizeTarget(target),
       honesty: "Need a readout to dial the chain.",
       chain: null,
       steps: [],
     };
   }
 
+  const resolvedTarget = normalizeTarget(target || readout.target || "vocal");
   const deep = mode === "deep";
   const liveTraits = deep ? deepenTraits(readout, traits) : traits;
-  let chain = buildVocalChain(readout, liveTraits, daw);
+  let chain = buildChainForTarget(resolvedTarget, readout, liveTraits, daw);
 
-  if (deep) {
+  if (deep && resolvedTarget === "vocal") {
     const extras = deepVocalExtras(readout, liveTraits);
     const sendExtras = deepSendExtras(readout, liveTraits);
-    // Insert deep stages after de-ess (before sat)
     const deessIdx = chain.inserts.findIndex((s) => s.role === "deess");
     if (deessIdx >= 0) {
       chain = {
@@ -174,7 +211,6 @@ export function recommend(traits, pluginMap, daw = "universal", readout = null, 
     } else {
       chain = { ...chain, inserts: [...chain.inserts, ...extras] };
     }
-    // Ambient / design sends before the final width note
     const widthIdx = chain.sends.findIndex((s) => s.role === "width");
     if (widthIdx >= 0) {
       chain = {
@@ -193,6 +229,12 @@ export function recommend(traits, pluginMap, daw = "universal", readout = null, 
       "Deep Pro recreation — inserts, atmosphere, and sound-design lanes from the measured signature. Not a claim these were the exact plugins on the record.";
     chain.estimateNote =
       "Deep chain · match stages, then open Design for ambient / FX lanes and Master for the bus pass.";
+  } else if (deep) {
+    chain = attachAffiliates(chain);
+    chain.honesty =
+      resolvedTarget === "instrumental"
+        ? "Deep instrumental recreation — bed EQ, glue, and width from the measured balance. Not the original session."
+        : "Deep full-mix recreation — mix-bus order plus Master delivery checklist. Not the original session.";
   }
 
   const chars = pluginMap?.characteristics || {};
@@ -206,26 +248,52 @@ export function recommend(traits, pluginMap, daw = "universal", readout = null, 
       orderNote: chars[id].orderNote || null,
     });
   };
-  maybe("mud", liveTraits.tone.mud === "elevated", "Mud elevated — trust the deeper low-mid cut in Step 2.");
-  maybe("sibilance", liveTraits.tone.sibilance === "elevated", "Sibilance hot — don’t skip or under-do de-ess.");
-  maybe("harshness", liveTraits.tone.harshness === "elevated", "Harshness forward — keep the measured upper-mid cut.");
-  maybe(
-    "dynamics_crest",
-    liveTraits.dynamics === "heavily_limited" || liveTraits.dynamics === "controlled",
-    "Low crest — serial compression in the chain is doing real work."
-  );
+
+  if (resolvedTarget === "vocal") {
+    maybe("mud", liveTraits.tone.mud === "elevated", "Mud elevated — trust the deeper low-mid cut in Step 2.");
+    maybe("sibilance", liveTraits.tone.sibilance === "elevated", "Sibilance hot — don’t skip or under-do de-ess.");
+    maybe("harshness", liveTraits.tone.harshness === "elevated", "Harshness forward — keep the measured upper-mid cut.");
+    maybe(
+      "dynamics_crest",
+      liveTraits.dynamics === "heavily_limited" || liveTraits.dynamics === "controlled",
+      "Low crest — serial compression in the chain is doing real work."
+    );
+  } else {
+    maybe(
+      "low_end_mask",
+      liveTraits.tone.mud === "elevated" || (readout.toneFull?.mud ?? -99) > -2,
+      "Low-end masking — carve kick/bass and HPF non-bass groups."
+    );
+    maybe(
+      "bus_glue",
+      liveTraits.dynamics === "heavily_limited" || liveTraits.dynamics === "controlled",
+      "Dense crest — gentle bus glue (1–2 dB), not another slam limiter."
+    );
+    maybe(
+      "stereo_image",
+      liveTraits.stereo === "wide" || readout.stereo.sideMidRatio > 0.22,
+      "Wide side energy — mono lows and manage width by band."
+    );
+    maybe(
+      "harshness",
+      liveTraits.tone.harshness === "elevated" || (readout.toneFull?.harshness ?? -99) > -6,
+      "Top/harsh energy — tame hats/cymbals before shelving air."
+    );
+  }
 
   const master = deep ? buildMasterAnalysis(readout, liveTraits) : null;
-  const design = deep ? buildDesignBrief(readout, liveTraits) : null;
+  const design = deep && resolvedTarget === "vocal" ? buildDesignBrief(readout, liveTraits) : null;
 
   return {
     daw: "universal",
     mode,
+    target: resolvedTarget,
     honesty: chain.honesty,
     estimateNote: chain.estimateNote,
     chain,
     master,
     design,
+    instruments: readout.instruments || liveTraits.instruments || [],
     traits: liveTraits,
     highlights,
     steps: chain.inserts.map((step) => ({

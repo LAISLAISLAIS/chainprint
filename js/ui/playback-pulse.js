@@ -55,9 +55,6 @@ export function mountPlaybackPulse(parent = document.body) {
       <button type="button" class="playback-dock-title-btn" data-player-expand-title>
         <p class="playback-dock-title" data-player-title>Reference</p>
       </button>
-      <button type="button" class="playback-dock-expand" data-player-expand hidden aria-expanded="false" aria-label="Show tracks">
-        <span class="playback-dock-chevron" aria-hidden="true"></span>
-      </button>
       <button type="button" class="playback-dock-close" data-player-close aria-label="Close player">
         <span aria-hidden="true"></span>
       </button>
@@ -119,7 +116,6 @@ export function mountPlaybackPulse(parent = document.body) {
   const volRange = el.querySelector("[data-playback-volume]");
   const closeBtn = el.querySelector("[data-player-close]");
   const dragHandle = el.querySelector("[data-player-drag]");
-  const expandBtn = el.querySelector("[data-player-expand]");
   const collapseBtn = el.querySelector("[data-player-collapse]");
   const sheet = el.querySelector("[data-player-sheet]");
   const queueEl = el.querySelector("[data-player-queue]");
@@ -154,9 +150,8 @@ export function mountPlaybackPulse(parent = document.body) {
     expanded = Boolean(on) && getPlaybackTracks().length > 1;
     el.classList.toggle("is-expanded", expanded);
     if (sheet) sheet.hidden = !expanded;
-    if (expandBtn) {
-      expandBtn.setAttribute("aria-expanded", expanded ? "true" : "false");
-      expandBtn.setAttribute("aria-label", expanded ? "Hide tracks" : "Show tracks");
+    if (titleBtn) {
+      titleBtn.setAttribute("aria-expanded", expanded ? "true" : "false");
     }
     renderQueue();
   }
@@ -182,8 +177,9 @@ export function mountPlaybackPulse(parent = document.body) {
     const tracks = getPlaybackTracks();
     const multi = tracks.length > 1;
     el.classList.toggle("has-queue", multi);
-    // Queue opens via title tap — keep close as the only chrome action on the right
-    if (expandBtn) expandBtn.hidden = true;
+    if (titleBtn) {
+      titleBtn.title = multi ? "Show tracks" : "";
+    }
     if (!multi && expanded) setExpanded(false);
     else if (expanded) renderQueue();
   }
@@ -298,12 +294,6 @@ export function mountPlaybackPulse(parent = document.body) {
   });
   seek?.addEventListener("pointercancel", () => {
     seeking = false;
-  });
-
-  expandBtn?.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setExpanded(!expanded);
   });
 
   collapseBtn?.addEventListener("click", (e) => {
