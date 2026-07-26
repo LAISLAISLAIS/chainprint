@@ -297,18 +297,41 @@ export function getSession() {
   }
 }
 
+/** Drop persisted Supabase auth keys so a failed/hung signOut can't revive the session. */
+function clearSupabaseAuthStorage() {
+  try {
+    const doomed = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && /^sb-[\w-]+-auth-token/.test(key)) doomed.push(key);
+    }
+    for (const key of doomed) localStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+}
+
 export async function logout() {
   cacheAccount(null);
   localStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SESSION_KEY_V1);
+  localStorage.removeItem(ACCOUNT_CACHE_KEY);
   initPromise = null;
-  if (isSupabaseConfigured()) {
-    try {
-      const supabase = await getSupabase();
-      await supabase?.auth.signOut();
-    } catch {
-      /* ignore */
-    }
+
+  if (!isSupabaseConfigured()) return;
+
+  try {
+    const supabase = await getSupabase();
+    // `local` clears storage even when the network/revoke call fails or hangs
+    await Promise.race([
+      supabase?.auth.signOut({ scope: "local" }) ?? Promise.resolve(),
+      new Promise((resolve) => setTimeout(resolve, 2000)),
+    ]);
+  } catch {
+    /* ignore — still wipe storage below */
   }
+  clearSupabaseAuthStorage();
+  cacheAccount(null);
 }
 
 /**

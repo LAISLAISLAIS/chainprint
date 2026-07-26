@@ -46,7 +46,9 @@
   padding: 0;
   border-bottom: 1px solid var(--studio-rule);
   background: #000;
-  z-index: 5;
+  /* Above stage chrome so the account menu (incl. Log out) stays clickable */
+  z-index: 40;
+  position: relative;
 }
 
 .studio-brand {

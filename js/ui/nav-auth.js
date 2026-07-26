@@ -72,7 +72,15 @@ export async function mountAuthNav(root, opts = {}) {
   logoutBtn?.addEventListener("click", async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    await logout();
+    logoutBtn.disabled = true;
+    try {
+      await Promise.race([
+        logout(),
+        new Promise((resolve) => setTimeout(resolve, 2500)),
+      ]);
+    } catch {
+      /* still leave the page */
+    }
     location.assign(logoutHref);
   });
 

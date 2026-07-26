@@ -394,7 +394,14 @@ function applyAccessGate() {
 }
 
 document.querySelector("[data-logout-gate]")?.addEventListener("click", async () => {
-  await logout();
+  try {
+    await Promise.race([
+      logout(),
+      new Promise((resolve) => setTimeout(resolve, 2500)),
+    ]);
+  } catch {
+    /* still leave the page */
+  }
   location.href = "../auth/?mode=login&next=/analyze/";
 });
 
