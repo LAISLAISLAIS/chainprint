@@ -206,6 +206,16 @@ a.tool-card:hover {
   font-weight: var(--weight-semibold);
 }
 
+.help-block a {
+  color: var(--teal);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.help-block a:hover {
+  color: var(--teal-bright);
+}
+
 .help-toc {
   display: flex;
   flex-wrap: wrap;
