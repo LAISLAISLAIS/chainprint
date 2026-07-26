@@ -1974,8 +1974,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  padding: 14px var(--studio-gutter);
-  min-height: 64px;
+  padding: 12px var(--studio-gutter) 10px;
+  min-height: 0;
   box-sizing: border-box;
 }
 
@@ -2021,7 +2021,7 @@
 .hear-strip {
   display: grid;
   gap: 8px;
-  padding: 10px var(--studio-gutter) 12px;
+  padding: 8px var(--studio-gutter) 10px;
   border-top: 1px solid var(--studio-rule);
   background: rgba(255, 255, 255, 0.015);
 }
@@ -2296,6 +2296,39 @@
   border-color: rgba(255, 255, 255, 0.28);
 }
 
+/* Desktop: preview strip becomes one calm row so the stage board can breathe */
+@media (min-width: 901px) {
+  .hear-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px 20px;
+    flex-wrap: nowrap;
+    padding: 10px var(--studio-gutter);
+  }
+
+  .hear-strip-head {
+    flex: 0 0 auto;
+    gap: 10px;
+  }
+
+  .hear-strip-hint {
+    display: none;
+  }
+
+  .hear-strip-controls {
+    flex: 1 1 auto;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    min-width: 0;
+  }
+
+  .hear-strip-source {
+    flex: 0 1 auto;
+    max-width: 22rem;
+  }
+}
+
 /* Stage rail */
 .stage-rail-shell {
   position: sticky;
@@ -2310,7 +2343,7 @@
   display: flex;
   align-items: stretch;
   gap: 0;
-  padding: 6px var(--studio-gutter);
+  padding: 8px var(--studio-gutter);
   overflow-x: auto;
   scrollbar-width: none;
   scroll-behavior: smooth;
@@ -2430,7 +2463,9 @@
 .stage-focus {
   min-height: 0;
   overflow: auto;
-  padding: 14px var(--studio-gutter) 10px;
+  display: grid;
+  align-content: stretch;
+  padding: clamp(18px, 3.2vh, 36px) var(--studio-gutter) clamp(14px, 2.4vh, 28px);
 }
 
 .stage-focus .chain-step {
@@ -2443,31 +2478,39 @@
   max-width: none;
   width: 100%;
   margin: 0;
+  min-height: 100%;
+  height: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.25fr);
-  gap: 16px 28px;
-  align-items: start;
+  grid-template-columns: minmax(0, 0.92fr) minmax(0, 1.28fr);
+  gap: clamp(18px, 3.5vh, 40px) clamp(24px, 4vw, 52px);
+  align-items: center;
+  align-content: center;
+  box-sizing: border-box;
 }
 
 .stage-focus .chain-step:not(:has(> .step-rack)) {
-  grid-template-columns: minmax(0, 40rem);
+  grid-template-columns: minmax(0, 42rem);
+  justify-content: start;
 }
 
 .stage-focus .step-copy {
   display: grid;
-  gap: 10px;
-  align-content: start;
+  gap: clamp(12px, 2vh, 22px);
+  align-content: center;
   min-width: 0;
 }
 
 .stage-focus .step-intro {
   display: grid;
-  gap: 6px;
+  gap: 8px;
   min-width: 0;
 }
 
 .stage-focus .step-rack {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .stage-focus .step-head {
@@ -2499,7 +2542,7 @@
 
 .stage-focus .step-title {
   font-family: var(--font-ui);
-  font-size: var(--text-xl);
+  font-size: clamp(1.35rem, 2.1vw, 1.85rem);
   font-weight: var(--weight-semibold);
   margin: 0;
   letter-spacing: var(--tracking-title);
@@ -2516,6 +2559,26 @@
 
 .stage-focus .plugin-face {
   margin: 0;
+  width: 100%;
+}
+
+.stage-focus .plugin-face .rack-body {
+  padding: clamp(14px, 2vh, 20px);
+  gap: clamp(12px, 1.8vh, 18px);
+}
+
+.stage-focus .plugin-face .rack-dials {
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(142px, 1fr));
+}
+
+.stage-focus .plugin-face .rack-dial {
+  padding: 13px 14px;
+  gap: 5px;
+}
+
+.stage-focus .plugin-face .rack-dial-val {
+  font-size: clamp(0.95rem, 1.35vw, 1.12rem);
 }
 
 .stage-focus .step-why {
@@ -3112,7 +3175,7 @@
   align-items: center;
   justify-content: center;
   gap: 18px;
-  padding: 10px var(--studio-gutter) 12px;
+  padding: 12px var(--studio-gutter) 14px;
   border-top: 1px solid var(--studio-rule);
 }
 
@@ -4231,7 +4294,30 @@
   }
 
   .stage-focus {
-    padding: 14px var(--studio-gutter) 12px;
+    padding: 16px var(--studio-gutter) 14px;
+    align-content: start;
+  }
+
+  .stage-focus .chain-step {
+    grid-template-columns: 1fr;
+    gap: 16px;
+    min-height: 0;
+    height: auto;
+    align-items: start;
+    align-content: start;
+  }
+
+  .stage-focus .step-copy {
+    align-content: start;
+    gap: 12px;
+  }
+
+  .stage-focus .step-rack {
+    justify-content: start;
+  }
+
+  .stage-focus .step-title {
+    font-size: var(--text-xl);
   }
 
   .stage-nav {
@@ -4249,11 +4335,6 @@
 
   .stage-focus .plugin-face .rack-dials {
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  }
-
-  .stage-focus .chain-step {
-    grid-template-columns: 1fr;
-    gap: 14px;
   }
 
   .why-main,
