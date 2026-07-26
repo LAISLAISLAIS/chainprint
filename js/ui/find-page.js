@@ -4,11 +4,16 @@
 
 import { findKeyBpmFromFile, findKeyBpmFromUrl } from "../find-key-bpm.js";
 import { mountAuthNav } from "./nav-auth.js";
+import { mountChainMark } from "./chain-mark.js";
+import { playAudio, stopAudio, subscribePlayback, playingKey } from "./audio-player.js";
+import { mountPlaybackPulse } from "./playback-pulse.js";
 
 mountAuthNav(document.querySelector("[data-auth-nav]"), {
   authHref: "../auth/",
   next: "/find/",
 });
+
+mountPlaybackPulse();
 
 const dropzone = document.querySelector("[data-dropzone]");
 const fileInput = document.querySelector("[data-file]");
@@ -24,8 +29,17 @@ const keyEl = document.querySelector("[data-key]");
 const keyMeta = document.querySelector("[data-key-meta]");
 const relativeEl = document.querySelector("[data-relative]");
 const noteEl = document.querySelector("[data-note]");
+const playBtn = document.querySelector("[data-find-play]");
+const playLabel = document.querySelector("[data-find-play-label]");
+const findMarkRoot = document.querySelector("[data-find-mark]");
 
 let busy = false;
+/** @type {File | Blob | null} */
+let lastAudioFile = null;
+/** @type {(() => void) | null} */
+let unmountFindMark = null;
+
+subscribePlayback(syncPlayUi);
 
 function setStatus(text, isError = false) {
   if (!statusEl) return;
@@ -51,14 +65,37 @@ function setBusy(on) {
   const sub = dropzone?.querySelector(".find-drop-sub");
   if (title) title.textContent = on ? "Listening…" : "Drop audio here";
   if (sub) sub.textContent = on ? "Measuring key & tempo" : "or click to choose a file";
+
+  if (on) {
+    if (!unmountFindMark && findMarkRoot) {
+      unmountFindMark = mountChainMark(findMarkRoot, { variant: "cycle" });
+    }
+  } else {
+    unmountFindMark?.();
+    unmountFindMark = null;
+  }
+}
+
+function syncPlayUi() {
+  const on = playingKey() === "find";
+  playBtn?.classList.toggle("is-playing", on);
+  if (playLabel) playLabel.textContent = on ? "Pause" : "Play";
+  playBtn?.setAttribute("aria-label", on ? "Pause reference" : "Play reference");
 }
 
 function showResults(result) {
   if (!resultsEl) return;
   resultsEl.hidden = false;
+  lastAudioFile = result.audioFile || null;
+  stopAudio();
 
   if (sourceEl) {
     sourceEl.textContent = result.sourceName || "Track";
+  }
+
+  if (playBtn) {
+    playBtn.hidden = !lastAudioFile;
+    syncPlayUi();
   }
 
   if (bpmEl) {
@@ -105,6 +142,9 @@ async function run(task, label) {
   setBusy(true);
   setStatus(label);
   resultsEl && (resultsEl.hidden = true);
+  stopAudio();
+  lastAudioFile = null;
+  if (playBtn) playBtn.hidden = true;
   try {
     const result = await task();
     setStatus("");
@@ -117,7 +157,23 @@ async function run(task, label) {
   }
 }
 
-dropzone?.addEventListener("click", () => fileInput?.click());
+playBtn?.addEventListener("click", async () => {
+  if (!lastAudioFile) return;
+  try {
+    await playAudio(lastAudioFile, "find");
+  } catch (err) {
+    console.error(err);
+    setStatus("Couldn’t play this clip.", true);
+  }
+});
+
+dropzone?.addEventListener("click", (e) => {
+  if (busy) {
+    e.preventDefault();
+    return;
+  }
+  fileInput?.click();
+});
 
 dropzone?.addEventListener("dragover", (e) => {
   e.preventDefault();

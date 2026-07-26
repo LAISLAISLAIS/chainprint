@@ -60,6 +60,7 @@ export async function analyzeFile(file, { pluginMap = null, daw = "universal", m
       origin: file._chainprintOrigin || meta?.platform || "upload",
       meta,
     },
+    file,
     readout,
     traits: advice?.traits || traits,
     advice,

@@ -1,9 +1,14 @@
 /**
- * Hero chain — three links in a horizontal lockup, optically centered.
+ * Hero / analyzing chain mark — horizontal 5-link lockup.
+ * @param {HTMLElement | null} root
+ * @param {{ variant?: 'hero' | 'cycle' }} [opts]
  */
-
-export function mountChainMark(root) {
+export function mountChainMark(root, opts = {}) {
   if (!root) return () => {};
+
+  const variant = opts.variant || "hero";
+  root.classList.add("logo-hero");
+  if (variant === "cycle") root.classList.add("logo-hero--cycle");
 
   root.innerHTML = `
     <svg class="chain-mark-svg" viewBox="0 0 120 40" aria-hidden="true">
@@ -28,6 +33,7 @@ export function mountChainMark(root) {
   `;
 
   return () => {
+    root.classList.remove("logo-hero", "logo-hero--cycle");
     root.innerHTML = "";
   };
 }

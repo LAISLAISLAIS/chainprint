@@ -15,6 +15,7 @@ function uid() {
  * @property {string | null} artwork
  * @property {object | null} meta
  * @property {{ kind: 'file', file: File } | { kind: 'url', url: string, manualQuery?: string } | { kind: 'blend' } | null} source
+ * @property {File | Blob | null} [audioFile]
  * @property {object | null} result
  * @property {string[]} [blendOf]
  * @property {number} [weight]
@@ -57,6 +58,7 @@ export function createLibrary() {
       artwork: partial.artwork ?? null,
       meta: partial.meta ?? null,
       source: partial.source ?? null,
+      audioFile: partial.audioFile ?? null,
       result: partial.result ?? null,
       blendOf: partial.blendOf,
       weight: partial.weight,

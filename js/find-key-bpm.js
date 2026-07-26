@@ -59,6 +59,7 @@ export async function findKeyBpmFromFile(file) {
   const result = buildResult(tempo, pitch);
   result.durationSec = durationSec;
   result.sourceName = file.name;
+  result.audioFile = file;
   return result;
 }
 
@@ -70,6 +71,7 @@ export async function findKeyBpmFromUrl(raw, opts = {}) {
   const pitch = estimatePitchProfile(mono, sampleRate);
   const result = buildResult(tempo, pitch, resolved.meta);
   result.durationSec = durationSec;
+  result.audioFile = resolved.file;
   result.sourceName =
     resolved.meta?.matchedTitle ||
     resolved.meta?.title ||

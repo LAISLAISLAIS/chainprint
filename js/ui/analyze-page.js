@@ -16,6 +16,9 @@ import { createLibrary } from "../session/library.js";
 import { blendTracks } from "../blend.js";
 import { mountAuthNav } from "./nav-auth.js";
 import { renderPluginFace } from "./plugin-visuals.js";
+import { mountChainMark } from "./chain-mark.js";
+import { playAudio, stopAudio, subscribePlayback, playingKey } from "./audio-player.js";
+import { mountPlaybackPulse } from "./playback-pulse.js";
 // PDF export is lazy-loaded on click so a CDN failure can't break the studio
 
 const library = createLibrary();
@@ -47,6 +50,8 @@ const trackCard = document.querySelector("[data-track-card]");
 const trackArt = document.querySelector("[data-track-art]");
 const trackTitle = document.querySelector("[data-track-title]");
 const trackMeta = document.querySelector("[data-track-meta]");
+const trackPlayBtn = document.querySelector("[data-track-play]");
+const analyzeMarkRoot = document.querySelector("[data-analyze-mark]");
 const identityRow = document.querySelector("[data-identity]");
 const identityInput = document.querySelector("[data-identity-input]");
 const identityGo = document.querySelector("[data-identity-go]");
@@ -105,11 +110,18 @@ let stages = [];
 let stageIndex = 0;
 /** @type {'chain' | 'signature' | 'design' | 'master' | 'why'} */
 let activeView = "chain";
+/** @type {(() => void) | null} */
+let unmountAnalyzeMark = null;
+/** @type {(() => void) | null} */
+let unmountHeroMark = null;
 
 mountAuthNav(document.querySelector("[data-auth-nav]"), {
   authHref: "../auth/",
   next: "/analyze/",
 });
+
+mountPlaybackPulse();
+subscribePlayback(syncPlayButtons);
 
 function refreshQuotaChrome() {
   const account = getSession();
@@ -224,13 +236,61 @@ function setStatus(state, text) {
   if (statusText) statusText.textContent = text;
 }
 
+function audioFileForEntry(entry) {
+  if (!entry) return null;
+  if (entry.audioFile instanceof Blob) return entry.audioFile;
+  if (entry.source?.kind === "file" && entry.source.file instanceof Blob) return entry.source.file;
+  return null;
+}
+
+function syncPlayButtons() {
+  const key = playingKey();
+  const active = library.active();
+  const activePlayable = Boolean(audioFileForEntry(active));
+
+  if (trackPlayBtn) {
+    const show = Boolean(active && activePlayable);
+    trackPlayBtn.hidden = !show;
+    const on = show && key === active?.id;
+    trackPlayBtn.classList.toggle("is-playing", on);
+    trackPlayBtn.setAttribute("aria-label", on ? "Pause reference" : "Play reference");
+  }
+
+  libraryList?.querySelectorAll("[data-library-play]").forEach((btn) => {
+    const id = btn.getAttribute("data-library-play");
+    const on = key === id;
+    btn.classList.toggle("is-playing", on);
+    btn.setAttribute("aria-label", on ? "Pause" : "Play");
+  });
+}
+
+async function toggleEntryPlayback(entry) {
+  const file = audioFileForEntry(entry);
+  if (!file || !entry) return;
+  try {
+    await playAudio(file, entry.id);
+  } catch (err) {
+    console.error(err);
+    setStatus("idle", "Couldn’t play this reference");
+  }
+}
+
 function setProgress(on, { label = "", progress = 0, stage = "" } = {}) {
   if (!progressRoot) return;
   progressRoot.classList.toggle("hidden", !on);
   idleStatus?.classList.toggle("hidden", on);
   document.body.classList.toggle("is-analyzing", on);
   document.querySelector("[data-workspace]")?.classList.toggle("is-analyzing", on);
-  if (!on) {
+
+  if (on) {
+    if (!unmountAnalyzeMark && analyzeMarkRoot) {
+      unmountAnalyzeMark = mountChainMark(analyzeMarkRoot, { variant: "cycle" });
+    }
+  } else {
+    unmountAnalyzeMark?.();
+    unmountAnalyzeMark = null;
+    unmountHeroMark?.();
+    unmountHeroMark = null;
     if (progressFill) progressFill.style.width = "0%";
     return;
   }
@@ -278,6 +338,7 @@ function showTrackCard(meta) {
   if (!trackCard) return;
   if (!meta) {
     trackCard.classList.add("hidden");
+    if (trackPlayBtn) trackPlayBtn.hidden = true;
     return;
   }
   const title = meta.matchedTitle || meta.title || "Reference";
@@ -304,6 +365,7 @@ function showTrackCard(meta) {
     }
   }
   trackCard.classList.remove("hidden");
+  syncPlayButtons();
 }
 
 function entryDisplayName(entry) {
@@ -334,6 +396,7 @@ function renderLibrary() {
                 ? "Deep · ready"
                 : "Ready"
               : "Analyzing…";
+        const canPlay = Boolean(audioFileForEntry(entry));
         return `
           <li>
             <div class="library-item ${isActive ? "is-active" : ""}" data-library-id="${escapeHtml(entry.id)}">
@@ -349,7 +412,14 @@ function renderLibrary() {
                   <span class="library-item-meta">${escapeHtml(meta)}</span>
                 </span>
               </button>
+              <div class="library-item-actions">
+              ${
+                canPlay
+                  ? `<button type="button" class="library-item-play" data-library-play="${escapeHtml(entry.id)}" aria-label="Play"><span class="library-item-play-icon" aria-hidden="true"></span></button>`
+                  : ""
+              }
               <button type="button" class="library-item-remove" data-library-remove="${escapeHtml(entry.id)}" aria-label="Remove">×</button>
+              </div>
             </div>
           </li>`;
       })
@@ -382,6 +452,8 @@ function renderLibrary() {
       libraryHint.classList.add("is-ready");
     }
   }
+
+  syncPlayButtons();
 }
 
 function applyEntryToStudio(entry) {
@@ -1042,6 +1114,7 @@ async function runAnalysis() {
   renderMaster(null);
   renderDesign(null);
   showIdentity(false);
+  stopAudio();
   if (lastSource.kind === "file") {
     showTrackCard(null);
     lastTrackName = lastSource.file?.name?.replace(/\.[^.]+$/, "") || "";
@@ -1049,12 +1122,15 @@ async function runAnalysis() {
   if (emptyEl) {
     emptyEl.classList.remove("hidden");
     emptyEl.innerHTML = `
+      <div data-analyze-hero aria-hidden="true"></div>
       <h2>${analysisMode === "deep" ? "Deep analysis…" : "Reading the vocal…"}</h2>
       <p>${
         analysisMode === "deep"
           ? "Measuring vocal + master bus to build a Pro chain."
           : "Measuring tone, dynamics, and stereo to build your chain."
       }</p>`;
+    unmountHeroMark?.();
+    unmountHeroMark = mountChainMark(emptyEl.querySelector("[data-analyze-hero]"), { variant: "cycle" });
   }
 
   const daw = "universal";
@@ -1099,6 +1175,7 @@ async function runAnalysis() {
       artwork: result.source.meta?.artwork || null,
       meta: result.source.meta || { title: name },
       source: lastSource,
+      audioFile: result.file || (lastSource.kind === "file" ? lastSource.file : null),
       result: {
         readout: result.readout,
         traits: result.traits,
@@ -1227,11 +1304,20 @@ libraryList?.addEventListener("click", (e) => {
     renderLibrary();
     return;
   }
+  const play = e.target.closest("[data-library-play]");
+  if (play) {
+    e.preventDefault();
+    e.stopPropagation();
+    const id = play.getAttribute("data-library-play");
+    toggleEntryPlayback(library.get(id));
+    return;
+  }
   const remove = e.target.closest("[data-library-remove]");
   if (remove) {
     e.preventDefault();
     e.stopPropagation();
     const id = remove.getAttribute("data-library-remove");
+    if (playingKey() === id) stopAudio();
     library.remove(id);
     const next = library.active();
     renderLibrary();
@@ -1251,6 +1337,10 @@ libraryList?.addEventListener("click", (e) => {
   if (select) {
     selectLibraryEntry(select.getAttribute("data-library-select"));
   }
+});
+
+trackPlayBtn?.addEventListener("click", () => {
+  toggleEntryPlayback(library.active());
 });
 
 blendWeightBtns.forEach((btn) => {

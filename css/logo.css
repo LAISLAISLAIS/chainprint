@@ -139,4 +139,67 @@
   .chain-stroke--mid {
     opacity: 1;
   }
+
+  .logo-hero--cycle .chain-stroke {
+    animation: none;
+    stroke: #f0f0f0;
+    opacity: 0.85;
+  }
+}
+
+/* Analyzing — chain links cycle colors */
+.logo-hero--cycle {
+  --mark-w: 120px;
+  width: var(--mark-w);
+  height: calc(var(--mark-w) * 0.333);
+  margin: 0 auto;
+  animation: none;
+  color: #f5f5f5;
+}
+
+.logo-hero--cycle .chain-compose {
+  animation: none;
+}
+
+.logo-hero--cycle .chain-stroke {
+  stroke-width: 3.5;
+  opacity: 1;
+  animation: chain-color-cycle 2.4s linear infinite;
+}
+
+.logo-hero--cycle .chain-link--1 .chain-stroke { animation-delay: 0s; }
+.logo-hero--cycle .chain-link--2 .chain-stroke { animation-delay: 0.2s; }
+.logo-hero--cycle .chain-link--3 .chain-stroke { animation-delay: 0.4s; }
+.logo-hero--cycle .chain-link--4 .chain-stroke { animation-delay: 0.6s; }
+.logo-hero--cycle .chain-link--5 .chain-stroke { animation-delay: 0.8s; }
+
+@keyframes chain-color-cycle {
+  0% {
+    stroke: #f4f4f4;
+    opacity: 0.55;
+  }
+  16% {
+    stroke: #7ec8b8;
+    opacity: 1;
+  }
+  33% {
+    stroke: #e8c56a;
+    opacity: 1;
+  }
+  50% {
+    stroke: #e29a8e;
+    opacity: 1;
+  }
+  66% {
+    stroke: #8eb0e0;
+    opacity: 1;
+  }
+  83% {
+    stroke: #c4a8e0;
+    opacity: 0.9;
+  }
+  100% {
+    stroke: #f4f4f4;
+    opacity: 0.55;
+  }
 }

@@ -34,7 +34,7 @@
 
       <label class="find-drop" data-dropzone>
         <input type="file" accept="audio/*,.mp3,.wav,.m4a,.flac,.ogg,.aiff,.aif" hidden data-file />
-        <span class="find-alive" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+        <span class="find-alive" data-find-mark aria-hidden="true"></span>
         <span class="find-drop-title">Drop audio here</span>
         <span class="find-drop-sub">or click to choose a file</span>
       </label>
@@ -54,7 +54,13 @@
       <p class="find-status" data-status hidden></p>
 
       <section class="find-results" data-results hidden aria-live="polite">
-        <p class="find-source" data-source></p>
+        <div class="find-results-head">
+          <p class="find-source" data-source></p>
+          <button type="button" class="find-play" data-find-play hidden aria-label="Play reference">
+            <span class="find-play-icon" aria-hidden="true"></span>
+            <span data-find-play-label>Play</span>
+          </button>
+        </div>
         <div class="find-grid">
           <div class="find-metric">
             <span class="find-label">BPM</span>

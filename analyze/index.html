@@ -99,6 +99,9 @@
             <p class="track-title" data-track-title></p>
             <p class="track-meta" data-track-meta></p>
           </div>
+          <button type="button" class="track-play" data-track-play hidden aria-label="Play reference">
+            <span class="track-play-icon" data-track-play-icon aria-hidden="true"></span>
+          </button>
         </div>
 
         <div class="identity-row compact hidden" data-identity>
@@ -123,9 +126,7 @@
           </div>
 
           <div class="analyze-progress compact hidden" data-progress aria-live="polite">
-            <div class="analyze-alive" aria-hidden="true">
-              <span class="analyze-eq"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
-            </div>
+            <div class="analyze-alive" data-analyze-mark aria-hidden="true"></div>
             <div class="analyze-progress-head">
               <span class="analyze-progress-label" data-progress-label>Working…</span>
               <span class="analyze-progress-pct" data-progress-pct>0%</span>
