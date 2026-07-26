@@ -296,19 +296,22 @@
   display: none;
 }
 
-/* Sit in the thin collapsed rail, vertically centered */
+/* Vertically center in the thin rail below the header (escape .studio-top containing block) */
 .studio.is-source-collapsed .source-collapse {
-  position: absolute;
-  top: var(--studio-top-height);
+  position: fixed;
+  top: calc(var(--studio-top-height) + (100dvh - var(--studio-top-height)) / 2);
   left: 0;
-  bottom: 0;
+  bottom: auto;
   width: var(--studio-rail-width);
-  height: auto;
+  height: 48px;
+  transform: translateY(-50%);
   z-index: 6;
   border: none;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
+  display: grid;
+  place-items: center;
 }
 
 .studio.is-source-collapsed .source-collapse:hover,
@@ -319,8 +322,7 @@
 
 .studio.is-source-collapsed .source-collapse-icon {
   transform: rotate(-135deg);
-  margin-left: 0;
-  margin-right: 2px;
+  margin: 0;
 }
 
 .source-rail-body {
@@ -4092,8 +4094,15 @@
   /* On stacked mobile layout, keep the chevron in the brand row */
   .studio.is-source-collapsed .source-collapse {
     position: static;
+    top: auto;
+    left: auto;
     width: 22px;
     height: 22px;
+    transform: none;
+  }
+
+  .studio.is-source-collapsed .source-collapse-icon {
+    margin-right: 2px;
   }
 
   .source-stack {
