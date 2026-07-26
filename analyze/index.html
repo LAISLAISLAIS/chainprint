@@ -256,6 +256,12 @@
                   <p class="estimate-note" data-estimate-note>Exports an Ableton rack with settings dialed from this reference.</p>
                 </div>
                 <div class="chain-toolbar-actions">
+                  <button type="button" class="export-btn export-btn-ghost" data-share-chain disabled>
+                    Share link
+                  </button>
+                  <button type="button" class="export-btn export-btn-ghost" data-ableton-mcp disabled>
+                    Mix in Ableton
+                  </button>
                   <button type="button" class="export-btn export-btn-ghost" data-export-ableton disabled>
                     Export Chain
                   </button>
@@ -264,6 +270,46 @@
                   </button>
                 </div>
               </div>
+
+              <dialog class="mcp-dialog" data-mcp-dialog>
+                <form method="dialog" class="mcp-dialog-panel">
+                  <header class="mcp-dialog-head">
+                    <h2>Mix in Ableton with AI</h2>
+                    <button type="submit" class="mcp-dialog-close" aria-label="Close">×</button>
+                  </header>
+                  <p class="mcp-dialog-lede">
+                    Share this chain, then paste the link into Claude Desktop or Cursor with
+                    <code>chainprint-mcp</code> installed. It loads stock Live devices and dials them in.
+                  </p>
+                  <label class="mcp-dialog-field">
+                    <span>Share link</span>
+                    <div class="mcp-dialog-row">
+                      <input type="text" readonly data-mcp-share-url placeholder="Create a share link first…" />
+                      <button type="button" class="export-btn export-btn-ghost" data-mcp-copy-url>Copy</button>
+                    </div>
+                  </label>
+                  <details class="mcp-dialog-config">
+                    <summary>MCP client config</summary>
+                    <pre><code>{
+  "mcpServers": {
+    "chainprint": {
+      "command": "uvx",
+      "args": ["chainprint-mcp"]
+    }
+  }
+}</code></pre>
+                  </details>
+                  <p class="mcp-dialog-hint">
+                    Run <code>uvx chainprint-mcp install</code>, restart Ableton, set Control Surface to
+                    <strong>ChainprintMCP</strong>.
+                    <a href="../help/ableton-mcp/">Full setup guide</a>
+                  </p>
+                  <div class="mcp-dialog-actions">
+                    <button type="button" class="export-btn export-btn-ghost" data-mcp-create-share>Create share link</button>
+                    <button type="submit" class="export-btn">Done</button>
+                  </div>
+                </form>
+              </dialog>
 
               <section class="hear-strip" data-hear-strip aria-label="Preview on your dry take">
                 <div class="hear-strip-head">

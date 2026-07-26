@@ -238,6 +238,12 @@ const stageNext = document.querySelector("[data-stage-next]");
 const exportPdfBtn = document.querySelector("[data-export-pdf]");
 const exportAbletonBtn = document.querySelector("[data-export-ableton]");
 const shareChainBtn = document.querySelector("[data-share-chain]");
+const abletonMcpBtn = document.querySelector("[data-ableton-mcp]");
+const mcpDialog = document.querySelector("[data-mcp-dialog]");
+const mcpShareUrlInput = document.querySelector("[data-mcp-share-url]");
+const mcpCopyUrlBtn = document.querySelector("[data-mcp-copy-url]");
+const mcpCreateShareBtn = document.querySelector("[data-mcp-create-share]");
+let lastShareUrl = "";
 const matchFileInput = document.querySelector("[data-match-file]");
 const matchName = document.querySelector("[data-match-name]");
 const matchStatus = document.querySelector("[data-match-status]");
@@ -1359,6 +1365,8 @@ function setHasResults(on) {
   }
   if (exportPdfBtn) exportPdfBtn.disabled = !on;
   if (exportAbletonBtn) exportAbletonBtn.disabled = !on || !lastAdvice?.chain;
+  if (shareChainBtn) shareChainBtn.disabled = !on || !lastAdvice?.chain;
+  if (abletonMcpBtn) abletonMcpBtn.disabled = !on || !lastAdvice?.chain;
   if (!on) {
     applyChainFxFromAdvice(null);
   } else {
@@ -2172,51 +2180,107 @@ exportAbletonBtn?.addEventListener("click", async () => {
   }
 });
 
+async function createOrCopyShareLink({ announce = true } = {}) {
+  if (!lastAdvice?.chain) throw new Error("Nothing to share yet — run an analysis first.");
+  const { createSharedChain, sharingAvailable } = await import("../share/chain-share.js");
+  if (!sharingAvailable()) {
+    throw new Error("Sharing needs the cloud backend — it isn't configured in this build.");
+  }
+  const readout = library.active()?.result?.readout || null;
+  const { url } = await createSharedChain({
+    advice: lastAdvice,
+    trackName: lastTrackName || undefined,
+    keyLabel: readout?.pitch?.keyLabel || undefined,
+    bpm: readout?.tempo?.bpm ?? undefined,
+    artworkUrl:
+      typeof library.active()?.artwork === "string" && /^https?:/.test(library.active().artwork)
+        ? library.active().artwork
+        : undefined,
+  });
+  lastShareUrl = url;
+  if (mcpShareUrlInput) mcpShareUrlInput.value = url;
+  let copied = false;
+  try {
+    await navigator.clipboard.writeText(url);
+    copied = true;
+  } catch {
+    /* clipboard may be blocked */
+  }
+  if (announce && !copied) prompt("Share this chain:", url);
+  return { url, copied };
+}
+
 shareChainBtn?.addEventListener("click", async () => {
   if (!lastAdvice?.chain || !shareChainBtn) return;
   const label = shareChainBtn.textContent;
   shareChainBtn.disabled = true;
   shareChainBtn.textContent = "Creating link…";
   try {
-    const { createSharedChain, sharingAvailable } = await import("../share/chain-share.js");
-    if (!sharingAvailable()) {
-      alert("Sharing needs the cloud backend — it isn't configured in this build.");
-      return;
-    }
-    const readout = library.active()?.result?.readout || null;
-    const { url } = await createSharedChain({
-      advice: lastAdvice,
-      trackName: lastTrackName || undefined,
-      keyLabel: readout?.pitch?.keyLabel || undefined,
-      bpm: readout?.tempo?.bpm ?? undefined,
-      artworkUrl:
-        typeof library.active()?.artwork === "string" && /^https?:/.test(library.active().artwork)
-          ? library.active().artwork
-          : undefined,
-    });
-    let copied = false;
-    try {
-      await navigator.clipboard.writeText(url);
-      copied = true;
-    } catch {
-      /* clipboard can be blocked — fall back to prompt below */
-    }
+    const { copied } = await createOrCopyShareLink({ announce: true });
     if (copied) {
       shareChainBtn.textContent = "Link copied";
       setTimeout(() => {
         if (shareChainBtn) shareChainBtn.textContent = label || "Share link";
       }, 2200);
     } else {
-      prompt("Share this chain:", url);
+      shareChainBtn.textContent = label || "Share link";
     }
   } catch (err) {
     console.error(err);
     alert(err.message || "Could not create the share link.");
+    shareChainBtn.textContent = label || "Share link";
   } finally {
     shareChainBtn.disabled = false;
     if (shareChainBtn.textContent === "Creating link…") {
       shareChainBtn.textContent = label || "Share link";
     }
+  }
+});
+
+function openMcpDialog() {
+  if (mcpShareUrlInput) mcpShareUrlInput.value = lastShareUrl || "";
+  if (typeof mcpDialog?.showModal === "function") mcpDialog.showModal();
+  else mcpDialog?.setAttribute("open", "");
+}
+
+abletonMcpBtn?.addEventListener("click", () => {
+  openMcpDialog();
+});
+
+mcpCreateShareBtn?.addEventListener("click", async () => {
+  if (!mcpCreateShareBtn) return;
+  const label = mcpCreateShareBtn.textContent;
+  mcpCreateShareBtn.disabled = true;
+  mcpCreateShareBtn.textContent = "Creating…";
+  try {
+    const { copied } = await createOrCopyShareLink({ announce: false });
+    mcpCreateShareBtn.textContent = copied ? "Link ready · copied" : "Link ready";
+    setTimeout(() => {
+      if (mcpCreateShareBtn) mcpCreateShareBtn.textContent = label || "Create share link";
+    }, 1800);
+  } catch (err) {
+    console.error(err);
+    alert(err.message || "Could not create the share link.");
+    mcpCreateShareBtn.textContent = label || "Create share link";
+  } finally {
+    mcpCreateShareBtn.disabled = false;
+  }
+});
+
+mcpCopyUrlBtn?.addEventListener("click", async () => {
+  const url = lastShareUrl || mcpShareUrlInput?.value || "";
+  if (!url) {
+    mcpCreateShareBtn?.click();
+    return;
+  }
+  try {
+    await navigator.clipboard.writeText(url);
+    mcpCopyUrlBtn.textContent = "Copied";
+    setTimeout(() => {
+      if (mcpCopyUrlBtn) mcpCopyUrlBtn.textContent = "Copy";
+    }, 1600);
+  } catch {
+    prompt("Share this chain:", url);
   }
 });
 
