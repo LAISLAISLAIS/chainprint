@@ -62,14 +62,15 @@ Card body       DM Sans · text-base or text-md · regular
 
 - Void black backgrounds, bright white primary, soft grey secondary (`--silkscreen`)
 - Quieter copy: `--muted` / `--lamp-dim`
-- Metal is **sparse and purposeful** — analyzing chain mark, live lamp, auth success ticks. Not decorative underlines, card washes, or glyph tinting.
-- Quiet chrome: hairline rules (`--panel-edge` / `--studio-rule`), almost no glow
+- **Teal** (`--teal`) is the live accent — analyzing chain hue-fade, success ticks, sparse live lamps. Not decorative underlines or every card wash.
+- Warm **metal/gold is retired** from product chrome (`--metal*` aliases to teal for legacy rules)
+- Quiet chrome: hairline rules (`--panel-edge` / `--studio-rule` / `--surface-border`), shared card fill `--surface`
 - Pack content to the top (`align-content: start`) — never stretch short blocks into empty viewport voids
-- Motion: short fades / 3–4px slides on panel enter; hover is border/background only (no bounce)
+- Motion: analyzing mark hue-cycles through teal; elsewhere short fades; hover is border/background only (no bounce)
 
 ### Exception — DAW plugin skins
 
-Ableton / Logic / Pro Tools face skins in `css/app.css` may keep host-faithful accent colors. Product UI (studio, auth, find, share, settings) stays metal-only.
+Ableton / Logic / Pro Tools face skins in `css/app.css` may keep host-faithful accent colors. Product UI (studio, auth, find, share, settings) uses teal only for live/success accents.
 
 ## Anti-patterns
 
@@ -77,6 +78,7 @@ Ableton / Logic / Pro Tools face skins in `css/app.css` may keep host-faithful a
 - Mixing three fonts inside one list item
 - Tiny uppercase labels with wide tracking (reads as noise)
 - Corporate “Inter + soft purple” vibes
-- Teal / cool neon accents in product chrome
+- Gold / champagne accents in product chrome
+- Teal neon everywhere (keep it sparse — analyzing + confirmation)
 - Short column beside a tall list (creates dead black bands)
 - Page-level `--brand` / `--accent` overrides that drift from chassis

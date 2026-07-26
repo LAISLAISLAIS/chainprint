@@ -629,6 +629,8 @@ document.querySelectorAll("[data-unlock-deep]").forEach((btn) => {
     }
     if (analysisMode !== "deep") {
       setMode("deep");
+      if (analysisMode !== "deep") pendingViewAfterAnalysis = null;
+      // setMode already re-runs when the mode changes
       return;
     }
     if (!rerunActiveAnalysis()) {
@@ -1557,8 +1559,16 @@ function renderDesign(design) {
   designBody?.classList.toggle("hidden", !has);
   if (!has || !design) return;
 
-  if (designHeadline) designHeadline.textContent = design.headline || "Vocal production plan";
+  if (designHeadline) designHeadline.textContent = design.headline || "Production plan";
   if (designBlurb) designBlurb.textContent = design.blurb || "";
+  if (designSub) {
+    designSub.textContent =
+      analysisTarget === "instrumental"
+        ? "How to build atmosphere and production around the instrumental bed."
+        : analysisTarget === "full"
+          ? "How to shape arrangement, space, and print for the full mix."
+          : "How to build the atmosphere and production around the dry vocal.";
+  }
 
   if (designCues) {
     const cues = design.cues || [];

@@ -66,7 +66,7 @@ function stepCard(step, index, kind) {
   const how = step.how ? `<p class="xp-how"><span>How</span> ${esc(step.how)}</p>` : "";
 
   return `
-    <article class="xp-step">
+    <article class="xp-step" data-xp-keep>
       <div class="xp-step-head">
         <span class="xp-n">${n}</span>
         <div class="xp-step-titles">
@@ -85,8 +85,10 @@ function section(title, body, opts = {}) {
   if (!body) return "";
   return `
     <section class="xp-section${opts.breakBefore ? " xp-break" : ""}">
-      <h2>${esc(title)}</h2>
-      ${opts.lede ? `<p class="xp-section-lede">${esc(opts.lede)}</p>` : ""}
+      <div class="xp-section-head" data-xp-keep>
+        <h2>${esc(title)}</h2>
+        ${opts.lede ? `<p class="xp-section-lede">${esc(opts.lede)}</p>` : ""}
+      </div>
       ${body}
     </section>`;
 }
@@ -216,19 +218,21 @@ export function buildExportSheetHtml(advice, meta = {}) {
   }
 
   const bandsHtml = readout?.bands?.length
-    ? `<div class="xp-bands">${readout.bands.map(bandRow).join("")}</div>`
+    ? `<div class="xp-bands" data-xp-keep><h3 class="xp-subhead">Frequency balance</h3>${readout.bands
+        .map(bandRow)
+        .join("")}</div>`
     : "";
 
   const signatureBody = `
     ${
       signatureMetrics.length
-        ? `<div class="xp-metrics">${signatureMetrics.join("")}</div>`
-        : `<p class="xp-empty">Signature meters unavailable for this pass.</p>`
+        ? `<div class="xp-metrics" data-xp-keep>${signatureMetrics.join("")}</div>`
+        : `<p class="xp-empty" data-xp-keep>Signature meters unavailable for this pass.</p>`
     }
-    ${bandsHtml ? `<h3 class="xp-subhead">Frequency balance</h3>${bandsHtml}` : ""}
+    ${bandsHtml}
     ${
       readout?.note
-        ? `<p class="xp-note"><span>Note</span> ${esc(readout.note)}${
+        ? `<p class="xp-note" data-xp-keep><span>Note</span> ${esc(readout.note)}${
             readout.durationSec != null
               ? ` · ${fmt(readout.durationSec, 1)}s · ${readout.sampleRate || "—"} Hz`
               : ""
@@ -242,21 +246,21 @@ export function buildExportSheetHtml(advice, meta = {}) {
     (f) => f?.label && !/^(target|source)$/i.test(String(f.label))
   );
   const findingsHtml = findings.length
-    ? `<div class="xp-facts">${findings
+    ? findings
         .map(
           (f) => `
-      <div class="xp-fact">
+      <div class="xp-fact" data-xp-keep>
         <span class="xp-fact-k">${esc(f.label)}</span>
         <p>${esc(f.text)}</p>
       </div>`
         )
-        .join("")}</div>`
+        .join("")
     : "";
   const summaryHtml = traits?.summary?.length
-    ? `<ul class="xp-bullets">${traits.summary.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>`
+    ? `<ul class="xp-bullets" data-xp-keep>${traits.summary.map((s) => `<li>${esc(s)}</li>`).join("")}</ul>`
     : "";
   const traitsDeep = traits?.deep
-    ? `<div class="xp-chips">
+    ? `<div class="xp-chips" data-xp-keep>
         ${traits.deep.designLane ? `<span>${esc(humanize(traits.deep.designLane))}</span>` : ""}
         ${traits.deep.spaceCharacter ? `<span>${esc(humanize(traits.deep.spaceCharacter))}</span>` : ""}
         ${traits.deep.denseness ? `<span>Density · ${esc(humanize(traits.deep.denseness))}</span>` : ""}
@@ -272,10 +276,10 @@ export function buildExportSheetHtml(advice, meta = {}) {
   /* —— Why / priorities —— */
   const highlights = advice.highlights || [];
   const highlightsHtml = highlights.length
-    ? `<div class="xp-moves">${highlights
+    ? highlights
         .map(
           (h, i) => `
-      <article class="xp-move">
+      <article class="xp-move" data-xp-keep>
         <span class="xp-n">${String(i + 1).padStart(2, "0")}</span>
         <div>
           <h3>${esc(h.stage || h.title || h.action || "Move")}</h3>
@@ -284,7 +288,7 @@ export function buildExportSheetHtml(advice, meta = {}) {
         </div>
       </article>`
         )
-        .join("")}</div>`
+        .join("")
     : "";
 
   const orderWhy = chain.orderWhy;
@@ -297,12 +301,20 @@ export function buildExportSheetHtml(advice, meta = {}) {
       .map((line, i) => `<li><span>S${i + 1}</span>${esc(line)}</li>`)
       .join("");
     orderHtml = `
-      ${insertOrder ? `<h3 class="xp-subhead">Insert order</h3><ol class="xp-order">${insertOrder}</ol>` : ""}
-      ${sendOrder ? `<h3 class="xp-subhead">Send order</h3><ol class="xp-order">${sendOrder}</ol>` : ""}
-      ${orderWhy.tip ? `<p class="xp-note"><span>Tip</span> ${esc(orderWhy.tip)}</p>` : ""}
+      ${
+        insertOrder
+          ? `<div data-xp-keep><h3 class="xp-subhead">Insert order</h3><ol class="xp-order">${insertOrder}</ol></div>`
+          : ""
+      }
+      ${
+        sendOrder
+          ? `<div data-xp-keep><h3 class="xp-subhead">Send order</h3><ol class="xp-order">${sendOrder}</ol></div>`
+          : ""
+      }
+      ${orderWhy.tip ? `<p class="xp-note" data-xp-keep><span>Tip</span> ${esc(orderWhy.tip)}</p>` : ""}
     `;
   } else if (Array.isArray(orderWhy) && orderWhy.length) {
-    orderHtml = `<ol class="xp-order">${orderWhy
+    orderHtml = `<ol class="xp-order" data-xp-keep>${orderWhy
       .map((line, i) => `<li><span>${String(i + 1).padStart(2, "0")}</span>${esc(line)}</li>`)
       .join("")}</ol>`;
   }
@@ -311,10 +323,10 @@ export function buildExportSheetHtml(advice, meta = {}) {
 
   /* —— Instruments —— */
   const instrumentsBody = instruments.length
-    ? `<div class="xp-instruments">${instruments
+    ? instruments
         .map(
           (item) => `
-      <div class="xp-instrument">
+      <div class="xp-instrument" data-xp-keep>
         <div class="xp-instrument-head">
           <strong>${esc(item.label)}</strong>
           <span>${esc(pct(item.confidence))}</span>
@@ -322,7 +334,7 @@ export function buildExportSheetHtml(advice, meta = {}) {
         ${item.tip ? `<p>${esc(item.tip)}</p>` : ""}
       </div>`
         )
-        .join("")}</div>`
+        .join("")
     : "";
 
   /* —— Chain —— */
@@ -331,21 +343,13 @@ export function buildExportSheetHtml(advice, meta = {}) {
   const honesty = advice.honesty || chain.honesty || "";
   const estimateNote = advice.estimateNote || chain.estimateNote || "";
   const chainIntro = `
-    ${honesty ? `<p class="xp-honesty">${esc(honesty)}</p>` : ""}
-    ${estimateNote ? `<p class="xp-section-lede">${esc(estimateNote)}</p>` : ""}
+    ${honesty ? `<p class="xp-honesty" data-xp-keep>${esc(honesty)}</p>` : ""}
+    ${estimateNote ? `<p class="xp-section-lede" data-xp-keep>${esc(estimateNote)}</p>` : ""}
   `;
   const chainBody = `
     ${chainIntro}
-    <div class="xp-columns">
-      <div class="xp-col">
-        <h3 class="xp-subhead">Inserts · build in order</h3>
-        <div class="xp-stack">${inserts || `<p class="xp-empty">No inserts.</p>`}</div>
-      </div>
-      <div class="xp-col">
-        <h3 class="xp-subhead">Sends</h3>
-        <div class="xp-stack">${sends || `<p class="xp-empty">No sends.</p>`}</div>
-      </div>
-    </div>
+    ${inserts ? `<h3 class="xp-subhead" data-xp-keep>Inserts · build in order</h3>${inserts}` : `<p class="xp-empty" data-xp-keep>No inserts.</p>`}
+    ${sends ? `<h3 class="xp-subhead" data-xp-keep>Sends</h3>${sends}` : `<p class="xp-empty" data-xp-keep>No sends.</p>`}
   `;
 
   /* —— Design (Deep) —— */
@@ -355,7 +359,7 @@ export function buildExportSheetHtml(advice, meta = {}) {
     const cues = (design.cues || [])
       .map(
         (c) => `
-      <div class="xp-fact">
+      <div class="xp-fact" data-xp-keep>
         <span class="xp-fact-k">${esc(c.label)}</span>
         <p>${esc(c.text)}</p>
       </div>`
@@ -364,7 +368,7 @@ export function buildExportSheetHtml(advice, meta = {}) {
     const layers = (design.layers || [])
       .map(
         (layer) => `
-      <article class="xp-layer">
+      <article class="xp-layer" data-xp-keep>
         <h3>${esc(layer.title)}</h3>
         ${layer.goal ? `<p class="xp-layer-goal">${esc(layer.goal)}</p>` : ""}
         <ul class="xp-bullets">${(layer.actions || layer.moves || [])
@@ -377,11 +381,21 @@ export function buildExportSheetHtml(advice, meta = {}) {
       .map((item) => `<li>${esc(item)}</li>`)
       .join("");
     designBody = `
-      ${design.headline ? `<p class="xp-design-head">${esc(design.headline)}</p>` : ""}
-      ${design.blurb ? `<p class="xp-section-lede">${esc(design.blurb)}</p>` : ""}
-      ${cues ? `<div class="xp-facts">${cues}</div>` : ""}
-      ${layers ? `<div class="xp-layers">${layers}</div>` : ""}
-      ${checklist ? `<h3 class="xp-subhead">Before you print</h3><ul class="xp-bullets">${checklist}</ul>` : ""}
+      ${
+        design.headline || design.blurb
+          ? `<div data-xp-keep>
+        ${design.headline ? `<p class="xp-design-head">${esc(design.headline)}</p>` : ""}
+        ${design.blurb ? `<p class="xp-section-lede">${esc(design.blurb)}</p>` : ""}
+      </div>`
+          : ""
+      }
+      ${cues}
+      ${layers}
+      ${
+        checklist
+          ? `<div data-xp-keep><h3 class="xp-subhead">Before you print</h3><ul class="xp-bullets">${checklist}</ul></div>`
+          : ""
+      }
     `;
   }
 
@@ -409,12 +423,26 @@ export function buildExportSheetHtml(advice, meta = {}) {
       .join("");
     const masterBands = (master.bands || []).map(bandRow).join("");
     masterBody = `
-      ${master.streamingTarget ? `<p class="xp-section-lede">Streaming target · ${esc(master.streamingTarget)}</p>` : ""}
-      ${master.honesty ? `<p class="xp-honesty">${esc(master.honesty)}</p>` : ""}
-      ${masterMetrics ? `<div class="xp-metrics">${masterMetrics}</div>` : ""}
-      ${notes ? `<h3 class="xp-subhead">Master notes</h3><ul class="xp-bullets">${notes}</ul>` : ""}
-      ${steps ? `<h3 class="xp-subhead">Mastering chain</h3><div class="xp-stack">${steps}</div>` : ""}
-      ${masterBands ? `<h3 class="xp-subhead">Master bands</h3><div class="xp-bands">${masterBands}</div>` : ""}
+      ${
+        master.streamingTarget || master.honesty
+          ? `<div data-xp-keep>
+        ${master.streamingTarget ? `<p class="xp-section-lede">Streaming target · ${esc(master.streamingTarget)}</p>` : ""}
+        ${master.honesty ? `<p class="xp-honesty">${esc(master.honesty)}</p>` : ""}
+      </div>`
+          : ""
+      }
+      ${masterMetrics ? `<div class="xp-metrics" data-xp-keep>${masterMetrics}</div>` : ""}
+      ${
+        notes
+          ? `<div data-xp-keep><h3 class="xp-subhead">Master notes</h3><ul class="xp-bullets">${notes}</ul></div>`
+          : ""
+      }
+      ${steps ? `<h3 class="xp-subhead" data-xp-keep>Mastering chain</h3>${steps}` : ""}
+      ${
+        masterBands
+          ? `<div class="xp-bands" data-xp-keep><h3 class="xp-subhead">Master bands</h3>${masterBands}</div>`
+          : ""
+      }
     `;
   }
 
@@ -430,7 +458,7 @@ export function buildExportSheetHtml(advice, meta = {}) {
 
   return `
     <div class="xp-sheet" data-export-sheet>
-      <header class="xp-top">
+      <header class="xp-top" data-xp-keep>
         <div class="xp-brand">
           <img class="xp-mark" src="${MARK_IMG_URI}" width="56" height="19" alt="" />
           <span class="xp-word">Chainprint</span>
@@ -443,7 +471,7 @@ export function buildExportSheetHtml(advice, meta = {}) {
         </div>
       </header>
 
-      <p class="xp-lede">Full reference analysis — measured signature, why each move matters, and the complete processing chain with settings. Use this as your session bible; always finish by ear in full mix context.</p>
+      <p class="xp-lede" data-xp-keep>Full reference analysis — measured signature, why each move matters, and the complete processing chain with settings. Use this as your session bible; always finish by ear in full mix context.</p>
 
       ${section(signatureLabel, signatureBody, {
         lede: "What we measured on the reference — the numbers that dialed every stage.",
@@ -471,7 +499,7 @@ export function buildExportSheetHtml(advice, meta = {}) {
         breakBefore: Boolean(masterBody),
       })}
 
-      <footer class="xp-foot">
+      <footer class="xp-foot" data-xp-keep>
         <span>chainprint.app</span>
         <span>Engineered recreation from the measured reference signature — refine by ear in full mix context.</span>
       </footer>
@@ -490,19 +518,32 @@ export const EXPORT_SHEET_CSS = `
     z-index: -1;
   }
 
-  .xp-sheet {
+  .xp-pages {
+    display: grid;
+    gap: 0;
+  }
+
+  .xp-sheet,
+  .xp-page {
     box-sizing: border-box;
     width: 816px;
-    padding: 40px 44px 32px;
+    min-height: 1056px;
+    padding: 36px 44px;
     background: #050505;
     color: #f2f2f2;
     font-family: "DM Sans", "Segoe UI", sans-serif;
     -webkit-font-smoothing: antialiased;
+    display: grid;
+    align-content: start;
+    gap: 14px;
   }
 
   .xp-sheet *,
   .xp-sheet *::before,
-  .xp-sheet *::after {
+  .xp-sheet *::after,
+  .xp-page *,
+  .xp-page *::before,
+  .xp-page *::after {
     box-sizing: border-box;
   }
 
@@ -571,7 +612,7 @@ export const EXPORT_SHEET_CSS = `
   }
 
   .xp-lede {
-    margin: 16px 0 22px;
+    margin: 0;
     font-size: 12.5px;
     color: #9a9a9a;
     letter-spacing: -0.01em;
@@ -579,17 +620,24 @@ export const EXPORT_SHEET_CSS = `
   }
 
   .xp-section {
-    margin: 0 0 28px;
-    padding-top: 4px;
+    margin: 0;
+    padding-top: 0;
+    display: contents;
   }
 
   .xp-section.xp-break {
-    padding-top: 8px;
-    border-top: 1px solid rgba(255,255,255,0.08);
+    padding-top: 0;
+    border-top: none;
   }
 
+  .xp-section-head {
+    display: grid;
+    gap: 6px;
+  }
+
+  .xp-section-head > h2,
   .xp-section > h2 {
-    margin: 0 0 6px;
+    margin: 0;
     font-family: "Syne", sans-serif;
     font-size: 18px;
     font-weight: 700;
@@ -599,14 +647,14 @@ export const EXPORT_SHEET_CSS = `
   }
 
   .xp-section-lede {
-    margin: 0 0 12px;
+    margin: 0;
     font-size: 11.5px;
     color: #8a8a8a;
     line-height: 1.4;
   }
 
   .xp-subhead {
-    margin: 16px 0 8px;
+    margin: 0;
     font-size: 10px;
     font-weight: 600;
     letter-spacing: 0.1em;
@@ -615,7 +663,7 @@ export const EXPORT_SHEET_CSS = `
   }
 
   .xp-honesty {
-    margin: 0 0 10px;
+    margin: 0;
     padding: 10px 12px;
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 8px;
@@ -697,9 +745,7 @@ export const EXPORT_SHEET_CSS = `
   }
 
   .xp-facts {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    display: contents;
   }
 
   .xp-fact {
@@ -752,9 +798,7 @@ export const EXPORT_SHEET_CSS = `
   }
 
   .xp-moves {
-    display: grid;
-    gap: 8px;
-    margin-bottom: 14px;
+    display: contents;
   }
 
   .xp-move {
@@ -815,9 +859,7 @@ export const EXPORT_SHEET_CSS = `
   }
 
   .xp-instruments {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 8px;
+    display: contents;
   }
 
   .xp-instrument {
@@ -854,15 +896,11 @@ export const EXPORT_SHEET_CSS = `
   }
 
   .xp-columns {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 18px;
-    align-items: start;
+    display: contents;
   }
 
   .xp-stack {
-    display: grid;
-    gap: 8px;
+    display: contents;
   }
 
   .xp-step {
@@ -984,9 +1022,7 @@ export const EXPORT_SHEET_CSS = `
   }
 
   .xp-layers {
-    display: grid;
-    gap: 10px;
-    margin-top: 10px;
+    display: contents;
   }
 
   .xp-layer {
@@ -1039,7 +1075,7 @@ export const EXPORT_SHEET_CSS = `
     justify-content: space-between;
     align-items: baseline;
     gap: 16px;
-    margin-top: 8px;
+    margin-top: 0;
     padding-top: 14px;
     border-top: 1px solid rgba(255,255,255,0.1);
     font-size: 9.5px;

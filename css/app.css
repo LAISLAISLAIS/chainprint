@@ -1042,9 +1042,9 @@
 
 .readout {
   padding: 14px 14px 12px;
-  border: 1px solid var(--panel-edge);
+  border: 1px solid var(--surface-border, var(--panel-edge));
   border-radius: var(--radius-sm);
-  background: rgba(0, 0, 0, 0.28);
+  background: var(--surface, rgba(255, 255, 255, 0.025));
 }
 
 .readout .key {

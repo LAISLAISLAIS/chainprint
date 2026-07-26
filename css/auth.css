@@ -164,11 +164,11 @@
 }
 
 .password-reqs li.is-met {
-  color: var(--metal-bright);
+  color: var(--teal-bright);
 }
 
 .password-reqs li.is-met::before {
-  background: var(--metal);
+  background: var(--teal);
 }
 
 .terms-check {
@@ -193,7 +193,7 @@
   height: 16px;
   margin: 2px 0 0;
   flex-shrink: 0;
-  accent-color: var(--metal);
+  accent-color: var(--teal);
   cursor: pointer;
 }
 
@@ -338,11 +338,12 @@
 }
 
 .social-note {
-  margin-top: 10px;
-  font-size: 0.75rem;
+  margin: 0 0 18px;
+  font-size: var(--text-sm);
   color: var(--silkscreen);
-  line-height: 1.4;
-  text-align: center;
+  line-height: 1.45;
+  text-align: left;
+  letter-spacing: var(--tracking-body);
 }
 
 .auth-divider {

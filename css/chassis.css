@@ -17,21 +17,34 @@
   --accent-soft: rgba(255, 255, 255, 0.06);
   --accent-dim: #9a9a9a;
   /*
-   * Accent family — warm metal only (no teal/cool accents).
-   * Use --metal for fills & glyphs, --metal-bright for small text labels.
+   * Live accent — cool teal (analyzing mark, success, sparse highlights).
+   * --metal* aliases kept so older rules keep working.
    */
-  --metal: #c4a574;
-  --metal-bright: #d8c09a;
-  --metal-soft: rgba(196, 165, 116, 0.35);
-  --metal-dim: #8a7352;
-  --metal-glow: rgba(196, 165, 116, 0.22);
-  --metal-wash: rgba(196, 165, 116, 0.1);
-  --metal-wash-strong: rgba(196, 165, 116, 0.16);
-  --ok: var(--metal-bright);
+  --teal: #6ec4b4;
+  --teal-bright: #8ed9cb;
+  --teal-soft: rgba(110, 196, 180, 0.32);
+  --teal-dim: #3f8f84;
+  --teal-glow: rgba(110, 196, 180, 0.28);
+  --teal-wash: rgba(110, 196, 180, 0.1);
+  --teal-wash-strong: rgba(110, 196, 180, 0.16);
+  --metal: var(--teal);
+  --metal-bright: var(--teal-bright);
+  --metal-soft: var(--teal-soft);
+  --metal-dim: var(--teal-dim);
+  --metal-glow: var(--teal-glow);
+  --metal-wash: var(--teal-wash);
+  --metal-wash-strong: var(--teal-wash-strong);
+  --ok: var(--teal-bright);
   --lamp: #f0f0f0;
   --lamp-dim: #6a6a6a;
   --danger: #ff6b6b;
   --danger-soft: #ffb4b4;
+
+  /* Shared surface chrome — use these for cards/panels */
+  --surface: rgba(255, 255, 255, 0.025);
+  --surface-hover: rgba(255, 255, 255, 0.045);
+  --surface-border: var(--panel-edge);
+  --surface-border-strong: var(--panel-edge-strong);
 
   /* Spacing ladder — prefer these over one-off px */
   --space-1: 4px;
@@ -115,7 +128,8 @@ body {
 
 body {
   background:
-    radial-gradient(ellipse 70% 42% at 50% -6%, rgba(255, 255, 255, 0.03) 0%, transparent 55%),
+    radial-gradient(ellipse 62% 38% at 50% -4%, rgba(110, 196, 180, 0.045) 0%, transparent 58%),
+    radial-gradient(ellipse 70% 42% at 50% -6%, rgba(255, 255, 255, 0.025) 0%, transparent 55%),
     linear-gradient(180deg, #000 0%, var(--chassis) 55%, #000 100%);
   background-attachment: scroll;
 }
@@ -156,7 +170,7 @@ body > * {
   border-radius: var(--radius);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
 }
 
 .brand {
@@ -202,7 +216,7 @@ body > * {
 }
 
 .lamp[data-state="live"] {
-  background: var(--metal);
+  background: var(--teal);
   animation: none;
   opacity: 1;
 }

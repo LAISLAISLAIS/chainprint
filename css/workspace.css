@@ -27,9 +27,9 @@
   --studio-rail-width: 300px;
   --studio-top-height: 52px;
   --studio-gutter: 20px;
-  /* Live cue — quiet white; metal reserved for analyzing mark */
-  --signal: var(--accent);
-  --signal-faint: rgba(255, 255, 255, 0.22);
+  /* Live cue — teal for analyzing/live; chrome stays monochrome */
+  --signal: var(--teal);
+  --signal-faint: var(--teal-soft);
   position: relative;
   height: 100%;
   display: grid;
@@ -1376,13 +1376,14 @@
 .instrument-card {
   padding: 14px 16px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--panel-edge);
-  background: rgba(255, 255, 255, 0.03);
-  transition: border-color 0.15s ease, transform 0.15s ease;
+  border: 1px solid var(--surface-border, var(--panel-edge));
+  background: var(--surface, rgba(255, 255, 255, 0.025));
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 .instrument-card:hover {
-  border-color: rgba(255, 255, 255, 0.16);
+  border-color: var(--surface-border-strong, var(--panel-edge-strong));
+  background: var(--surface-hover, rgba(255, 255, 255, 0.045));
   transform: none;
 }
 
@@ -1538,7 +1539,7 @@
 
 .analyze-progress.compact .analyze-progress-fill {
   height: 100%;
-  background: rgba(255, 255, 255, 0.72);
+  background: linear-gradient(90deg, var(--teal-dim), var(--teal-bright));
   border-radius: 1px;
   animation: none;
   transition: width 0.28s ease-out;
@@ -1648,7 +1649,7 @@
 .studio.is-analyzing [data-analyze-hero] {
   --mark-w: clamp(148px, 28vw, 200px);
   margin-bottom: 18px;
-  color: var(--metal);
+  color: var(--teal);
 }
 
 @keyframes analyze-main-breathe {
@@ -2735,18 +2736,18 @@
 }
 
 .design-layer {
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  border: 1px solid var(--surface-border, var(--panel-edge));
   border-radius: var(--radius-sm);
   padding: 14px 14px 12px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface, rgba(255, 255, 255, 0.025));
   display: grid;
   gap: 12px;
   transition: border-color 0.18s var(--ease-out), background 0.18s var(--ease-out);
 }
 
 .design-layer:hover {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.045);
+  border-color: var(--surface-border-strong, var(--panel-edge-strong));
+  background: var(--surface-hover, rgba(255, 255, 255, 0.045));
 }
 
 .design-layer-head {
@@ -3307,15 +3308,15 @@
   gap: 8px;
   padding: 10px 11px;
   border-radius: var(--radius-xs);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid var(--surface-border, var(--panel-edge));
+  background: var(--surface, rgba(255, 255, 255, 0.025));
   min-width: 0;
   transition: border-color 0.18s var(--ease-out), background 0.18s var(--ease-out);
 }
 
 .why-fact:hover {
-  border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--surface-border-strong, var(--panel-edge-strong));
+  background: var(--surface-hover, rgba(255, 255, 255, 0.045));
 }
 
 .why-fact.is-empty {
@@ -3415,14 +3416,14 @@
   align-items: start;
   padding: 12px 12px 11px;
   border-radius: var(--radius-sm);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--surface-border, var(--panel-edge));
+  background: var(--surface, rgba(255, 255, 255, 0.025));
   transition: border-color 0.18s var(--ease-out), background 0.18s var(--ease-out);
 }
 
 .why-move:hover {
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.045);
+  border-color: var(--surface-border-strong, var(--panel-edge-strong));
+  background: var(--surface-hover, rgba(255, 255, 255, 0.045));
 }
 
 .why-move:last-child {
@@ -3845,9 +3846,9 @@
   gap: 12px;
   align-items: start;
   padding: 10px 11px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.025);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--surface-border, var(--panel-edge));
+  background: var(--surface, rgba(255, 255, 255, 0.025));
 }
 
 .studio .master-note-glyph {

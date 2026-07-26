@@ -114,7 +114,7 @@
   min-height: 40px;
   margin-bottom: 8px;
   overflow: visible;
-  color: var(--metal, #c4a574);
+  color: var(--teal, #6ec4b4);
 }
 
 .find-drop.is-busy .find-alive {
@@ -125,13 +125,13 @@
 .find-drop.is-busy .find-alive.logo-hero,
 .find-drop.is-busy .find-alive .logo-hero--cycle {
   --mark-w: min(148px, 56vw);
-  color: var(--metal, #c4a574);
+  color: var(--teal, #6ec4b4);
 }
 
 .find-drop.is-busy {
   border-style: solid;
-  border-color: var(--metal-soft, rgba(196, 165, 116, 0.35));
-  background: rgba(196, 165, 116, 0.04);
+  border-color: var(--teal-soft, rgba(110, 196, 180, 0.32));
+  background: var(--teal-wash, rgba(110, 196, 180, 0.1));
   pointer-events: none;
   cursor: default;
   /* Allow hue-rotated chain to paint; clip was unnecessary */

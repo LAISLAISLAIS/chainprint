@@ -601,10 +601,17 @@ export function deepSendExtras(readout, traits) {
  * Deep sound-design brief for the Design tab.
  * Plain-language production plan — not a plugin dump.
  */
-export function buildDesignBrief(readout, traits) {
-  const lane = traits.deep?.designLane || "polished_lead";
-  const space = traits.deep?.spaceCharacter || "supported";
-  const delivery = traits.deep?.delivery || "competitive";
+export function buildDesignBrief(readout, traits, target = "vocal") {
+  const resolved = target === "instrumental" || target === "full" ? target : "vocal";
+  if (resolved === "instrumental") return buildInstrumentalDesignBrief(readout, traits);
+  if (resolved === "full") return buildFullMixDesignBrief(readout, traits);
+  return buildVocalDesignBrief(readout, traits);
+}
+
+function buildVocalDesignBrief(readout, traits) {
+  const lane = traits?.deep?.designLane || "polished_lead";
+  const space = traits?.deep?.spaceCharacter || "supported";
+  const delivery = traits?.deep?.delivery || "competitive";
 
   const laneMeta = {
     polished_lead: {
@@ -644,6 +651,7 @@ export function buildDesignBrief(readout, traits) {
         ? "Keep space short and quiet so the lyric stays right up front."
         : "Space should glue the vocal without becoming a wash.";
 
+  const tone = traits?.tone || {};
   const layers = [
     {
       id: "space",
@@ -703,7 +711,7 @@ export function buildDesignBrief(readout, traits) {
             : "Keep pitch natural. Character comes from saturation and doubles, not heavy effects.",
       actions: [
         "Decide pitch personality before saturation so harmonics match.",
-        traits.tone.air === "elevated"
+        tone.air === "elevated"
           ? "Air is already bright — only add more top if the lead still feels veiled."
           : "After de-ess, a gentle air lift is fine if presence needs help.",
         lane === "aggressive_pop"
@@ -776,6 +784,205 @@ export function buildDesignBrief(readout, traits) {
       "Extra vocal layers are ducked under consonants",
       "Wet and dry A/B’d against the reference at matched loudness",
       "Master image checked after vocal FX are printed",
+    ],
+  };
+}
+
+function buildInstrumentalDesignBrief(readout, traits) {
+  const space = traits.deep?.spaceCharacter || "supported";
+  const delivery = traits.deep?.delivery || "competitive";
+  const denseness = traits.deep?.denseness || "controlled";
+  const instruments = (readout.instruments || traits.instruments || [])
+    .slice(0, 3)
+    .map((i) => i.label)
+    .filter(Boolean);
+
+  return {
+    lane: "instrumental_bed",
+    space,
+    headline: "Instrumental production plan",
+    blurb:
+      "Shape the bed like a finished record — low-end weight, glue, width, and section energy — without smearing the pocket.",
+    cues: [
+      {
+        label: "Sources",
+        text: instruments.length
+          ? `Detected cues · ${instruments.join(" · ")} — verify by ear and build layers around them.`
+          : "No strong source labels — trust your ear for drums, bass, and harmonic beds.",
+      },
+      {
+        label: "Density",
+        text: `Mix reads ${String(denseness).replace(/_/g, " ")} · loudness ${String(delivery).replace(/_/g, " ")}.`,
+      },
+    ],
+    layers: [
+      {
+        id: "foundation",
+        title: "Low-end foundation",
+        goal: "Kick and bass own separate lanes so the bed stays punchy in mono.",
+        actions: [
+          "High-pass non-bass beds around 80–120 Hz so the sub stays clean.",
+          "Sidechain or duck pads under kick/bass if the pocket feels cloudy.",
+          denseness === "radio_dense"
+            ? "Already dense — prefer subtractive EQ over more compression on the bed."
+            : "Light bus glue after the arrangement feels solid.",
+        ],
+        tools: affiliatesForRole("eq"),
+      },
+      {
+        id: "space",
+        title: "Bed space",
+        goal:
+          space === "wet_wide"
+            ? "Wide ambience is part of the record — keep it on returns."
+            : "Short rooms and plates glue the bed without washing transients.",
+        actions: [
+          space === "wet_wide"
+            ? "Two returns: short room for drums, longer ambient send for pads/guitars."
+            : "One short room/plate on drums and harmonic beds; keep pre-delay audible.",
+          "Filter returns so low end stays mono and dry.",
+          "Automate space up into choruses; pull it back in verses.",
+        ],
+        tools: affiliatesForRole("ambient"),
+      },
+      {
+        id: "width",
+        title: "Stereo image",
+        goal: "Center the power instruments; let pads, FX, and doubles carry width.",
+        actions: [
+          traits.deep?.monoCompat === "wide_risk"
+            ? "Mono-check the whole bed — pull wideners off kick/bass/snare."
+            : "Pan supporting layers; keep kick, snare, and bass centered.",
+          "Add microshift or chorus only on pads/guitars, not the drum bus.",
+          "Check phone/mono — if the hook disappears, you over-widened.",
+        ],
+        tools: affiliatesForRole("microshift"),
+      },
+      {
+        id: "moments",
+        title: "Section energy",
+        goal: "Risers, filters, and mutes mark section changes like a finished instrumental.",
+        actions: [
+          "Automate filter opens / noise risers into hooks.",
+          "Mute or thin beds for one bar before drops to create impact.",
+          "Print FX hits to audio so arrangement edits stay intentional.",
+        ],
+        tools: affiliatesForRole("granular"),
+      },
+      {
+        id: "delivery",
+        title: "Print & glue",
+        goal: `Aim for a ${String(delivery).replace(/_/g, " ")} print — tone before loudness.`,
+        actions: [
+          "A/B the bed against the reference at matched loudness.",
+          "Print arrangement FX before the master limiter.",
+          "Leave headroom for the Master tab.",
+        ],
+        tools: affiliatesForRole("master_meter"),
+      },
+    ],
+    checklist: [
+      "Kick/bass still clear in mono",
+      "Pads and FX are filtered out of the sub",
+      "Width is on supports, not the drum bus",
+      "Section automation is printed or locked",
+      "Bed A/B’d vs reference at matched loudness",
+      "True-peak headroom left for Master",
+    ],
+  };
+}
+
+function buildFullMixDesignBrief(readout, traits) {
+  const space = traits.deep?.spaceCharacter || "supported";
+  const delivery = traits.deep?.delivery || "competitive";
+  const denseness = traits.deep?.denseness || "controlled";
+
+  return {
+    lane: "full_mix",
+    space,
+    headline: "Full-mix production plan",
+    blurb:
+      "Treat the song as one picture — arrangement density, bus space, transitions, and print — then finish on Master.",
+    cues: [
+      {
+        label: "Picture",
+        text: `Density ${String(denseness).replace(/_/g, " ")} · space ${String(space).replace(/_/g, " ")}.`,
+      },
+      {
+        label: "Loudness",
+        text: `Reads ${String(delivery).replace(/_/g, " ")} — don’t crush detail to chase LUFS.`,
+      },
+    ],
+    layers: [
+      {
+        id: "arrangement",
+        title: "Arrangement density",
+        goal: "Each section should feel intentional — thinner verses, denser hooks.",
+        actions: [
+          "Mute or filter layers in verses so hooks expand.",
+          "Stack one extra bed or FX lane only under choruses.",
+          denseness === "radio_dense"
+            ? "Already smashed — create contrast with arrangement, not more bus compression."
+            : "Add light bus glue after the arrangement reads clearly.",
+        ],
+        tools: affiliatesForRole("bus_comp"),
+      },
+      {
+        id: "space",
+        title: "Mix-bus space",
+        goal: "Shared space glues the record without washing lead elements.",
+        actions: [
+          space === "wet_wide"
+            ? "Keep long ambience on returns; keep lead vocal/drums drier than the wash."
+            : "Short plate/room sends for glue; save long tails for transitions.",
+          "High-pass and low-pass every return.",
+          "Automate send levels by section.",
+        ],
+        tools: affiliatesForRole("ambient"),
+      },
+      {
+        id: "transitions",
+        title: "Transitions & moments",
+        goal: "Fills, reverse FX, and filter sweeps sell section changes.",
+        actions: [
+          "Place risers/sweeps into choruses and bridges.",
+          "Print transition FX to audio for tight edits.",
+          "Leave one beat of air before big drops when the reference does.",
+        ],
+        tools: affiliatesForRole("granular"),
+      },
+      {
+        id: "width",
+        title: "Image & mono",
+        goal: "Power stays centered; sides carry sparkle and FX.",
+        actions: [
+          traits.deep?.monoCompat === "wide_risk"
+            ? "Collapse wideners on low/mid fundamentals until mono holds."
+            : "Check mono compatibility after every stereo FX move.",
+          "Keep vocal, kick, snare, and bass centered.",
+          "Open side energy above ~2–3 kHz on pads/FX.",
+        ],
+        tools: affiliatesForRole("microshift"),
+      },
+      {
+        id: "delivery",
+        title: "Print path",
+        goal: `Finish toward a ${String(delivery).replace(/_/g, " ")} master without killing transients.`,
+        actions: [
+          "A/B the full mix vs reference at matched loudness before limiting hard.",
+          "Print creative FX before the mastering chain.",
+          "Use the Master tab for crest, peak, and streaming targets.",
+        ],
+        tools: affiliatesForRole("master_meter"),
+      },
+    ],
+    checklist: [
+      "Verses and hooks feel different in density",
+      "Returns are filtered; low end stays mono",
+      "Transitions are intentional and printed",
+      "Lead elements survive a mono check",
+      "Full mix A/B’d vs reference at matched loudness",
+      "Headroom left for Master limiting",
     ],
   };
 }

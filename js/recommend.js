@@ -411,7 +411,7 @@ export function recommend(traits, pluginMap, daw = "universal", readout = null, 
   const highlights = buildHighlights(chain, liveTraits, readout, resolvedTarget);
 
   const master = deep ? buildMasterAnalysis(readout, liveTraits) : null;
-  const design = deep && resolvedTarget === "vocal" ? buildDesignBrief(readout, liveTraits) : null;
+  const design = deep ? buildDesignBrief(readout, liveTraits, resolvedTarget) : null;
 
   return {
     daw: "universal",

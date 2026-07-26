@@ -121,9 +121,9 @@
   gap: 8px;
   align-content: start;
   padding: 16px 15px 15px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--surface-border, var(--panel-edge));
   border-radius: var(--radius-sm);
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--surface, rgba(255, 255, 255, 0.025));
   text-decoration: none;
   color: inherit;
   min-height: 100%;
@@ -131,8 +131,8 @@
 }
 
 a.tool-card:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--surface-border-strong, var(--panel-edge-strong));
+  background: var(--surface-hover, rgba(255, 255, 255, 0.045));
 }
 
 .tool-card-kicker {
@@ -171,9 +171,9 @@ a.tool-card:hover {
   display: grid;
   gap: 10px;
   padding: 18px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  border: 1px solid var(--surface-border, var(--panel-edge));
   border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--surface, rgba(255, 255, 255, 0.025));
 }
 
 .help-block h3 {
