@@ -39,7 +39,7 @@
   overflow: visible;
   display: grid;
   place-items: center;
-  animation: mark-rise 1.15s var(--ease-out) both;
+  animation: mark-rise 0.35s ease-out both;
 }
 
 .logo-hero .chain-mark-svg {
@@ -52,79 +52,69 @@
 
 .chain-compose {
   transform-origin: 60px 20px;
-  animation: mark-breathe 8s ease-in-out infinite;
+  animation: none;
 }
 
 .chain-stroke {
   stroke: currentColor;
   stroke-width: 3.5;
   fill: none;
-  opacity: 0.38;
-  animation: link-signal 6.2s ease-in-out infinite;
+  opacity: 0.42;
+  animation: none;
 }
 
 .chain-stroke--mid {
   opacity: 0.95;
 }
 
-.chain-link--1 .chain-stroke { animation-delay: 0s; }
-.chain-link--2 .chain-stroke { animation-delay: 0.35s; }
-.chain-link--3 .chain-stroke { animation-delay: 0.7s; }
-.chain-link--4 .chain-stroke { animation-delay: 1.05s; }
-.chain-link--5 .chain-stroke { animation-delay: 1.4s; }
+.chain-link--1 .chain-stroke,
+.chain-link--2 .chain-stroke,
+.chain-link--3 .chain-stroke,
+.chain-link--4 .chain-stroke,
+.chain-link--5 .chain-stroke {
+  animation-delay: 0s;
+}
 
 @keyframes mark-rise {
   from {
     opacity: 0;
-    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
 @keyframes mark-breathe {
   0%,
   100% {
-    transform: translateY(0);
+    opacity: 1;
   }
   50% {
-    transform: translateY(-2px);
+    opacity: 0.94;
   }
 }
 
 @keyframes link-signal {
   0%,
-  14%,
   100% {
-    opacity: 0.32;
-  }
-  24%,
-  36% {
-    opacity: 1;
+    opacity: 0.42;
   }
   50% {
-    opacity: 0.45;
+    opacity: 0.55;
   }
 }
 
 .chain-link--2 .chain-stroke--mid {
-  animation-name: link-signal-mid;
+  animation-name: none;
 }
 
 @keyframes link-signal-mid {
   0%,
-  14%,
   100% {
-    opacity: 0.7;
-  }
-  24%,
-  36% {
-    opacity: 1;
+    opacity: 0.95;
   }
   50% {
-    opacity: 0.85;
+    opacity: 1;
   }
 }
 
@@ -161,7 +151,7 @@
 }
 
 .logo-hero--cycle .chain-compose {
-  animation: chain-cycle-breathe 2.8s ease-in-out infinite;
+  animation: chain-cycle-breathe 3.6s ease-in-out infinite;
   transform-origin: 60px 20px;
 }
 
@@ -180,34 +170,35 @@
   stroke-width: 3.5;
   fill: none;
   opacity: 0.88;
-  animation: chain-metal-pulse 1.6s ease-in-out infinite !important;
+  animation: none !important;
 }
 
-.logo-hero--cycle .chain-link--1 .chain-stroke { animation-delay: 0s !important; }
-.logo-hero--cycle .chain-link--2 .chain-stroke { animation-delay: -0.32s !important; }
-.logo-hero--cycle .chain-link--3 .chain-stroke { animation-delay: -0.64s !important; }
-.logo-hero--cycle .chain-link--4 .chain-stroke { animation-delay: -0.96s !important; }
-.logo-hero--cycle .chain-link--5 .chain-stroke { animation-delay: -1.28s !important; }
+.logo-hero--cycle .chain-link--1 .chain-stroke,
+.logo-hero--cycle .chain-link--2 .chain-stroke,
+.logo-hero--cycle .chain-link--3 .chain-stroke,
+.logo-hero--cycle .chain-link--4 .chain-stroke,
+.logo-hero--cycle .chain-link--5 .chain-stroke {
+  animation: none !important;
+  animation-delay: 0s !important;
+}
 
 @keyframes chain-metal-pulse {
   0%,
   100% {
-    opacity: 0.42;
-    stroke: var(--metal-dim);
+    opacity: 0.55;
   }
   50% {
     opacity: 1;
-    stroke: var(--metal-bright);
   }
 }
 
 @keyframes chain-cycle-breathe {
   0%,
   100% {
-    transform: scale(1);
+    opacity: 0.72;
   }
   50% {
-    transform: scale(1.035);
+    opacity: 1;
   }
 }
 

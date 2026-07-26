@@ -40,6 +40,16 @@
   status = 301
 
 [[redirects]]
+  from = "/tools"
+  to = "/tools/"
+  status = 301
+
+[[redirects]]
+  from = "/help"
+  to = "/help/"
+  status = 301
+
+[[redirects]]
   from = "/c"
   to = "/c/"
   status = 301

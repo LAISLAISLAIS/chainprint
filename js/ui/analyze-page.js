@@ -587,14 +587,7 @@ function setView(view) {
   panels.forEach((panel) => {
     const on = panel.getAttribute("data-panel") === view;
     panel.classList.toggle("is-active", on);
-    if (on) {
-      panel.classList.remove("is-entering");
-      // restart enter animation
-      void panel.offsetWidth;
-      panel.classList.add("is-entering");
-    } else {
-      panel.classList.remove("is-entering");
-    }
+    panel.classList.toggle("is-entering", on);
   });
 }
 
@@ -1142,7 +1135,7 @@ function applyEntryToStudio(entry) {
   syncMatchToActiveEntry();
 }
 
-/** Live blend preview — A↔B gap at balanced, or how the hybrid shifts when leaning. */
+/** Live blend preview — mix % toward A/B, plus what that lean moves. */
 function renderBlendDiffPreview(entryA, entryB) {
   if (!blendDiff) return;
   if (!entryA?.result?.readout || !entryB?.result?.readout) {
@@ -1154,20 +1147,25 @@ function renderBlendDiffPreview(entryA, entryB) {
   const target = analysisTarget || entryA.result.readout.target || "vocal";
   const readoutA = entryA.result.readout;
   const readoutB = entryB.result.readout;
+  const pctA = Math.round((1 - blendWeight) * 100);
+  const pctB = Math.round(blendWeight * 100);
   const lean = blendWeight < 0.4 ? "a" : blendWeight > 0.6 ? "b" : "balanced";
+  const mixLine = `${pctA}% A · ${pctB}% B`;
 
-  let label;
   let report;
+  let shiftHint;
 
   if (lean === "balanced") {
-    label = "A↔B gap";
     report = compareMixes(readoutA, readoutB, { target });
+    shiftHint = "Where A and B differ";
   } else {
     const hybrid = blendReadouts(readoutA, readoutB, blendWeight);
     const balanced = blendReadouts(readoutA, readoutB, 0.5);
-    // How the hybrid differs from a balanced merge = what this lean changes
     report = compareMixes(balanced, hybrid, { target });
-    label = lean === "a" ? "Toward A · vs balanced" : "Toward B · vs balanced";
+    shiftHint =
+      lean === "a"
+        ? `Pulls ${pctA - 50}% further toward A vs a 50/50 merge`
+        : `Pulls ${pctB - 50}% further toward B vs a 50/50 merge`;
   }
 
   const chips = (report.metrics || [])
@@ -1177,26 +1175,30 @@ function renderBlendDiffPreview(entryA, entryB) {
       (m) =>
         `<span class="blend-diff-chip"><em>${escapeHtml(m.key)}</em> ${escapeHtml(m.value)}</span>`
     );
+  const bandThresh = lean === "balanced" ? 1.5 : 0.8;
   const bandGaps = (report.bands || [])
-    .filter((b) => Math.abs(b.deltaDb) >= 1.5)
+    .filter((b) => Math.abs(b.deltaDb) >= bandThresh)
     .sort((x, y) => Math.abs(y.deltaDb) - Math.abs(x.deltaDb))
-    .slice(0, 2)
+    .slice(0, 3)
     .map((b) => {
       const sign = b.deltaDb > 0 ? "+" : "";
       return `<span class="blend-diff-chip"><em>${escapeHtml(b.label)}</em> ${sign}${b.deltaDb.toFixed(1)} dB</span>`;
     });
   const items = [...chips, ...bandGaps];
 
+  const head = `<p class="blend-diff-mix">${escapeHtml(mixLine)}</p>
+    <p class="blend-diff-label">${escapeHtml(shiftHint)}</p>`;
+
   if (!items.length) {
     const empty =
       lean === "balanced"
-        ? "These refs sit close — hybrid will fine-tune shared traits."
+        ? "A and B already match closely — the hybrid won’t invent big differences."
         : lean === "a"
-          ? "Lean is mild — A and the midpoint already agree on most traits."
-          : "Lean is mild — B and the midpoint already agree on most traits.";
-    blendDiff.innerHTML = `<p class="blend-diff-empty">${escapeHtml(empty)}</p>`;
+          ? "A and B are already close — leaning to A barely moves measured traits."
+          : "A and B are already close — leaning to B barely moves measured traits.";
+    blendDiff.innerHTML = `${head}<p class="blend-diff-empty">${escapeHtml(empty)}</p>`;
   } else {
-    blendDiff.innerHTML = `<p class="blend-diff-label">${escapeHtml(label)}</p><div class="blend-diff-chips">${items.join("")}</div>`;
+    blendDiff.innerHTML = `${head}<div class="blend-diff-chips">${items.join("")}</div>`;
   }
   blendDiff.classList.remove("hidden");
 }
@@ -1926,20 +1928,20 @@ function renderFocus() {
 
   stageFocus.innerHTML = `
     <article class="chain-step">
-      <header class="step-block">
-        <div class="step-head">
-          <span class="step-index">${kind === "send" ? "Send" : `Step ${index + 1}`}</span>
-          <span class="type-badge">${escapeHtml(type)}</span>
-          <span class="tier">${tierLabel(step.tier)}</span>
-        </div>
-        <h3 class="step-title">${escapeHtml(step.title)}</h3>
-        ${gap}
-      </header>
-      <div class="step-block">${face}</div>
-      <div class="step-block step-block--meta">
+      <div class="step-copy">
+        <header class="step-intro">
+          <div class="step-head">
+            <span class="step-index">${kind === "send" ? "Send" : `Step ${index + 1}`}</span>
+            <span class="type-badge">${escapeHtml(type)}</span>
+            <span class="tier">${tierLabel(step.tier)}</span>
+          </div>
+          <h3 class="step-title">${escapeHtml(step.title)}</h3>
+          ${gap}
+        </header>
         ${tips}
         ${affiliates}
       </div>
+      ${face ? `<div class="step-rack">${face}</div>` : ""}
     </article>`;
 
   stageFocus.scrollTop = 0;
@@ -2006,7 +2008,9 @@ exportPdfBtn?.addEventListener("click", async () => {
   exportPdfBtn.textContent = "Exporting…";
   try {
     const { downloadChainPdf } = await import("../export/chain-pdf.js");
-    const readout = library.active()?.result?.readout || null;
+    const result = library.active()?.result || null;
+    const readout = result?.readout || null;
+    const traits = result?.traits || lastAdvice.traits || null;
     const keyLabel =
       readout?.pitch?.keyLabel ||
       readout?.keyLabel ||
@@ -2017,13 +2021,15 @@ exportPdfBtn?.addEventListener("click", async () => {
       trackName: lastTrackName || undefined,
       keyLabel,
       bpm,
+      readout,
+      traits,
     });
   } catch (err) {
     console.error(err);
     alert(err.message || "Could not export PDF. Check your connection and try again.");
   } finally {
     exportPdfBtn.classList.remove("is-busy");
-    exportPdfBtn.textContent = label || "Export PDF";
+    exportPdfBtn.textContent = label || "Export Analysis PDF";
   }
 });
 

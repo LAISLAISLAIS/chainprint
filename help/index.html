@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Help — How Chainprint Works</title>
+  <meta name="description" content="Complete Chainprint help: how analysis works, targets, Signature, Compare, Why, Design, Master, exports, Key · BPM finder, plans, and honest limits." />
+  <meta name="robots" content="index, follow, max-image-preview:large" />
+  <link rel="canonical" href="https://chainprint.app/help/" />
+  <meta name="theme-color" content="#000000" />
+  <link rel="icon" href="../assets/favicon.svg" type="image/svg+xml" />
+  <link rel="icon" href="../assets/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png" sizes="180x180" />
+  <link rel="manifest" href="../site.webmanifest" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Chainprint" />
+  <meta property="og:title" content="Help · Chainprint" />
+  <meta property="og:description" content="A complete guide to Chainprint — analyze, rebuild, export, and verify by ear." />
+  <meta property="og:url" content="https://chainprint.app/help/" />
+  <meta property="og:image" content="https://chainprint.app/assets/og-image.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Help · Chainprint" />
+  <meta name="twitter:description" content="How Chainprint works, end to end." />
+  <meta name="twitter:image" content="https://chainprint.app/assets/og-image.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" />
+  <link rel="stylesheet" href="../css/chassis.css" />
+  <link rel="stylesheet" href="../css/logo.css" />
+  <link rel="stylesheet" href="../css/auth.css" />
+  <link rel="stylesheet" href="../css/site-pages.css" />
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "What does Chainprint do?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Chainprint reverse-engineers a reference mix into a plausible processing chain — inserts, sends, and settings — so you can rebuild the sound in your DAW. It is an engineered recreation from measurements, not a claim about the exact plugins used on the original."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is the difference between Vocal, Instrumental, and Full mix?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Vocal focuses on the lead region. Instrumental builds a chain for beds and instruments. Full mix treats the whole song as the target with denser, mix-bus-aware recommendations."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "What is Deep / Pro mode?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Standard mode builds the processing chain. Deep mode (Pro) unlocks Design and Master panels plus deeper character reads for vocal work."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Is Key · BPM Finder free?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Yes. The Key · BPM finder is free. Upload a file or paste a streaming link to detect musical key, relative key, and tempo in your browser."
+        }
+      }
+    ]
+  }
+  </script>
+</head>
+<body>
+  <div class="site-page">
+    <header class="site-nav">
+      <a class="logo" href="../" aria-label="Chainprint home">
+        <span class="logo-mark" aria-hidden="true"></span>
+        <span class="logo-word">Chainprint</span>
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a href="../tools/">Tools</a>
+        <a href="./" aria-current="page">Help</a>
+        <a href="../analyze/">Studio</a>
+        <span class="nav-auth" data-auth-nav></span>
+      </nav>
+    </header>
+
+    <main class="site-main is-narrow">
+      <header class="site-hero">
+        <h1>Help</h1>
+        <p>
+          A complete guide to what Chainprint measures, how each studio panel works, and how to get a
+          chain into your session — with honest limits called out.
+        </p>
+        <nav class="help-toc" aria-label="On this page">
+          <a href="#start">Getting started</a>
+          <a href="#targets">Targets &amp; modes</a>
+          <a href="#panels">Studio panels</a>
+          <a href="#exports">Exports &amp; share</a>
+          <a href="#finder">Key · BPM</a>
+          <a href="#plans">Plans</a>
+          <a href="#honesty">Honesty</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+      </header>
+
+      <section class="site-section" id="start" aria-labelledby="help-start">
+        <h2 id="help-start">Getting started</h2>
+        <div class="help-block">
+          <h3>1. Open the studio</h3>
+          <p>
+            Go to <a href="../analyze/">Analyze</a>, sign in if prompted, and set your analysis
+            <strong>target</strong> (Vocal, Instrumental, or Full mix) and <strong>mode</strong>
+            (Standard or Deep).
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>2. Provide a reference</h3>
+          <ul>
+            <li><strong>Upload</strong> an audio file (WAV, MP3, FLAC, and similar).</li>
+            <li>Or <strong>paste a link</strong> from Spotify, Apple Music, YouTube, or SoundCloud — we’ll resolve a preview when possible.</li>
+            <li>Optional: name the track and artist so your library stays tidy.</li>
+          </ul>
+        </div>
+        <div class="help-block">
+          <h3>3. Run analysis</h3>
+          <p>
+            Hit analyze and wait through load → decode → measure → build. When it finishes you’ll get a
+            processing chain plus Signature meters. Tabs unlock as results are ready.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>4. Rebuild by ear</h3>
+          <p>
+            Work the <strong>Chain</strong> panel top to bottom. Use <strong>Why</strong> for priority
+            moves, add your dry take for A/B preview, then export Ableton or the Analysis PDF. Always
+            finish by ear in full mix context.
+          </p>
+        </div>
+      </section>
+
+      <section class="site-section" id="targets" aria-labelledby="help-targets">
+        <h2 id="help-targets">Targets &amp; modes</h2>
+        <div class="help-block">
+          <h3>Vocal</h3>
+          <p>
+            Measures the lead / vocal region and builds insert + send processing aimed at matching that
+            character on your dry vocal.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Instrumental</h3>
+          <p>
+            Aimed at beds and instrumental material — useful when you’re matching a beat, pad bed, or
+            instrumental stem rather than a dry vocal.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Full mix</h3>
+          <p>
+            Treats the whole song as the target. Expect denser, more mix-bus-aware suggestions and
+            source detection for what’s in the bed.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Standard vs Deep</h3>
+          <p>
+            <strong>Standard</strong> builds the chain and core panels (Signature, Compare, Why,
+            Instruments). <strong>Deep</strong> (Pro) adds <strong>Design</strong> and
+            <strong>Master</strong>, plus deeper character tags for vocal work.
+          </p>
+        </div>
+      </section>
+
+      <section class="site-section" id="panels" aria-labelledby="help-panels">
+        <h2 id="help-panels">Studio panels</h2>
+        <div class="help-block">
+          <h3>Chain</h3>
+          <p>
+            Your main build sheet: numbered inserts, sends, plugin targets, and dialed settings.
+            Expand a stage for why it exists and how to set it. Preview row lets you A/B dry vs chain
+            once you’ve added a dry take.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Signature</h3>
+          <p>
+            The measured fingerprint — tempo, key, spectral center, crest, tone (air / sibilance /
+            harsh / mud), stereo, bands, and more. Tap any card for a plain-English definition and
+            what this reading means.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Compare</h3>
+          <p>
+            Upload <em>your</em> mix and see where it drifts from the reference: frequency gaps,
+            dynamics, width, and suggested moves to close the gap. Reference sits on one side; your
+            mix on the other.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Why</h3>
+          <p>
+            <strong>Start here</strong> priority moves, measured facts from the pass, and the full
+            build-order rationale so you know what to touch first vs later.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Instruments</h3>
+          <p>
+            Source guesses for what’s present in the bed (on instrumental / full-mix style passes),
+            with confidence and a practical tip for each.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Design (Deep)</h3>
+          <p>
+            Creative production layers on top of the technical chain — space character, beds, width,
+            actions per layer, and a checklist before you print.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Master (Deep)</h3>
+          <p>
+            Mix-bus oriented readouts, streaming target notes, mastering chain steps, and band
+            balance for the full reference.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Library, blend &amp; playback</h3>
+          <ul>
+            <li><strong>Library</strong> — keep multiple references; switch the active one anytime.</li>
+            <li><strong>Blend</strong> — pick two refs, weight A↔B, and build a hybrid chain that preserves contrast.</li>
+            <li><strong>Playback dock</strong> — audition library audio while you work (mobile docks to the bottom).</li>
+          </ul>
+        </div>
+      </section>
+
+      <section class="site-section" id="exports" aria-labelledby="help-exports">
+        <h2 id="help-exports">Exports &amp; share</h2>
+        <div class="help-block">
+          <h3>Ableton rack (.adg)</h3>
+          <p>
+            Builds an Audio Effect Rack from stages that map to Ableton stock devices. Drag onto a
+            track in Live. EQ / de-ess style stages may need hand-dialing — notes travel with the rack.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Analysis PDF</h3>
+          <p>
+            A multi-page report of the full reference analysis: signature meters and bands, traits,
+            why / priority moves, instruments, complete insert &amp; send settings with why/how, plus
+            Design and Master when Deep was used. Use it as a session bible.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Shared chains</h3>
+          <p>
+            Publish a snapshot of a chain to a public <code>/c/</code> link so collaborators can open
+            the stages without your full library.
+          </p>
+        </div>
+      </section>
+
+      <section class="site-section" id="finder" aria-labelledby="help-finder">
+        <h2 id="help-finder">Key · BPM finder</h2>
+        <div class="help-block">
+          <h3>Free utility</h3>
+          <p>
+            Open <a href="../find/">Key · BPM</a>, upload a file or paste a streaming link, and get
+            musical key, relative key, and tempo with confidence labels. Analysis for uploads runs in
+            your browser when possible.
+          </p>
+        </div>
+      </section>
+
+      <section class="site-section" id="plans" aria-labelledby="help-plans">
+        <h2 id="help-plans">Plans &amp; settings</h2>
+        <div class="help-block">
+          <h3>Free</h3>
+          <p>
+            Sign up to analyze with a free quota. Perfect for trying the studio and running Standard
+            chains.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Pro</h3>
+          <p>
+            Unlimited analyses and Deep mode — Design, Master, and deeper vocal character. Your quota
+            chip in the studio shows plan status.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Settings</h3>
+          <p>
+            In <a href="../settings/">Settings</a> update profile and avatar, choose default target
+            and mode for new sessions, and manage password / account chrome.
+          </p>
+        </div>
+      </section>
+
+      <section class="site-section" id="honesty" aria-labelledby="help-honesty">
+        <h2 id="help-honesty">Honesty &amp; limits</h2>
+        <div class="help-block">
+          <h3>What we claim — and don’t</h3>
+          <p>
+            Chainprint produces a <strong>plausible reconstruction</strong> from measurements. It is
+            not a claim that “this is exactly what they used,” and it won’t recover proprietary plugin
+            settings from a finished mix. Treat numbers as a strong starting map; finish by ear.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Verify these by ear</h3>
+          <ul>
+            <li>Key and BPM when confidence is low or marked verify.</li>
+            <li>Instrument / source labels — presence guesses, not stems.</li>
+            <li>Any setting that fights the arrangement in full mix context.</li>
+          </ul>
+        </div>
+        <div class="help-block">
+          <h3>Privacy snapshot</h3>
+          <p>
+            Account data powers login and quotas. Audio is processed to generate suggestions; we don’t
+            sell your files. Details live in the <a href="../privacy/">Privacy Policy</a> and
+            <a href="../terms/">Terms</a>.
+          </p>
+        </div>
+      </section>
+
+      <section class="site-section" id="faq" aria-labelledby="help-faq">
+        <h2 id="help-faq">FAQ</h2>
+        <div class="help-block">
+          <h3>What does Chainprint do?</h3>
+          <p>
+            It reverse-engineers a reference mix into a rebuildable chain — measured signature,
+            rationale, and settings — so you can recreate the vibe in your DAW.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Which DAWs work?</h3>
+          <p>
+            The chain is written in DAW-agnostic stock language. Ableton users can also export an
+            <code>.adg</code> rack. Logic / Pro Tools users dial the same stages on stock (or preferred) plugins.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Why don’t I see Design or Master?</h3>
+          <p>
+            Those panels unlock on <strong>Deep</strong> mode with a Pro plan. Switch mode in the
+            reference rail before you analyze.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Can I analyze without signing up?</h3>
+          <p>
+            The Key · BPM finder is free without an account. Full analyze studio requires sign-in so
+            we can apply plan quotas and save preferences.
+          </p>
+        </div>
+        <div class="help-block">
+          <h3>Where’s the feature list?</h3>
+          <p>
+            See <a href="../tools/">Tools</a> for every capability in one place, or jump straight to
+            the <a href="../analyze/">studio</a>.
+          </p>
+        </div>
+      </section>
+
+      <div class="site-cta-row">
+        <a class="btn btn-primary" href="../analyze/">Open studio</a>
+        <a class="btn btn-ghost" href="../tools/">Browse tools</a>
+      </div>
+    </main>
+
+    <footer class="site-foot">
+      <a href="../">Home</a>
+      <span aria-hidden="true">·</span>
+      <a href="../tools/">Tools</a>
+      <span aria-hidden="true">·</span>
+      <a href="../terms/">Terms</a>
+      <span aria-hidden="true">·</span>
+      <a href="../privacy/">Privacy</a>
+    </footer>
+  </div>
+  <script type="module">
+    import { initAuth } from "../js/auth/session.js";
+    import { mountAuthNav } from "../js/ui/nav-auth.js";
+    await initAuth();
+    mountAuthNav(document.querySelector("[data-auth-nav]"), {
+      authHref: "../auth/",
+      next: "/help/",
+      settingsHref: "../settings/",
+    });
+  </script>
+</body>
+</html>

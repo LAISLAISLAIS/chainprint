@@ -1,5 +1,5 @@
 /**
- * Render a branded one-page PDF of the vocal chain and download it.
+ * Render a branded multi-page PDF of the full reference analysis and download it.
  */
 
 import { buildExportSheetHtml, EXPORT_SHEET_CSS } from "./chain-sheet.js";
@@ -21,8 +21,59 @@ async function loadPdfLibs() {
 }
 
 /**
+ * Slice a tall canvas into letter pages (portrait).
+ * @param {import("jspdf").jsPDF} pdf
+ * @param {HTMLCanvasElement} canvas
+ */
+function addPaginatedCanvas(pdf, canvas) {
+  const pageW = pdf.internal.pageSize.getWidth();
+  const pageH = pdf.internal.pageSize.getHeight();
+  const margin = 22;
+  const maxW = pageW - margin * 2;
+  const maxH = pageH - margin * 2;
+
+  const imgW = canvas.width;
+  const imgH = canvas.height;
+  const scale = maxW / imgW;
+  const pageSlicePx = Math.floor(maxH / scale);
+
+  let srcY = 0;
+  let pageIndex = 0;
+
+  while (srcY < imgH) {
+    const sliceH = Math.min(pageSlicePx, imgH - srcY);
+    if (sliceH <= 0) break;
+
+    const pageCanvas = document.createElement("canvas");
+    pageCanvas.width = imgW;
+    pageCanvas.height = sliceH;
+    const ctx = pageCanvas.getContext("2d");
+    if (!ctx) throw new Error("Could not page the PDF canvas.");
+    ctx.fillStyle = "#050505";
+    ctx.fillRect(0, 0, imgW, sliceH);
+    ctx.drawImage(canvas, 0, srcY, imgW, sliceH, 0, 0, imgW, sliceH);
+
+    const drawW = maxW;
+    const drawH = sliceH * scale;
+    const x = margin;
+    const y = margin;
+
+    if (pageIndex > 0) pdf.addPage();
+    pdf.setFillColor(5, 5, 5);
+    pdf.rect(0, 0, pageW, pageH, "F");
+    pdf.addImage(pageCanvas.toDataURL("image/png"), "PNG", x, y, drawW, drawH, undefined, "FAST");
+
+    srcY += sliceH;
+    pageIndex += 1;
+
+    // Safety — avoid runaway if something goes wrong with heights
+    if (pageIndex > 40) break;
+  }
+}
+
+/**
  * @param {{ chain: object }} advice
- * @param {{ trackName?: string, keyLabel?: string, bpm?: number|string }} [meta]
+ * @param {{ trackName?: string, keyLabel?: string, bpm?: number|string, readout?: object, traits?: object }} [meta]
  */
 export async function downloadChainPdf(advice, meta = {}) {
   const { html2canvas, jsPDF } = await loadPdfLibs();
@@ -41,6 +92,8 @@ export async function downloadChainPdf(advice, meta = {}) {
     style.setAttribute("data-export-style", "");
     style.textContent = EXPORT_SHEET_CSS;
     document.head.appendChild(style);
+  } else {
+    style.textContent = EXPORT_SHEET_CSS;
   }
 
   mount.innerHTML = buildExportSheetHtml(advice, meta);
@@ -63,39 +116,22 @@ export async function downloadChainPdf(advice, meta = {}) {
     useCORS: true,
     logging: false,
     width: sheet.offsetWidth,
-    height: sheet.offsetHeight,
+    height: sheet.scrollHeight || sheet.offsetHeight,
+    windowWidth: sheet.offsetWidth,
+    windowHeight: sheet.scrollHeight || sheet.offsetHeight,
   });
 
-  // Landscape letter — one page, fill width
   const pdf = new jsPDF({
-    orientation: "landscape",
+    orientation: "portrait",
     unit: "pt",
     format: "letter",
   });
 
-  const pageW = pdf.internal.pageSize.getWidth();
-  const pageH = pdf.internal.pageSize.getHeight();
-  const margin = 18;
-  const maxW = pageW - margin * 2;
-  const maxH = pageH - margin * 2;
+  addPaginatedCanvas(pdf, canvas);
 
-  const imgW = canvas.width;
-  const imgH = canvas.height;
-  const scale = Math.min(maxW / imgW, maxH / imgH);
-  const drawW = imgW * scale;
-  const drawH = imgH * scale;
-  const x = (pageW - drawW) / 2;
-  const y = (pageH - drawH) / 2;
-
-  const img = canvas.toDataURL("image/png");
-  pdf.setFillColor(5, 5, 5);
-  pdf.rect(0, 0, pageW, pageH, "F");
-  pdf.addImage(img, "PNG", x, y, drawW, drawH, undefined, "FAST");
-
-  const daw = advice.chain?.daw || "daw";
   const target = advice.target || "vocal";
   const name = slug(meta.trackName) || target;
-  pdf.save(`chainprint-${target}-${name}.pdf`);
+  pdf.save(`chainprint-analysis-${target}-${name}.pdf`);
 
   mount.innerHTML = "";
 }

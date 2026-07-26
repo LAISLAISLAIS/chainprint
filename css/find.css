@@ -354,7 +354,7 @@
   border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  animation: find-in 0.45s var(--ease-out) both;
+  animation: find-in 0.28s ease-out both;
 }
 
 .find-source {
@@ -507,28 +507,41 @@
 @keyframes find-in {
   from {
     opacity: 0;
-    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
 @media (max-width: 560px) {
   .find-page {
-    padding: 14px 16px calc(36px + env(safe-area-inset-bottom, 0));
-    padding-top: calc(14px + env(safe-area-inset-top, 0));
+    padding:
+      calc(14px + env(safe-area-inset-top, 0px))
+      max(16px, env(safe-area-inset-right, 0px))
+      calc(36px + env(safe-area-inset-bottom, 0px))
+      max(16px, env(safe-area-inset-left, 0px));
   }
 
   .find-nav {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     gap: 8px;
     margin-bottom: 28px;
   }
 
+  .find-nav .logo {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
   .find-nav .logo-word {
     font-size: var(--text-base);
+  }
+
+  .find-nav .nav-links {
+    flex: 1 1 100%;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    gap: 2px;
   }
 
   .find-nav .nav-links a,

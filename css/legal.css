@@ -106,10 +106,27 @@
 
 @media (max-width: 560px) {
   .legal-page {
-    padding: 18px 14px 48px;
+    padding:
+      calc(16px + env(safe-area-inset-top, 0px))
+      max(16px, env(safe-area-inset-right, 0px))
+      calc(48px + env(safe-area-inset-bottom, 0px))
+      max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  .legal-top {
+    gap: 10px;
+  }
+
+  .legal-top-nav {
+    gap: 10px;
+    font-size: var(--text-xs);
   }
 
   .legal-doc {
-    padding: 24px 18px 28px;
+    padding: 22px 16px 26px;
+  }
+
+  .legal-doc h1 {
+    font-size: clamp(1.4rem, 6vw, 1.7rem);
   }
 }

@@ -1,0 +1,313 @@
+/* Shared marketing pages — Tools, Help */
+
+.site-page {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding:
+    calc(var(--space-5) + env(safe-area-inset-top, 0px))
+    max(var(--space-5), env(safe-area-inset-right, 0px))
+    calc(var(--space-6) + env(safe-area-inset-bottom, 0px))
+    max(var(--space-5), env(safe-area-inset-left, 0px));
+  background:
+    radial-gradient(ellipse 70% 40% at 50% 0%, rgba(255, 255, 255, 0.035) 0%, transparent 55%),
+    #000;
+}
+
+.site-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: min(960px, 100%);
+  margin: 0 auto var(--space-6);
+  min-width: 0;
+}
+
+.site-nav .logo-word {
+  font-size: 1rem;
+  font-weight: var(--weight-bold);
+  letter-spacing: -0.04em;
+  opacity: 0.92;
+}
+
+.site-nav .nav-links {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 2px;
+  min-width: 0;
+}
+
+.site-nav .nav-links a {
+  color: #9a9a9a;
+}
+
+.site-nav .nav-links a[aria-current="page"] {
+  color: #f4f4f4;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.site-main {
+  width: min(960px, 100%);
+  margin: 0 auto;
+  flex: 1;
+  display: grid;
+  gap: var(--space-6);
+  align-content: start;
+}
+
+.site-main.is-narrow {
+  width: min(720px, 100%);
+}
+
+.site-hero {
+  display: grid;
+  gap: 10px;
+  max-width: 40rem;
+}
+
+.site-hero h1 {
+  margin: 0;
+  font-family: var(--font-brand);
+  font-size: clamp(1.85rem, 4.5vw, 2.4rem);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-display);
+  line-height: var(--leading-tight);
+  color: var(--brand);
+}
+
+.site-hero p {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: var(--leading-body);
+  letter-spacing: var(--tracking-body);
+  color: var(--silkscreen);
+  max-width: 36rem;
+}
+
+.site-section {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.site-section > h2 {
+  margin: 0;
+  font-family: var(--font-brand);
+  font-size: var(--text-xl);
+  font-weight: var(--weight-bold);
+  letter-spacing: var(--tracking-title);
+  color: var(--brand);
+}
+
+.site-section > .site-lede {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--silkscreen);
+  max-width: 36rem;
+}
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16.5rem, 1fr));
+  gap: 10px;
+}
+
+.tool-card {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  padding: 16px 15px 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.025);
+  text-decoration: none;
+  color: inherit;
+  min-height: 100%;
+  transition: border-color 0.18s var(--ease-out), background 0.18s var(--ease-out);
+}
+
+a.tool-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.tool-card-kicker {
+  margin: 0;
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: #7a7a7a;
+}
+
+.tool-card h3 {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-title);
+  color: #f2f2f2;
+  line-height: var(--leading-snug);
+}
+
+.tool-card p {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: var(--leading-body);
+  color: var(--silkscreen);
+}
+
+.tool-card-meta {
+  margin-top: 2px;
+  font-size: var(--text-xs);
+  color: #6a6a6a;
+}
+
+.help-block {
+  display: grid;
+  gap: 10px;
+  padding: 18px 16px;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.help-block h3 {
+  margin: 0;
+  font-family: var(--font-ui);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  letter-spacing: var(--tracking-title);
+  color: #f0f0f0;
+}
+
+.help-block p,
+.help-block li {
+  margin: 0;
+  font-size: var(--text-base);
+  line-height: 1.55;
+  color: var(--silkscreen);
+}
+
+.help-block ul,
+.help-block ol {
+  margin: 0;
+  padding-left: 1.15rem;
+  display: grid;
+  gap: 6px;
+}
+
+.help-block strong {
+  color: #e4e4e4;
+  font-weight: var(--weight-semibold);
+}
+
+.help-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.help-toc a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-btn);
+  color: #b8b8b8;
+  text-decoration: none;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.help-toc a:hover {
+  color: #f2f2f2;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.site-foot {
+  width: min(960px, 100%);
+  margin: var(--space-6) auto 0;
+  padding-top: var(--space-4);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  justify-content: center;
+  font-size: var(--text-xs);
+  color: #555;
+}
+
+.site-foot a {
+  color: #6a6a6a;
+  text-decoration: none;
+}
+
+.site-foot a:hover {
+  color: #cfcfcf;
+}
+
+.site-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.site-cta-row .btn {
+  min-height: 44px;
+}
+
+@media (max-width: 640px) {
+  .site-page {
+    padding:
+      calc(14px + env(safe-area-inset-top, 0px))
+      max(16px, env(safe-area-inset-right, 0px))
+      calc(28px + env(safe-area-inset-bottom, 0px))
+      max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  .site-nav {
+    margin-bottom: var(--space-5);
+    gap: 8px;
+  }
+
+  .site-nav .logo-word {
+    font-size: var(--text-base);
+  }
+
+  .site-nav .nav-links a,
+  .site-nav .account-menu-trigger,
+  .site-nav .nav-cta {
+    font-size: var(--text-xs) !important;
+    padding: 7px 10px !important;
+    min-height: 36px;
+  }
+
+  .tool-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .help-block {
+    padding: 14px 13px;
+  }
+
+  .site-main {
+    gap: var(--space-5);
+  }
+}
+
+@media (max-width: 380px) {
+  .site-nav .logo-word {
+    max-width: 6.5rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}

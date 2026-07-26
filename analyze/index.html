@@ -58,10 +58,23 @@
 <body class="studio-body">
   <div class="studio" data-workspace>
     <header class="studio-top">
-      <a class="logo studio-logo" href="../" aria-label="Chainprint home">
-        <span class="logo-mark" aria-hidden="true"></span>
-        <span class="logo-word">Chainprint</span>
-      </a>
+      <div class="studio-brand">
+        <a class="logo studio-logo" href="../" aria-label="Chainprint home">
+          <span class="logo-mark" aria-hidden="true"></span>
+          <span class="logo-word">Chainprint</span>
+        </a>
+        <button
+          type="button"
+          class="source-collapse"
+          data-source-collapse
+          aria-expanded="true"
+          aria-controls="source-rail-body"
+          title="Collapse reference panel"
+        >
+          <span class="source-collapse-icon" aria-hidden="true"></span>
+          <span class="sr-only">Collapse reference panel</span>
+        </button>
+      </div>
 
       <nav class="studio-tabs" data-views aria-label="Workspace">
         <button type="button" class="studio-tab" data-view="chain" aria-pressed="true">Chain</button>
@@ -84,18 +97,6 @@
 
     <div class="studio-grid">
       <aside class="studio-source" data-source-rail>
-        <button
-          type="button"
-          class="source-collapse"
-          data-source-collapse
-          aria-expanded="true"
-          aria-controls="source-rail-body"
-          title="Collapse reference panel"
-        >
-          <span class="source-collapse-icon" aria-hidden="true"></span>
-          <span class="sr-only">Collapse reference panel</span>
-        </button>
-
         <div class="source-rail-body" id="source-rail-body" data-source-body>
           <div class="source-stack">
             <header class="source-head">
@@ -252,7 +253,7 @@
                     Export Chain
                   </button>
                   <button type="button" class="export-btn" data-export-pdf disabled>
-                    Export PDF
+                    Export Analysis PDF
                   </button>
                 </div>
               </div>

@@ -6,6 +6,9 @@
 /auth  /auth/  301
 /calibration  /calibration/  301
 /find  /find/  301
+/tools  /tools/  301
+/help  /help/  301
 /privacy  /privacy/  301
 /terms  /terms/  301
 /settings  /settings/  301
+/c  /c/  301

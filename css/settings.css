@@ -255,7 +255,26 @@
 
 @media (max-width: 560px) {
   .settings-page {
-    padding: 18px 14px 48px;
+    padding:
+      calc(16px + env(safe-area-inset-top, 0px))
+      max(16px, env(safe-area-inset-right, 0px))
+      calc(48px + env(safe-area-inset-bottom, 0px))
+      max(16px, env(safe-area-inset-left, 0px));
+  }
+
+  .settings-top-nav {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 4px;
+    max-width: min(100%, 16rem);
+  }
+
+  .settings-top-nav a {
+    font-size: var(--text-xs);
+    padding: 6px 8px;
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
   }
 
   .settings-card {
