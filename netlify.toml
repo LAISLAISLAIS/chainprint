@@ -24,6 +24,16 @@
   to = "/find/"
   status = 301
 
+[[redirects]]
+  from = "/privacy"
+  to = "/privacy/"
+  status = 301
+
+[[redirects]]
+  from = "/terms"
+  to = "/terms/"
+  status = 301
+
 [[headers]]
   for = "/*"
   [headers.values]

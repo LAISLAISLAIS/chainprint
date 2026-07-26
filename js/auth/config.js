@@ -13,10 +13,10 @@ export const authConfig = {
    * Supabase Project URL, e.g. "https://xxxx.supabase.co"
    * Leave empty to use local demo storage (same browser only).
    */
-  supabaseUrl: "",
+  supabaseUrl: "https://wggvvgigtwzwivpgszyr.supabase.co",
 
   /** Supabase anon/public key */
-  supabaseAnonKey: "",
+  supabaseAnonKey: "sb_publishable_mGJIAlOvSs_5sahA8i0qiQ_q5gskCtM",
 
   /** e.g. "123456789-abcdefg.apps.googleusercontent.com" */
   googleClientId: "",

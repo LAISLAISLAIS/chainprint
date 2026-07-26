@@ -16,7 +16,7 @@ export async function getSupabase() {
 
   loading = (async () => {
     const { createClient } = await import(
-      "https://esm.sh/@supabase/supabase-js@2.49.1"
+      "https://esm.sh/@supabase/supabase-js@2.76.1"
     );
     client = createClient(authConfig.supabaseUrl, authConfig.supabaseAnonKey, {
       auth: {

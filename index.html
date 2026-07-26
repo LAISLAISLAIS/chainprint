@@ -280,6 +280,30 @@
       color: #cfcfcf;
     }
 
+    .landing-legal {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      padding: 16px 20px calc(16px + env(safe-area-inset-bottom, 0));
+      font-size: 0.78rem;
+      color: #555;
+      z-index: 2;
+    }
+
+    .landing-legal a {
+      color: #6a6a6a;
+      text-decoration: none;
+    }
+
+    .landing-legal a:hover {
+      color: #cfcfcf;
+    }
+
     @keyframes hero-in {
       from {
         opacity: 0;
@@ -475,6 +499,12 @@
         </div>
       </div>
     </main>
+
+    <footer class="landing-legal">
+      <a href="terms/">Terms</a>
+      <span aria-hidden="true">·</span>
+      <a href="privacy/">Privacy</a>
+    </footer>
   </div>
   <script type="module">
     import { mountHeroMotion } from "./js/ui/hero-motion.js";

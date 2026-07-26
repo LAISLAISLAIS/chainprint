@@ -23,6 +23,8 @@ const passwordInput = form?.querySelector("#password");
 const emailInput = form?.querySelector("#email");
 const emailLabel = form?.querySelector('label[for="email"]');
 const requirements = document.querySelector("[data-password-reqs]");
+const termsField = document.querySelector("[data-terms-field]");
+const termsInput = form?.querySelector("#agree-terms");
 const socialNote = document.querySelector("[data-social-note]");
 const dbNote = document.querySelector("[data-db-note]");
 
@@ -107,12 +109,27 @@ function setMode(m) {
   }
   // Never show password rules on login; signup shows them while creating a password
   setPasswordReqsVisible(false);
+  if (termsField) {
+    termsField.hidden = isLogin;
+    if (termsInput) {
+      termsInput.required = !isLogin;
+      if (isLogin) termsInput.checked = false;
+    }
+  }
   if (submitBtn) submitBtn.textContent = isLogin ? "Log in" : "Sign up with email";
   if (switchEl) {
     switchEl.innerHTML = isLogin
       ? `New here? <a href="${switchHref("signup")}">Create an account</a>`
       : `Already have an account? <a href="${switchHref("login")}">Log in</a>`;
   }
+}
+
+function requireTermsAgreement() {
+  if (mode !== "signup") return true;
+  if (termsInput?.checked) return true;
+  showError("Please agree to the Terms of Service and Privacy Policy to continue.");
+  termsInput?.focus();
+  return false;
 }
 
 function showError(msg) {
@@ -191,6 +208,7 @@ document.querySelectorAll("[data-social]").forEach((btn) => {
     const provider = btn.getAttribute("data-social");
     if (provider !== "google" && provider !== "apple") return;
     showError("");
+    if (!requireTermsAgreement()) return;
     btn.disabled = true;
     const label = btn.textContent;
     btn.textContent = "Connecting…";
@@ -221,6 +239,7 @@ form?.addEventListener("submit", async (e) => {
   const email = String(fd.get("email") || identifier || "");
 
   if (mode === "signup") {
+    if (!requireTermsAgreement()) return;
     const pass = validatePassword(password);
     if (!pass.ok) {
       showError(pass.message);

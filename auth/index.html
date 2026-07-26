@@ -107,6 +107,15 @@
               <li data-req="symbol">1 symbol (!@#$…)</li>
             </ul>
           </div>
+          <label class="terms-check" data-terms-field>
+            <input id="agree-terms" name="agree_terms" type="checkbox" value="1" />
+            <span>
+              I agree to the
+              <a href="../terms/" target="_blank" rel="noopener">Terms of Service</a>
+              and
+              <a href="../privacy/" target="_blank" rel="noopener">Privacy Policy</a>
+            </span>
+          </label>
           <p class="auth-error" data-auth-error role="alert"></p>
           <button class="btn btn-primary auth-submit" type="submit" data-auth-submit>Sign up &amp; analyze</button>
         </form>
@@ -115,6 +124,11 @@
 
         <p class="auth-switch" data-auth-switch>
           Already have an account? <a href="?mode=login">Log in</a>
+        </p>
+        <p class="auth-legal-links">
+          <a href="../terms/">Terms</a>
+          <span aria-hidden="true">·</span>
+          <a href="../privacy/">Privacy</a>
         </p>
       </section>
     </div>
