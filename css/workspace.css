@@ -1649,8 +1649,8 @@
 }
 
 .studio.is-analyzing [data-analyze-hero] {
-  --mark-w: clamp(160px, 30vw, 220px);
-  margin-bottom: 20px;
+  --mark-w: clamp(168px, 34vw, 240px);
+  margin-bottom: 22px;
   color: var(--teal, #6ec4b4);
 }
 
@@ -3832,15 +3832,55 @@
   font-weight: 500;
 }
 
-/* Even rhythm: cards → bands (no inflated margin under last odd card) */
+/* Signature panel — fill the viewport instead of packing into the top */
 .studio [data-panel="signature"] .panel-pad {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1.15fr) minmax(0, 0.9fr);
+  gap: clamp(16px, 2.8vh, 28px);
+  padding-top: clamp(18px, 3vh, 28px);
+  padding-bottom: clamp(20px, 3.5vh, 36px);
+  align-content: stretch;
 }
 
 .studio [data-panel="signature"] .panel-head {
   margin-bottom: 0;
+  flex: 0 0 auto;
+}
+
+.studio [data-panel="signature"] .readout-grid {
+  min-height: 0;
+  align-content: start;
+  gap: clamp(8px, 1.3vh, 14px);
+  grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+}
+
+.studio [data-panel="signature"] .readout {
+  padding: clamp(10px, 1.5vh, 14px) 12px 10px;
+}
+
+.studio [data-panel="signature"] .readout-main {
+  gap: clamp(8px, 1.2vh, 12px);
+}
+
+.studio [data-panel="signature"] .band-meters {
+  min-height: 0;
+  margin-top: 0;
+  display: grid;
+  gap: clamp(8px, 1.5vh, 14px);
+  align-content: center;
+  padding-top: clamp(4px, 1vh, 12px);
+}
+
+.studio [data-panel="signature"] .band-track {
+  height: clamp(8px, 1.3vh, 12px);
+}
+
+.studio [data-panel="signature"] .band-row {
+  gap: 10px;
+  grid-template-columns: 78px minmax(0, 1fr) 48px;
 }
 
 .studio [data-panel="master"] .master-body {
@@ -3866,28 +3906,6 @@
 .studio .band-row .name,
 .studio .band-row .db {
   font-size: var(--text-xs);
-}
-
-.studio [data-panel="signature"] .panel-pad {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  padding-top: 16px;
-  padding-bottom: 16px;
-}
-
-.studio [data-panel="signature"] .panel-head {
-  margin-bottom: 0;
-  flex: 0 0 auto;
-}
-
-.studio [data-panel="signature"] .readout-grid {
-  flex: 0 0 auto;
-}
-
-.studio [data-panel="signature"] .band-meters {
-  flex: 0 0 auto;
-  margin-top: 0;
 }
 
 .studio .summary-list {

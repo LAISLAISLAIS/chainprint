@@ -77,11 +77,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .logo-hero,
-  .chain-compose,
-  .chain-stroke,
-  .logo-hero--cycle .chain-link {
-    animation: none !important;
+  .logo-hero {
+    animation: none;
   }
 
   .chain-stroke {
@@ -94,74 +91,99 @@
 }
 
 /*
- * Analyzing cycle — CSS currentColor loop as fallback;
- * JS also paints stroke each frame (see chain-mark.js).
+ * Analyzing / Key·BPM busy — HTML chain with CSS border-color loop.
+ * (SVG stroke animations were freezing; this cannot get stuck mid-JS.)
  */
 .logo-hero--cycle {
-  --mark-w: 120px;
+  --mark-w: clamp(148px, 32vw, 210px);
   width: var(--mark-w);
-  height: calc(var(--mark-w) * 0.333);
+  height: calc(var(--mark-w) * 0.34);
   margin: 0 auto;
   color: #6ec4b4;
-  animation: none;
-  transform: translateZ(0);
-  filter: drop-shadow(0 0 12px rgba(110, 196, 180, 0.45));
+  animation: chain-flow-breathe 2.4s ease-in-out infinite;
+  filter: drop-shadow(0 0 14px rgba(110, 196, 180, 0.4));
 }
 
-.logo-hero--cycle .chain-mark-svg {
-  overflow: visible;
+.chain-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  gap: 0;
 }
 
-.logo-hero--cycle .chain-stroke {
-  stroke: currentColor;
-  stroke-width: 4;
-  fill: none;
+.chain-flow-link {
+  display: block;
+  box-sizing: border-box;
+  border-style: solid;
+  border-width: 3.5px;
+  border-radius: 999px;
+  background: transparent;
+  flex-shrink: 0;
+  animation: chain-flow-color 1.7s ease-in-out infinite;
+  animation-delay: calc(var(--i, 0) * -0.34s);
 }
 
-.logo-hero--cycle .chain-link {
-  color: #6ec4b4;
-  animation: chain-teal-cycle 1.8s ease-in-out infinite;
-  will-change: color;
+.chain-flow-link--v {
+  width: 11.5%;
+  height: 72%;
+  margin-inline: -1.8%;
+  z-index: 1;
 }
 
-.logo-hero--cycle .chain-link--1 {
-  animation-delay: 0s;
-}
-.logo-hero--cycle .chain-link--2 {
-  animation-delay: -0.36s;
-}
-.logo-hero--cycle .chain-link--3 {
-  animation-delay: -0.72s;
-}
-.logo-hero--cycle .chain-link--4 {
-  animation-delay: -1.08s;
-}
-.logo-hero--cycle .chain-link--5 {
-  animation-delay: -1.44s;
+.chain-flow-link--h {
+  width: 26%;
+  height: 34%;
+  margin-inline: -1.8%;
+  z-index: 2;
 }
 
-@keyframes chain-teal-cycle {
+@keyframes chain-flow-color {
   0%,
   100% {
-    color: #245c55;
+    border-color: #1f524c;
+    opacity: 0.72;
   }
-  25% {
-    color: #6ec4b4;
+  20% {
+    border-color: #3f8f84;
+    opacity: 0.9;
+  }
+  45% {
+    border-color: #6ec4b4;
+    opacity: 1;
+  }
+  70% {
+    border-color: #e8fffa;
+    opacity: 1;
+  }
+  85% {
+    border-color: #8ed9cb;
+    opacity: 0.95;
+  }
+}
+
+@keyframes chain-flow-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 10px rgba(110, 196, 180, 0.28));
   }
   50% {
-    color: #e8fffa;
-  }
-  75% {
-    color: #8ed9cb;
+    transform: scale(1.04);
+    filter: drop-shadow(0 0 18px rgba(142, 217, 203, 0.55));
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .logo-hero--cycle {
+    animation: none;
     filter: none;
   }
 
-  .logo-hero--cycle .chain-link {
-    color: #6ec4b4 !important;
+  .chain-flow-link {
+    animation: none;
+    border-color: #6ec4b4;
+    opacity: 0.92;
   }
 }
