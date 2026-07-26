@@ -4,7 +4,7 @@
 
 import { analyzeFile, analyzeUrl, formatReadoutConsole } from "../analyze.js";
 import { loadPluginMap } from "../recommend.js";
-import { getSession, logout } from "../auth/session.js";
+import { getSession, initAuth, logout } from "../auth/session.js";
 import {
   analysesRemaining,
   canAnalyze,
@@ -62,7 +62,6 @@ const trackCard = document.querySelector("[data-track-card]");
 const trackArt = document.querySelector("[data-track-art]");
 const trackTitle = document.querySelector("[data-track-title]");
 const trackMeta = document.querySelector("[data-track-meta]");
-const trackPlayBtn = document.querySelector("[data-track-play]");
 const identityRow = document.querySelector("[data-identity]");
 const identityInput = document.querySelector("[data-identity-input]");
 const identityGo = document.querySelector("[data-identity-go]");
@@ -127,12 +126,15 @@ let analyzing = false;
 let analysisGen = 0;
 let blending = false;
 
+await initAuth();
+
 mountAuthNav(document.querySelector("[data-auth-nav]"), {
   authHref: "../auth/",
   next: "/analyze/",
 });
 
 mountPlaybackPulse();
+
 let lastPlaySig = "";
 subscribePlayback((state) => {
   const sig = `${state.playing ? 1 : 0}:${state.key || ""}`;
@@ -190,8 +192,8 @@ function applyAccessGate() {
   return true;
 }
 
-document.querySelector("[data-logout-gate]")?.addEventListener("click", () => {
-  logout();
+document.querySelector("[data-logout-gate]")?.addEventListener("click", async () => {
+  await logout();
   location.href = "../auth/?mode=login&next=/analyze/";
 });
 
@@ -264,17 +266,6 @@ function audioFileForEntry(entry) {
 
 function syncPlayButtons() {
   const key = playingKey();
-  const active = library.active();
-  const activePlayable = Boolean(audioFileForEntry(active));
-
-  if (trackPlayBtn) {
-    const show = Boolean(active && activePlayable);
-    trackPlayBtn.hidden = !show;
-    const on = show && key === active?.id;
-    trackPlayBtn.classList.toggle("is-playing", on);
-    trackPlayBtn.setAttribute("aria-label", on ? "Pause reference" : "Play reference");
-  }
-
   libraryList?.querySelectorAll("[data-library-play]").forEach((btn) => {
     const id = btn.getAttribute("data-library-play");
     const on = key === id;
@@ -355,9 +346,9 @@ function showIdentity(on, prefill = "") {
 
 function showTrackCard(meta) {
   if (!trackCard) return;
-  if (!meta) {
+  // Library row is the canonical identity once a ref is saved — avoid a second card
+  if (!meta || library.list().length > 0) {
     trackCard.classList.add("hidden");
-    if (trackPlayBtn) trackPlayBtn.hidden = true;
     return;
   }
   const title = meta.matchedTitle || meta.title || "Reference";
@@ -384,7 +375,6 @@ function showTrackCard(meta) {
     }
   }
   trackCard.classList.remove("hidden");
-  syncPlayButtons();
 }
 
 function entryDisplayName(entry) {
@@ -474,6 +464,8 @@ function renderLibrary() {
 
   syncPlayButtons();
   notifyPlaylist();
+  // Keep source rail to one identity surface
+  if (library.list().length > 0) trackCard?.classList.add("hidden");
 }
 
 function applyEntryToStudio(entry) {
@@ -1406,10 +1398,6 @@ libraryList?.addEventListener("click", (e) => {
   if (select) {
     selectLibraryEntry(select.getAttribute("data-library-select"));
   }
-});
-
-trackPlayBtn?.addEventListener("click", () => {
-  toggleEntryPlayback(library.active());
 });
 
 blendWeightBtns.forEach((btn) => {

@@ -131,6 +131,40 @@
   box-shadow: var(--focus-ring);
 }
 
+.password-reqs {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.password-reqs li {
+  font-size: 0.78rem;
+  color: #6e6e6e;
+  padding-left: 1.1rem;
+  position: relative;
+}
+
+.password-reqs li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.35em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4a4a4a;
+}
+
+.password-reqs li.is-met {
+  color: #8ecfc0;
+}
+
+.password-reqs li.is-met::before {
+  background: #5ec4b0;
+}
+
 .auth-error {
   display: none;
   padding: 10px 12px;

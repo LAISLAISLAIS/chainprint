@@ -72,8 +72,18 @@
 
         <form class="auth-form" data-auth-form>
           <div class="field" data-name-field>
-            <label for="name">Name</label>
-            <input id="name" name="name" type="text" autocomplete="name" placeholder="Your name" />
+            <label for="username">Username</label>
+            <input
+              id="username"
+              name="username"
+              type="text"
+              autocomplete="username"
+              placeholder="yourname"
+              minlength="3"
+              maxlength="24"
+              pattern="[A-Za-z0-9_]{3,24}"
+              spellcheck="false"
+            />
           </div>
           <div class="field">
             <label for="email">Email</label>
@@ -81,11 +91,27 @@
           </div>
           <div class="field">
             <label for="password">Password</label>
-            <input id="password" name="password" type="password" autocomplete="new-password" required minlength="6" placeholder="At least 6 characters" />
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="new-password"
+              required
+              minlength="8"
+              placeholder="8+ chars, upper, number, symbol"
+            />
+            <ul class="password-reqs" data-password-reqs aria-live="polite">
+              <li data-req="length">At least 8 characters</li>
+              <li data-req="upper">1 uppercase letter</li>
+              <li data-req="number">1 number</li>
+              <li data-req="symbol">1 symbol (!@#$…)</li>
+            </ul>
           </div>
           <p class="auth-error" data-auth-error role="alert"></p>
           <button class="btn btn-primary auth-submit" type="submit" data-auth-submit>Sign up &amp; analyze</button>
         </form>
+
+        <p class="social-note hidden" data-db-note></p>
 
         <p class="auth-switch" data-auth-switch>
           Already have an account? <a href="?mode=login">Log in</a>

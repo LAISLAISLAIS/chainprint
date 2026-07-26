@@ -1,14 +1,23 @@
 /**
- * OAuth provider config (Client IDs are public — safe in frontend JS).
+ * Auth + product config (public keys only — enforce access with Supabase RLS).
  *
- * Google: Google Cloud Console → APIs & Services → Credentials → OAuth 2.0 Client ID (Web)
- * Apple:  Apple Developer → Identifiers → Services ID (+ paid Apple Developer Program)
- *
- * Authorized JavaScript origins must include your live Netlify URL and localhost for testing.
- * On localhost without IDs, social buttons use a demo session.
+ * Setup:
+ * 1. Create a free project at https://supabase.com
+ * 2. Run supabase/migrations/001_profiles.sql in the SQL editor
+ * 3. Paste Project URL + anon key below (or set Netlify env and inject at build)
+ * 4. Auth → Providers → Email enabled; set password requirements in dashboard to match
  */
 
 export const authConfig = {
+  /**
+   * Supabase Project URL, e.g. "https://xxxx.supabase.co"
+   * Leave empty to use local demo storage (same browser only).
+   */
+  supabaseUrl: "",
+
+  /** Supabase anon/public key */
+  supabaseAnonKey: "",
+
   /** e.g. "123456789-abcdefg.apps.googleusercontent.com" */
   googleClientId: "",
 
@@ -21,3 +30,10 @@ export const authConfig = {
   /** Must match an Apple Return URL exactly. */
   appleRedirectURI: typeof location !== "undefined" ? `${location.origin}/auth/` : "",
 };
+
+export function isSupabaseConfigured() {
+  return Boolean(
+    String(authConfig.supabaseUrl || "").trim() &&
+      String(authConfig.supabaseAnonKey || "").trim()
+  );
+}

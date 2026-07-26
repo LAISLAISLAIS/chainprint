@@ -488,12 +488,13 @@
   <script type="module">
     import { mountHeroMotion } from "./js/ui/hero-motion.js";
     import { mountChainMark } from "./js/ui/chain-mark.js";
-    import { getSession } from "./js/auth/session.js";
+    import { getSession, initAuth } from "./js/auth/session.js";
     import { mountAuthNav } from "./js/ui/nav-auth.js";
     import { canAnalyze } from "./js/auth/quota.js";
 
     mountHeroMotion(document.querySelector("[data-hero-canvas]"));
     mountChainMark(document.querySelector("[data-chain-mark]"));
+    await initAuth();
     mountAuthNav(document.querySelector("[data-auth-nav]"), {
       authHref: "auth/",
       next: "/analyze/",

@@ -45,13 +45,21 @@ let pendingUrl = null;
 let unmountFindMark = null;
 
 let lastFindPlay = null;
+let lastFindActive = null;
 subscribePlayback((state) => {
   const on = Boolean(state.playing && state.key === "find");
-  if (on === lastFindPlay) return;
-  lastFindPlay = on;
-  playBtn?.classList.toggle("is-playing", on);
-  if (playLabel) playLabel.textContent = on ? "Pause" : "Play";
-  playBtn?.setAttribute("aria-label", on ? "Pause reference" : "Play reference");
+  const active = Boolean(state.active && state.key === "find");
+  if (on !== lastFindPlay) {
+    lastFindPlay = on;
+    playBtn?.classList.toggle("is-playing", on);
+    if (playLabel) playLabel.textContent = on ? "Pause" : "Play";
+    playBtn?.setAttribute("aria-label", on ? "Pause reference" : "Play reference");
+  }
+  // Once the dock is up, it owns transport — hide the inline control
+  if (active !== lastFindActive) {
+    lastFindActive = active;
+    if (playBtn && lastAudioFile) playBtn.hidden = active;
+  }
 });
 
 function setStatus(text, isError = false) {
@@ -116,7 +124,9 @@ function showResults(result) {
 
   if (playBtn) {
     playBtn.hidden = !lastAudioFile;
-    syncPlayUi();
+    playBtn.classList.remove("is-playing");
+    if (playLabel) playLabel.textContent = "Play";
+    playBtn.setAttribute("aria-label", "Play reference");
   }
 
   if (bpmEl) {

@@ -2,8 +2,10 @@
  * Signup / login page.
  */
 
-import { getSession, login, signup } from "../auth/session.js";
+import { getSession, initAuth, login, signup } from "../auth/session.js";
 import { signInWithProvider, socialStatus } from "../auth/oauth.js";
+import { validatePassword } from "../auth/validation.js";
+import { isSupabaseConfigured } from "../auth/config.js";
 
 const params = new URLSearchParams(location.search);
 const mode = params.get("mode") === "login" ? "login" : "signup";
@@ -18,7 +20,13 @@ const errorEl = document.querySelector("[data-auth-error]");
 const submitBtn = document.querySelector("[data-auth-submit]");
 const switchEl = document.querySelector("[data-auth-switch]");
 const passwordInput = form?.querySelector("#password");
+const emailInput = form?.querySelector("#email");
+const emailLabel = form?.querySelector('label[for="email"]');
+const requirements = document.querySelector("[data-password-reqs]");
 const socialNote = document.querySelector("[data-social-note]");
+const dbNote = document.querySelector("[data-db-note]");
+
+await initAuth();
 
 if (getSession()) {
   location.replace(next);
@@ -39,7 +47,6 @@ function safeNext(path) {
     "find/": "../find/",
   };
   if (map[path]) return map[path];
-  // Same-origin relative only — block open redirects
   if (
     typeof path === "string" &&
     /^\.\.?\//.test(path) &&
@@ -55,19 +62,46 @@ function switchHref(targetMode) {
   return `?mode=${targetMode}&next=${encodeURIComponent(nextRaw)}`;
 }
 
+function syncPasswordReqs(value) {
+  if (!requirements) return;
+  const { checks } = validatePassword(value);
+  requirements.querySelectorAll("[data-req]").forEach((el) => {
+    const key = el.getAttribute("data-req");
+    el.classList.toggle("is-met", Boolean(checks[key]));
+  });
+}
+
 function setMode(m) {
   const isLogin = m === "login";
-  document.title = isLogin ? "Log in · CHAINPRINT" : "Sign up · CHAINPRINT";
+  document.title = isLogin ? "Log in · Chainprint" : "Sign up · Chainprint";
   if (titleEl) titleEl.textContent = isLogin ? "Welcome back" : "Create your account";
   if (ledeEl) {
     ledeEl.textContent = isLogin
-      ? "Log in to continue reverse-engineering vocal mixes in your DAW."
-      : "Sign up to analyze a reference mix and recreate the vocal chain in your DAW.";
+      ? "Log in with your email or username to continue."
+      : "Choose a username and password to analyze vocal mixes in your DAW.";
   }
-  if (nameField) nameField.hidden = isLogin;
+  if (nameField) {
+    nameField.hidden = isLogin;
+    const input = nameField.querySelector("input");
+    if (input) input.required = !isLogin;
+  }
+  if (emailLabel) {
+    emailLabel.textContent = isLogin ? "Email or username" : "Email";
+  }
+  if (emailInput) {
+    emailInput.type = isLogin ? "text" : "email";
+    emailInput.autocomplete = isLogin ? "username" : "email";
+    emailInput.placeholder = isLogin ? "you@studio.com or username" : "you@studio.com";
+    emailInput.name = isLogin ? "identifier" : "email";
+  }
   if (passwordInput) {
     passwordInput.autocomplete = isLogin ? "current-password" : "new-password";
+    passwordInput.placeholder = isLogin
+      ? "Your password"
+      : "8+ chars, upper, number, symbol";
+    passwordInput.minLength = isLogin ? 1 : 8;
   }
+  if (requirements) requirements.hidden = isLogin;
   if (submitBtn) submitBtn.textContent = isLogin ? "Log in" : "Sign up with email";
   if (switchEl) {
     switchEl.innerHTML = isLogin
@@ -82,6 +116,16 @@ function showError(msg) {
   errorEl.classList.toggle("is-visible", Boolean(msg));
 }
 
+if (dbNote) {
+  if (!isSupabaseConfigured()) {
+    dbNote.textContent =
+      "Accounts are saved in this browser until Supabase is connected (see js/auth/config.js).";
+    dbNote.classList.remove("hidden");
+  } else {
+    dbNote.classList.add("hidden");
+  }
+}
+
 const status = socialStatus();
 if (socialNote) {
   if (status.demo) {
@@ -90,7 +134,7 @@ if (socialNote) {
     socialNote.classList.remove("hidden");
   } else if (!status.google && !status.apple) {
     socialNote.textContent =
-      "Email signup works now. Google / Apple sign-in will unlock once OAuth Client IDs are added.";
+      "Email signup works now. Google / Apple sign-in unlock once OAuth Client IDs are added.";
     socialNote.classList.remove("hidden");
   } else if (status.google && !status.apple) {
     socialNote.textContent = "Apple Sign In needs an Apple Developer Services ID (optional).";
@@ -99,6 +143,11 @@ if (socialNote) {
 }
 
 setMode(mode);
+syncPasswordReqs(passwordInput?.value || "");
+
+passwordInput?.addEventListener("input", () => {
+  syncPasswordReqs(passwordInput.value);
+});
 
 document.querySelectorAll("[data-social]").forEach((btn) => {
   btn.addEventListener("click", async () => {
@@ -117,7 +166,6 @@ document.querySelectorAll("[data-social]").forEach((btn) => {
       }
       btn.disabled = false;
       btn.textContent = label;
-      // restore icon+label properly
       btn.innerHTML =
         provider === "google"
           ? `<span class="social-icon" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18"><path fill="#EA4335" d="M12 10.2v3.6h5.1c-.2 1.2-.9 2.3-1.9 3l3.1 2.4c1.8-1.7 2.9-4.1 2.9-7 0-.7-.1-1.3-.2-1.9H12z"/><path fill="#34A853" d="M6.6 14.3l-.7.5-2.4 1.9C5.1 19.3 8.3 21.2 12 21.2c2.4 0 4.4-.8 5.9-2.1l-3.1-2.4c-.8.6-1.9.9-2.8.9-2.2 0-4-1.5-4.7-3.5z"/><path fill="#4A90E2" d="M3.5 7.3C2.7 8.8 2.3 10.4 2.3 12s.5 3.2 1.2 4.7c0 0 0 0 0 0l3.1-2.4c-.2-.5-.3-1.1-.3-1.7s.1-1.2.3-1.7L3.5 7.3z"/><path fill="#FBBC05" d="M12 5.4c1.3 0 2.5.5 3.4 1.3l2.6-2.6C16.4 2.6 14.4 1.8 12 1.8 8.3 1.8 5.1 3.7 3.5 7.3l3.1 2.4C7.9 7.7 9.8 5.4 12 5.4z"/></svg></span> Continue with Google`
@@ -130,9 +178,18 @@ form?.addEventListener("submit", async (e) => {
   e.preventDefault();
   showError("");
   const fd = new FormData(form);
-  const email = String(fd.get("email") || "");
   const password = String(fd.get("password") || "");
-  const name = String(fd.get("name") || "");
+  const username = String(fd.get("username") || "");
+  const identifier = String(fd.get("identifier") || fd.get("email") || "");
+  const email = String(fd.get("email") || identifier || "");
+
+  if (mode === "signup") {
+    const pass = validatePassword(password);
+    if (!pass.ok) {
+      showError(pass.message);
+      return;
+    }
+  }
 
   if (submitBtn) {
     submitBtn.disabled = true;
@@ -140,8 +197,8 @@ form?.addEventListener("submit", async (e) => {
   }
 
   try {
-    if (mode === "login") await login({ email, password });
-    else await signup({ email, password, name });
+    if (mode === "login") await login({ identifier, password });
+    else await signup({ email, password, username });
     location.assign(next);
   } catch (err) {
     showError(err.message || "Something went wrong.");

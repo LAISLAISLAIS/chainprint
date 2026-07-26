@@ -970,6 +970,11 @@ body > * {
     bottom: var(--playback-dock-space) !important;
     padding-bottom: 12px;
   }
+
+  /* Dock owns transport once open — don’t stack a second play on each row */
+  body.has-playback-dock .library-item-play {
+    display: none;
+  }
 }
 
 /* Clear sticky stage nav only on desktop floating dock */

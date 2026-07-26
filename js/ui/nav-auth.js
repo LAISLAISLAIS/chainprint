@@ -2,15 +2,17 @@
  * Shared header auth chrome: Log in / Sign up or account menu.
  */
 
-import { getSession, logout } from "../auth/session.js";
+import { getSession, initAuth, logout } from "../auth/session.js";
 import { analysesRemaining, getPlan } from "../auth/quota.js";
 
 /**
  * @param {HTMLElement | null} root
  * @param {{ homeHref?: string, authHref?: string, logoutHref?: string, next?: string }} [opts]
  */
-export function mountAuthNav(root, opts = {}) {
+export async function mountAuthNav(root, opts = {}) {
   if (!root) return;
+  await initAuth();
+
   const authHref = opts.authHref || "../auth/";
   const logoutHref = opts.logoutHref || `${authHref}?mode=login`;
   const account = getSession();
@@ -26,7 +28,7 @@ export function mountAuthNav(root, opts = {}) {
   const left = analysesRemaining(account);
   const plan = getPlan(account);
   const leftLabel = left === Infinity ? "Unlimited" : `${left} left`;
-  const label = account.name || account.email.split("@")[0];
+  const label = account.username || account.name || account.email.split("@")[0];
 
   root.innerHTML = `
     <span class="nav-quota" title="${plan.label} plan">${leftLabel}</span>
@@ -35,7 +37,8 @@ export function mountAuthNav(root, opts = {}) {
         ${escapeHtml(label)}
       </button>
       <div class="account-menu-panel" data-account-panel hidden>
-        <p class="account-email">${escapeHtml(account.email)}</p>
+        <p class="account-email">@${escapeHtml(account.username || label)}</p>
+        <p class="account-plan">${escapeHtml(account.email)}</p>
         <p class="account-plan">${plan.label} · ${leftLabel}</p>
         <button type="button" data-logout>Log out</button>
       </div>
@@ -58,10 +61,10 @@ export function mountAuthNav(root, opts = {}) {
     setOpen(Boolean(panel?.hidden));
   });
 
-  logoutBtn?.addEventListener("click", (e) => {
+  logoutBtn?.addEventListener("click", async (e) => {
     e.preventDefault();
     e.stopPropagation();
-    logout();
+    await logout();
     location.assign(logoutHref);
   });
 

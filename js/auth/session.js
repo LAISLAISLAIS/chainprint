@@ -1,10 +1,15 @@
 /**
- * Local account store — prototype auth until a real provider is wired.
- * Same API surface can later talk to Supabase / Clerk / custom backend.
+ * Account session — Supabase Postgres when configured, else local demo store.
+ * Public API: initAuth, getSession, signup, login, loginWithSocial, logout, updateAccount.
  */
 
-const USERS_KEY = "chainprint.users.v1";
-const SESSION_KEY = "chainprint.session.v1";
+import { isSupabaseConfigured } from "./config.js";
+import { getSupabase } from "./supabase-client.js";
+import { validatePassword, validateUsername, looksLikeEmail } from "./validation.js";
+
+const USERS_KEY = "chainprint.users.v2";
+const SESSION_KEY = "chainprint.session.v2";
+const ACCOUNT_CACHE_KEY = "chainprint.account.v2";
 
 /** @typedef {'free' | 'pro'} PlanId */
 /** @typedef {'password' | 'google' | 'apple'} AuthProvider */
@@ -13,15 +18,52 @@ const SESSION_KEY = "chainprint.session.v1";
  * @typedef {object} Account
  * @property {string} id
  * @property {string} email
+ * @property {string} username
  * @property {string} name
- * @property {string | null} passwordHash
+ * @property {string | null} [passwordHash]
  * @property {AuthProvider} provider
  * @property {string | null} providerUserId
  * @property {PlanId} plan
  * @property {number} analysesUsed
- * @property {number} analysesIncluded
+ * @property {number | null} analysesIncluded
  * @property {string} createdAt
  */
+
+/** @type {Account | null} */
+let memoryAccount = null;
+let initialized = false;
+
+function cacheAccount(account) {
+  memoryAccount = account ? publicAccount(account) : null;
+  if (memoryAccount) {
+    localStorage.setItem(ACCOUNT_CACHE_KEY, JSON.stringify(memoryAccount));
+  } else {
+    localStorage.removeItem(ACCOUNT_CACHE_KEY);
+  }
+  return memoryAccount;
+}
+
+function readCachedAccount() {
+  if (memoryAccount) return memoryAccount;
+  try {
+    const raw = localStorage.getItem(ACCOUNT_CACHE_KEY);
+    if (!raw) return null;
+    memoryAccount = JSON.parse(raw);
+    return memoryAccount;
+  } catch {
+    return null;
+  }
+}
+
+/** @param {Account} account */
+function publicAccount(account) {
+  const { passwordHash, ...rest } = account;
+  return {
+    ...rest,
+    username: rest.username || rest.name || rest.email?.split("@")[0] || "user",
+    name: rest.name || rest.username || rest.email?.split("@")[0] || "Account",
+  };
+}
 
 function readUsers() {
   try {
@@ -45,136 +87,288 @@ function uid() {
   return crypto.randomUUID?.() || `u_${Date.now()}_${Math.random().toString(16).slice(2)}`;
 }
 
-function newFreeAccount({ email, name, passwordHash = null, provider = "password", providerUserId = null }) {
+function newFreeAccount({
+  email,
+  username,
+  passwordHash = null,
+  provider = "password",
+  providerUserId = null,
+  id = null,
+}) {
+  const uname = String(username || email.split("@")[0] || "user").trim();
   return {
-    id: uid(),
+    id: id || uid(),
     email,
-    name: displayNameFrom(email, name),
+    username: uname,
+    name: uname,
     passwordHash,
     provider,
     providerUserId,
-    plan: "free",
+    plan: /** @type {PlanId} */ ("free"),
     analysesUsed: 0,
-    // null → use PLANS.free.analysesIncluded at read time
     analysesIncluded: null,
     createdAt: new Date().toISOString(),
   };
 }
 
-const PLACEHOLDER_NAMES = new Set(["google user", "apple user", "google", "apple"]);
-
-/** Demo social profiles (no Client ID) — person names for UI, not email stubs */
-const DEMO_DISPLAY_NAMES = {
-  "demo.google@chainprint.local": "Alex Morgan",
-  "demo.apple@chainprint.local": "Sam Rivera",
-};
-
-function isStubName(name, email) {
-  const n = String(name || "").trim().toLowerCase();
-  if (!n) return true;
-  if (PLACEHOLDER_NAMES.has(n)) return true;
-  const local = String(email || "").split("@")[0].toLowerCase();
-  if (n === local) return true;
-  if (local.startsWith("demo.") && n === local.slice(5)) return true;
-  return false;
+function mapProfileRow(user, profile) {
+  const username = profile?.username || user.user_metadata?.username || user.email?.split("@")[0] || "user";
+  return publicAccount({
+    id: user.id,
+    email: profile?.email || user.email || "",
+    username,
+    name: username,
+    passwordHash: null,
+    provider: /** @type {AuthProvider} */ (profile?.provider || "password"),
+    providerUserId: null,
+    plan: /** @type {PlanId} */ (profile?.plan || "free"),
+    analysesUsed: Number(profile?.analyses_used || 0),
+    analysesIncluded: profile?.analyses_included ?? null,
+    createdAt: profile?.created_at || user.created_at || new Date().toISOString(),
+  });
 }
 
-function displayNameFrom(email, name) {
-  const trimmed = String(name || "").trim();
-  if (trimmed && !isStubName(trimmed, email)) return trimmed;
-
-  const key = String(email || "").trim().toLowerCase();
-  if (DEMO_DISPLAY_NAMES[key]) return DEMO_DISPLAY_NAMES[key];
-
-  const local = key.split("@")[0] || "Account";
-  if (local.startsWith("demo.")) {
-    return local.slice(5).replace(/\./g, " ") || "Account";
+/** Warm session cache (call once per page). */
+export async function initAuth() {
+  if (initialized && memoryAccount !== undefined) {
+    return getSession();
   }
-  return local;
+  initialized = true;
+
+  if (!isSupabaseConfigured()) {
+    return getSession();
+  }
+
+  try {
+    const supabase = await getSupabase();
+    if (!supabase) return getSession();
+
+    const { data, error } = await supabase.auth.getSession();
+    if (error || !data.session?.user) {
+      cacheAccount(null);
+      return null;
+    }
+
+    const profile = await fetchProfile(supabase, data.session.user.id);
+    return cacheAccount(mapProfileRow(data.session.user, profile));
+  } catch (err) {
+    console.warn("[auth] init failed", err);
+    return getSession();
+  }
 }
 
 /** @returns {Account | null} */
 export function getSession() {
+  if (isSupabaseConfigured()) {
+    return readCachedAccount();
+  }
+
   try {
     const raw = localStorage.getItem(SESSION_KEY);
-    if (!raw) return null;
+    if (!raw) {
+      cacheAccount(null);
+      return null;
+    }
     const { email } = JSON.parse(raw);
     const users = readUsers();
-    const key = email?.toLowerCase?.();
+    const key = String(email || "").toLowerCase();
     const account = users[key];
-    if (!account) return null;
-
-    // Migrate leftover placeholder display names from earlier demo auth
-    const cleaned = displayNameFrom(account.email, account.name);
-    if (cleaned !== account.name) {
-      account.name = cleaned;
-      users[key] = account;
-      writeUsers(users);
+    if (!account) {
+      cacheAccount(null);
+      return null;
     }
-
-    return publicAccount(account);
+    return cacheAccount(account);
   } catch {
+    cacheAccount(null);
     return null;
   }
 }
 
-/** @param {Account} account */
-function publicAccount(account) {
-  const { passwordHash, ...rest } = account;
-  return rest;
-}
-
-function setSession(email) {
-  localStorage.setItem(SESSION_KEY, JSON.stringify({ email: email.toLowerCase(), at: Date.now() }));
-}
-
-export function logout() {
+export async function logout() {
+  cacheAccount(null);
   localStorage.removeItem(SESSION_KEY);
+  if (isSupabaseConfigured()) {
+    try {
+      const supabase = await getSupabase();
+      await supabase?.auth.signOut();
+    } catch {
+      /* ignore */
+    }
+  }
 }
 
 /**
- * @param {{ email: string, password: string, name?: string }} input
+ * @param {{ email: string, password: string, username: string }} input
  * @returns {Promise<Account>}
  */
-export async function signup({ email, password, name }) {
-  const normalized = String(email || "").trim().toLowerCase();
-  if (!normalized || !normalized.includes("@")) {
+export async function signup({ email, password, username }) {
+  const normalizedEmail = String(email || "").trim().toLowerCase();
+  if (!normalizedEmail || !normalizedEmail.includes("@")) {
     throw Object.assign(new Error("Enter a valid email."), { code: "invalid_email" });
   }
-  if (!password || password.length < 6) {
-    throw Object.assign(new Error("Password must be at least 6 characters."), { code: "weak_password" });
+
+  const userCheck = validateUsername(username);
+  if (!userCheck.ok) {
+    throw Object.assign(new Error(userCheck.message), { code: "invalid_username" });
+  }
+
+  const passCheck = validatePassword(password);
+  if (!passCheck.ok) {
+    throw Object.assign(new Error(passCheck.message), { code: "weak_password" });
+  }
+
+  if (isSupabaseConfigured()) {
+    return signupRemote({
+      email: normalizedEmail,
+      password,
+      username: userCheck.normalized,
+    });
+  }
+
+  return signupLocal({
+    email: normalizedEmail,
+    password,
+    username: userCheck.normalized,
+  });
+}
+
+/**
+ * @param {{ email?: string, identifier?: string, password: string }} input
+ * @returns {Promise<Account>}
+ */
+export async function login({ email, identifier, password }) {
+  const rawId = String(identifier || email || "").trim();
+  if (!rawId) {
+    throw Object.assign(new Error("Enter your email or username."), { code: "invalid_login" });
+  }
+  if (!password) {
+    throw Object.assign(new Error("Enter your password."), { code: "weak_password" });
+  }
+
+  if (isSupabaseConfigured()) {
+    return loginRemote({ identifier: rawId, password });
+  }
+  return loginLocal({ identifier: rawId, password });
+}
+
+/**
+ * Create or resume an account from Google / Apple (local / demo path).
+ * @param {{ provider: 'google' | 'apple', email: string, name?: string, providerUserId: string }} input
+ */
+export async function loginWithSocial({ provider, email, name, providerUserId }) {
+  const normalized = String(email || "").trim().toLowerCase();
+  if (!normalized || !normalized.includes("@")) {
+    throw Object.assign(new Error("That provider didn’t return an email."), { code: "no_email" });
+  }
+
+  if (isSupabaseConfigured()) {
+    throw Object.assign(
+      new Error("Connect Google / Apple in the Supabase dashboard, then use those buttons."),
+      { code: "oauth_pending" }
+    );
   }
 
   const users = readUsers();
-  if (users[normalized]) {
+  let account = users[normalized];
+  const baseUser =
+    String(name || "").trim().replace(/\s+/g, "_").slice(0, 24) ||
+    normalized.split("@")[0];
+
+  if (!account) {
+    let username = baseUser.replace(/[^a-zA-Z0-9_]/g, "") || "user";
+    if (username.length < 3) username = `${username}123`.slice(0, 24);
+    username = uniqueLocalUsername(username, users);
+    account = newFreeAccount({
+      email: normalized,
+      username,
+      passwordHash: null,
+      provider,
+      providerUserId: providerUserId || null,
+    });
+    users[normalized] = account;
+    writeUsers(users);
+  } else {
+    account.provider = account.provider || provider;
+    account.providerUserId = account.providerUserId || providerUserId || null;
+    users[normalized] = account;
+    writeUsers(users);
+  }
+
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ email: normalized, at: Date.now() }));
+  return cacheAccount(account);
+}
+
+/** Persist mutable fields on the signed-in account. */
+export async function updateAccount(patch) {
+  const session = getSession();
+  if (!session) return null;
+
+  const optimistic = publicAccount({ ...session, ...patch, passwordHash: null });
+  cacheAccount(optimistic);
+
+  if (isSupabaseConfigured()) {
+    const supabase = await getSupabase();
+    if (!supabase) return optimistic;
+    const row = {};
+    if (patch.plan != null) row.plan = patch.plan;
+    if (patch.analysesUsed != null) row.analyses_used = patch.analysesUsed;
+    if (patch.analysesIncluded != null) row.analyses_included = patch.analysesIncluded;
+    if (Object.keys(row).length) {
+      const { error } = await supabase.from("profiles").update(row).eq("id", session.id);
+      if (error) console.warn("[auth] updateAccount", error);
+    }
+    return optimistic;
+  }
+
+  const users = readUsers();
+  const account = users[session.email];
+  if (!account) return null;
+  Object.assign(account, patch);
+  users[session.email] = account;
+  writeUsers(users);
+  return cacheAccount(account);
+}
+
+/* ——— Local store ——— */
+
+async function signupLocal({ email, password, username }) {
+  const users = readUsers();
+  if (users[email]) {
     throw Object.assign(new Error("An account with that email already exists. Log in instead."), {
       code: "exists",
     });
   }
+  if (findByUsername(users, username)) {
+    throw Object.assign(new Error("That username is taken. Try another."), { code: "username_taken" });
+  }
 
   const account = newFreeAccount({
-    email: normalized,
-    name,
+    email,
+    username,
     passwordHash: await hashPassword(password),
     provider: "password",
   });
-
-  users[normalized] = account;
+  users[email] = account;
   writeUsers(users);
-  setSession(normalized);
-  return publicAccount(account);
+  localStorage.setItem(SESSION_KEY, JSON.stringify({ email, at: Date.now() }));
+  return cacheAccount(account);
 }
 
-/**
- * @param {{ email: string, password: string }} input
- * @returns {Promise<Account>}
- */
-export async function login({ email, password }) {
-  const normalized = String(email || "").trim().toLowerCase();
+async function loginLocal({ identifier, password }) {
   const users = readUsers();
-  const account = users[normalized];
+  const id = identifier.trim();
+  let account = null;
+
+  if (looksLikeEmail(id)) {
+    account = users[id.toLowerCase()] || null;
+  } else {
+    account = findByUsername(users, id);
+  }
+
   if (!account) {
-    throw Object.assign(new Error("No account found for that email."), { code: "not_found" });
+    throw Object.assign(new Error("No account found for that email or username."), {
+      code: "not_found",
+    });
   }
   if (!account.passwordHash) {
     throw Object.assign(
@@ -186,59 +380,156 @@ export async function login({ email, password }) {
   if (hash !== account.passwordHash) {
     throw Object.assign(new Error("Incorrect password."), { code: "bad_password" });
   }
-  setSession(normalized);
-  return publicAccount(account);
+  localStorage.setItem(
+    SESSION_KEY,
+    JSON.stringify({ email: account.email.toLowerCase(), at: Date.now() })
+  );
+  return cacheAccount(account);
 }
 
-/**
- * Create or resume an account from Google / Apple.
- * @param {{ provider: 'google' | 'apple', email: string, name?: string, providerUserId: string }} input
- */
-export async function loginWithSocial({ provider, email, name, providerUserId }) {
-  const normalized = String(email || "").trim().toLowerCase();
-  if (!normalized || !normalized.includes("@")) {
-    throw Object.assign(new Error("That provider didn’t return an email."), { code: "no_email" });
+function findByUsername(users, username) {
+  const needle = String(username || "").trim().toLowerCase();
+  return Object.values(users).find((a) => String(a.username || "").toLowerCase() === needle) || null;
+}
+
+function uniqueLocalUsername(base, users) {
+  let candidate = base.slice(0, 24);
+  let n = 0;
+  while (findByUsername(users, candidate)) {
+    n += 1;
+    const suffix = String(n);
+    candidate = `${base.slice(0, Math.max(1, 24 - suffix.length))}${suffix}`;
+  }
+  return candidate;
+}
+
+/* ——— Supabase ——— */
+
+async function fetchProfile(supabase, userId) {
+  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+  if (error) {
+    console.warn("[auth] profile fetch", error);
+    return null;
+  }
+  return data;
+}
+
+async function signupRemote({ email, password, username }) {
+  const supabase = await getSupabase();
+  if (!supabase) throw new Error("Database is not configured.");
+
+  const { data: taken, error: takenErr } = await supabase.rpc("username_taken", {
+    u: username,
+  });
+  if (!takenErr && taken) {
+    throw Object.assign(new Error("That username is taken. Try another."), { code: "username_taken" });
   }
 
-  const users = readUsers();
-  let account = users[normalized];
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: { username },
+    },
+  });
 
-  if (!account) {
-    account = newFreeAccount({
-      email: normalized,
-      name,
-      passwordHash: null,
-      provider,
-      providerUserId: providerUserId || null,
-    });
-    users[normalized] = account;
-    writeUsers(users);
-  } else {
-    account.provider = account.provider || provider;
-    account.providerUserId = account.providerUserId || providerUserId || null;
-    // Prefer a real provider name whenever we get one; replace email stubs
-    if (name && !isStubName(name, normalized)) {
-      account.name = String(name).trim();
-    } else if (isStubName(account.name, normalized)) {
-      account.name = displayNameFrom(normalized, name);
+  if (error) {
+    const msg = error.message || "Couldn’t create account.";
+    if (/already/i.test(msg)) {
+      throw Object.assign(new Error("An account with that email already exists. Log in instead."), {
+        code: "exists",
+      });
     }
-    users[normalized] = account;
-    writeUsers(users);
+    throw Object.assign(new Error(msg), { code: "signup_failed" });
   }
 
-  setSession(normalized);
-  return publicAccount(account);
+  const user = data.user;
+  if (!user) {
+    throw Object.assign(
+      new Error("Check your email to confirm the account, then log in."),
+      { code: "confirm_email" }
+    );
+  }
+
+  const { error: profileError } = await supabase.from("profiles").upsert(
+    {
+      id: user.id,
+      email,
+      username,
+      provider: "password",
+      plan: "free",
+      analyses_used: 0,
+    },
+    { onConflict: "id" }
+  );
+
+  if (profileError) {
+    if (/unique|duplicate/i.test(profileError.message || "")) {
+      throw Object.assign(new Error("That username or email is already taken."), {
+        code: "exists",
+      });
+    }
+    throw Object.assign(new Error(profileError.message || "Couldn’t save profile."), {
+      code: "profile_failed",
+    });
+  }
+
+  if (!data.session) {
+    throw Object.assign(
+      new Error("Account created. Confirm your email, then log in."),
+      { code: "confirm_email" }
+    );
+  }
+
+  const profile = await fetchProfile(supabase, user.id);
+  return cacheAccount(mapProfileRow(user, profile));
 }
 
-/** Persist mutable fields on the signed-in account. */
-export function updateAccount(patch) {
-  const session = getSession();
-  if (!session) return null;
-  const users = readUsers();
-  const account = users[session.email];
-  if (!account) return null;
-  Object.assign(account, patch);
-  users[session.email] = account;
-  writeUsers(users);
-  return publicAccount(account);
+async function loginRemote({ identifier, password }) {
+  const supabase = await getSupabase();
+  if (!supabase) throw new Error("Database is not configured.");
+
+  let email = identifier.trim().toLowerCase();
+  if (!looksLikeEmail(email)) {
+    const { data, error } = await supabase.rpc("resolve_login_email", {
+      identifier: email,
+    });
+    if (error || !data) {
+      throw Object.assign(new Error("No account found for that email or username."), {
+        code: "not_found",
+      });
+    }
+    email = String(data).toLowerCase();
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    throw Object.assign(new Error("Incorrect email/username or password."), {
+      code: "bad_password",
+    });
+  }
+
+  const user = data.user;
+  if (!user) {
+    throw Object.assign(new Error("Login failed."), { code: "login_failed" });
+  }
+
+  let profile = await fetchProfile(supabase, user.id);
+  if (!profile) {
+    const uname =
+      user.user_metadata?.username ||
+      email.split("@")[0].replace(/[^a-zA-Z0-9_]/g, "").slice(0, 24) ||
+      "user";
+    await supabase.from("profiles").upsert({
+      id: user.id,
+      email,
+      username: uname.length >= 3 ? uname : `${uname}123`.slice(0, 24),
+      provider: "password",
+      plan: "free",
+      analyses_used: 0,
+    });
+    profile = await fetchProfile(supabase, user.id);
+  }
+
+  return cacheAccount(mapProfileRow(user, profile));
 }
