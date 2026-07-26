@@ -4269,9 +4269,9 @@
     display: none !important;
   }
 
-  /* Track list lives in the player sheet — not the rail on every tab */
-  .library-panel,
-  .blend-panel {
+  /* Track list on Chain only — other tabs keep upload/paste without the full list */
+  .studio:not([data-studio-view="chain"]) .library-panel,
+  .studio:not([data-studio-view="chain"]) .blend-panel {
     display: none !important;
   }
 

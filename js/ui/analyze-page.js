@@ -597,6 +597,7 @@ stemInstrumentalInput?.addEventListener("change", () => {
 function setView(view) {
   if (!lastAdvice && view !== "chain") return;
   activeView = view;
+  workspace?.setAttribute("data-studio-view", view);
   viewTabs.forEach((tab) => {
     const v = tab.getAttribute("data-view");
     tab.setAttribute("aria-pressed", String(v === view));
