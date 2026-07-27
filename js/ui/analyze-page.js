@@ -32,7 +32,7 @@ import { setPlaybackTrackProvider, notifyPlaylist, setPlaybackTrackSelectHandler
 import { compareMixes } from "../match.js";
 import { bindReadoutExplainers, readoutCardHtml } from "./readout-glossary.js";
 import { glyphHtml, meterLevelForReadout } from "./studio-glyphs.js";
-// PDF export + share are lazy-loaded on click so a CDN failure can't break the studio
+// Share + Ableton export are lazy-loaded on click so a CDN failure can't break the studio
 
 const library = createLibrary({
   onChange() {
@@ -235,7 +235,6 @@ const stageFocus = document.querySelector("[data-stage-focus]");
 const stageCount = document.querySelector("[data-stage-count]");
 const stagePrev = document.querySelector("[data-stage-prev]");
 const stageNext = document.querySelector("[data-stage-next]");
-const exportPdfBtn = document.querySelector("[data-export-pdf]");
 const exportAbletonBtn = document.querySelector("[data-export-ableton]");
 const shareChainBtn = document.querySelector("[data-share-chain]");
 const abletonMcpBtn = document.querySelector("[data-ableton-mcp]");
@@ -1197,8 +1196,8 @@ function applyEntryToStudio(entry) {
   if (estimateNoteEl) {
     estimateNoteEl.textContent =
       entry.kind === "blend"
-        ? "Share this hybrid chain, export a Live rack, or apply it with AI."
-        : "Share this chain, export a Live rack, or apply it with AI.";
+        ? "Share this hybrid, drop a Live rack, or have AI dial it into Ableton."
+        : "Share a link, drop a Live rack, or have AI dial it into Ableton for you.";
   }
 
   setHasResults(true);
@@ -1363,7 +1362,6 @@ function setHasResults(on) {
     if (on) chainWorkspace.classList.remove("hidden");
     else chainWorkspace.classList.add("hidden");
   }
-  if (exportPdfBtn) exportPdfBtn.disabled = !on;
   if (exportAbletonBtn) exportAbletonBtn.disabled = !on || !lastAdvice?.chain;
   if (shareChainBtn) shareChainBtn.disabled = !on || !lastAdvice?.chain;
   if (abletonMcpBtn) abletonMcpBtn.disabled = !on || !lastAdvice?.chain;
@@ -2100,38 +2098,6 @@ window.addEventListener("resize", () => {
   stageRailResizeTimer = setTimeout(updateStageRailMore, 120);
 });
 
-exportPdfBtn?.addEventListener("click", async () => {
-  if (!lastAdvice?.chain || !exportPdfBtn) return;
-  const label = exportPdfBtn.textContent;
-  exportPdfBtn.classList.add("is-busy");
-  exportPdfBtn.textContent = "Exporting…";
-  try {
-    const { downloadChainPdf } = await import("../export/chain-pdf.js");
-    const result = library.active()?.result || null;
-    const readout = result?.readout || null;
-    const traits = result?.traits || lastAdvice.traits || null;
-    const keyLabel =
-      readout?.pitch?.keyLabel ||
-      readout?.keyLabel ||
-      readout?.pitch?.keyCandidates?.[0]?.label ||
-      undefined;
-    const bpm = readout?.tempo?.bpm ?? readout?.bpm ?? undefined;
-    await downloadChainPdf(lastAdvice, {
-      trackName: lastTrackName || undefined,
-      keyLabel,
-      bpm,
-      readout,
-      traits,
-    });
-  } catch (err) {
-    console.error(err);
-    alert(err.message || "Could not export PDF. Check your connection and try again.");
-  } finally {
-    exportPdfBtn.classList.remove("is-busy");
-    exportPdfBtn.textContent = label || "Export PDF";
-  }
-});
-
 exportAbletonBtn?.addEventListener("click", async () => {
   if (!lastAdvice?.chain || !exportAbletonBtn) return;
   const label = exportAbletonBtn.textContent;
@@ -2143,7 +2109,7 @@ exportAbletonBtn?.addEventListener("click", async () => {
       name: lastTrackName || "Chainprint Chain",
     });
     if (!included.length && !eqNotes.length) {
-      alert("This chain has no stages that map to Ableton stock devices yet — use the PDF export.");
+      alert("This chain has no stages that map to Ableton stock devices yet — rebuild from the stage list, or use Mix in Ableton with AI.");
       return;
     }
     const slug =
@@ -2716,7 +2682,7 @@ function renderChain(advice) {
   }
   if (estimateNoteEl) {
     estimateNoteEl.textContent =
-      "Share this chain, export a Live rack, or apply it with AI.";
+      "Share a link, drop a Live rack, or have AI dial it into Ableton for you.";
   }
 
   const insertStages = (chain.inserts || []).map((step, index) => ({

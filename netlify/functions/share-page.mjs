@@ -128,10 +128,10 @@ function buildHtml({ origin, id, row, meta }) {
 
         <section class="share-mcp" data-share-mcp>
           <header class="share-mcp-head">
-            <h2>Have AI apply it in Ableton</h2>
+            <h2>Have AI mix it in Ableton</h2>
             <p>
-              Power users: paste this link into Claude or Cursor with
-              <a href="/help/ableton-mcp/">chainprint-mcp</a> installed.
+              Paste this share link into Claude or Cursor — it loads stock Live devices and dials them in.
+              One-time setup: <a href="/help/ableton-mcp/">Ableton + AI guide</a>.
             </p>
           </header>
           <label class="share-mcp-field">
@@ -142,7 +142,7 @@ function buildHtml({ origin, id, row, meta }) {
             </div>
           </label>
           <details class="share-mcp-config">
-            <summary>MCP client config</summary>
+            <summary>One-time setup for Claude or Cursor</summary>
             <pre class="share-mcp-code"><code>{
   "mcpServers": {
     "chainprint": {
