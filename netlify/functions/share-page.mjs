@@ -130,10 +130,27 @@ function buildHtml({ origin, id, row, meta }) {
           <header class="share-mcp-head">
             <h2>Have AI mix it in Ableton</h2>
             <p>
-              Paste this share link into Claude or Cursor — it loads stock Live devices and dials them in.
-              One-time setup: <a href="/help/ableton-mcp/">Ableton + AI guide</a>.
+              Claude Desktop or Cursor can load this chain into Live and dial stock devices for you.
+              (ChatGPT isn’t supported yet — it needs a different connection style.)
             </p>
           </header>
+
+          <ol class="share-howto">
+            <li>
+              <strong>One-time setup</strong> —
+              run <code>uvx chainprint-mcp install</code>, restart Ableton, set a Control Surface to
+              <strong>ChainprintMCP</strong>, then add the config below to Claude or Cursor.
+              <a href="/help/ableton-mcp/">Full guide</a>
+            </li>
+            <li>
+              <strong>Open Live</strong> with your dry vocal (or bed) on a track.
+            </li>
+            <li>
+              <strong>Copy this link</strong> and paste it into Claude or Cursor. Ask something like:
+              <em>“Load this Chainprint link and apply it to my vocal track.”</em>
+            </li>
+          </ol>
+
           <label class="share-mcp-field">
             <span class="share-mcp-label">Share link</span>
             <div class="share-mcp-row">
@@ -142,7 +159,7 @@ function buildHtml({ origin, id, row, meta }) {
             </div>
           </label>
           <details class="share-mcp-config">
-            <summary>One-time setup for Claude or Cursor</summary>
+            <summary>Claude / Cursor config (paste once)</summary>
             <pre class="share-mcp-code"><code>{
   "mcpServers": {
     "chainprint": {
@@ -151,6 +168,10 @@ function buildHtml({ origin, id, row, meta }) {
     }
   }
 }</code></pre>
+            <p class="share-mcp-hint">
+              Claude Desktop: add to <code>claude_desktop_config.json</code>. Cursor: MCP settings → same block → reload.
+              More detail in the <a href="/help/ableton-mcp/">Ableton + AI guide</a>.
+            </p>
           </details>
         </section>
       </article>

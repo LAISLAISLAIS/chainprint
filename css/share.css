@@ -364,6 +364,42 @@
   color: var(--accent, #6ec4b4);
 }
 
+.share-howto {
+  margin: 0;
+  padding: 0 0 0 1.2rem;
+  display: grid;
+  gap: 10px;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--silkscreen);
+  line-height: var(--leading-body);
+}
+
+.share-howto li {
+  padding-left: 4px;
+}
+
+.share-howto strong {
+  color: var(--readout);
+  font-weight: var(--weight-semibold);
+}
+
+.share-howto em {
+  color: var(--readout);
+  font-style: normal;
+  font-weight: var(--weight-medium);
+}
+
+.share-howto code,
+.share-howto a {
+  color: var(--accent, #6ec4b4);
+}
+
+.share-howto a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .share-mcp-label {
   display: block;
   margin-bottom: 6px;
