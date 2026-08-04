@@ -3,6 +3,11 @@
   publish = "."
   functions = "netlify/functions"
 
+# Private beta site password (netlify/edge-functions/site-gate.js)
+[[edge_functions]]
+  function = "site-gate"
+  path = "/*"
+
 # Prefer _redirects for /api/odesli → function; keep directory trailing slashes here
 [[redirects]]
   from = "/analyze"
