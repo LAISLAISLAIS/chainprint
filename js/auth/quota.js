@@ -51,14 +51,15 @@ export function hasActivePro(account = getSession()) {
   if (DEV_UNLOCK_PRO) return true;
   if (account.plan !== "pro") return false;
 
-  const status = String(account.subscriptionStatus || "active").toLowerCase();
+  // Align with netlify/functions/_shared/entitlements.mjs + consume_analysis()
+  const raw = account.subscriptionStatus;
+  const status = String(raw == null || raw === "" ? "none" : raw).toLowerCase();
   if (status === "active" || status === "trialing") return true;
+  if (status === "none") return true; // legacy pre-Stripe Pro rows
   if (status === "past_due") {
     if (account.graceUntil) return new Date(account.graceUntil).getTime() > Date.now();
     return true;
   }
-  // Legacy rows with plan=pro and no status column yet
-  if (!account.subscriptionStatus || status === "none") return true;
   return false;
 }
 

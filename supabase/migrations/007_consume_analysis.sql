@@ -1,4 +1,5 @@
 -- Server-authoritative analysis quota consumption
+-- Pro predicate aligned with js/auth/quota.js hasActivePro()
 
 create or replace function public.consume_analysis()
 returns public.profiles
@@ -27,12 +28,13 @@ begin
     raise exception 'profile_missing' using errcode = 'P0002';
   end if;
 
-  status := lower(coalesce(row.subscription_status, 'none'));
+  status := lower(coalesce(nullif(trim(row.subscription_status), ''), 'none'));
   grace := row.grace_until;
+  -- Match client hasActivePro: active/trialing, legacy none, past_due within grace
   is_pro := (
     row.plan = 'pro'
     and (
-      status in ('active', 'trialing')
+      status in ('active', 'trialing', 'none')
       or (status = 'past_due' and (grace is null or grace > now()))
     )
   );

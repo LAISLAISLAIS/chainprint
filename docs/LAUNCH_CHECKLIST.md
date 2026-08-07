@@ -12,9 +12,11 @@ Do not enable live Stripe or open the site publicly until every box is checked.
 
 ## Netlify
 
+- [ ] **Required before merge/deploy:** `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` in production context (no publishable fallbacks in prod)
 - [ ] Env set from `.env.example` (live Stripe, Upstash, CORS=prod origin, SITE_*)
 - [ ] `CHAINPRINT_DEV_UNLOCK` unset / not `1`
-- [ ] Gate: either strong `SITE_PASSWORD` + signing secret, or `SITE_GATE_ENABLED=0`
+- [ ] Gate: set `SITE_PASSWORD` + `SITE_GATE_SIGNING_SECRET`, or `SITE_GATE_ENABLED=0` (missing password skips gate — does not 503 the site)
+- [ ] `/api/health` returns `"stripe":"ok"` and `"rateLimitBackend":"upstash"` in production
 - [ ] Deploy previews use **test** Stripe keys only
 - [ ] Custom domain HTTPS; headers present (`/api/health` 200)
 

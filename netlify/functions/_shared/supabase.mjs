@@ -1,16 +1,37 @@
 /**
  * Shared Supabase helpers for Netlify functions (anon, user JWT, or service role).
- * No hardcoded project fallbacks — missing env fails closed.
+ * Production: SUPABASE_URL + SUPABASE_ANON_KEY required (fail closed).
+ * Local/dev only: optional publishable fallback so `netlify dev` works before env is wired.
+ * Service role never falls back.
  */
 
 export const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+function isProductionRuntime() {
+  return process.env.CONTEXT === "production" || process.env.NODE_ENV === "production";
+}
+
+/** Publishable-only local fallback (same project as js/auth/config.js). Never use service role here. */
+const DEV_PUBLISHABLE = {
+  url: "https://wggvvgigtwzwivpgszyr.supabase.co",
+  key: "sb_publishable_mGJIAlOvSs_5sahA8i0qiQ_q5gskCtM",
+};
+
 export function supabaseConfig() {
-  const url = String(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").trim();
-  const key = String(
+  let url = String(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").trim();
+  let key = String(
     process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || ""
   ).trim();
+
+  if ((!url || !key) && !isProductionRuntime()) {
+    console.warn(
+      "[supabase] SUPABASE_URL/ANON_KEY unset — using local publishable fallback (not for production)"
+    );
+    url = url || DEV_PUBLISHABLE.url;
+    key = key || DEV_PUBLISHABLE.key;
+  }
+
   if (!url || !key) {
     const err = new Error("Supabase is not configured (SUPABASE_URL / SUPABASE_ANON_KEY).");
     err.status = 503;

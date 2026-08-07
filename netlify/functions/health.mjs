@@ -31,7 +31,8 @@ export async function handler() {
   const ok =
     supabase === "ok" &&
     (!production || rateLimitBackend === "upstash") &&
-    (!production || stripe === "ok" || stripe === "partial");
+    // Production billing requires webhook secret too (not just price + secret key)
+    (!production || stripe === "ok");
 
   return jsonResponse(ok ? 200 : 503, {
     ok,

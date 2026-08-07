@@ -168,14 +168,13 @@ export default async (request, context) => {
     return context.next();
   }
 
+  // Fail open if enabled but password unset — avoid taking production offline on merge.
+  // Set SITE_PASSWORD (and preferably SITE_GATE_SIGNING_SECRET) to enforce the gate.
   if (!pw || !secret) {
-    if (pathname.startsWith("/api/") || pathname.startsWith("/.netlify/")) {
-      return new Response(JSON.stringify({ error: "Site gate misconfigured." }), {
-        status: 503,
-        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
-      });
-    }
-    return htmlResponse(gateHtml({ misconfigured: true, next: "/" }), 503);
+    console.warn(
+      "[site-gate] SITE_PASSWORD missing — gate skipped. Set SITE_PASSWORD or SITE_GATE_ENABLED=0."
+    );
+    return context.next();
   }
 
   if (await validCookie(request, secret)) {

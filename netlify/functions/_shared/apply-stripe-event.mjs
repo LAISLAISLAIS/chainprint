@@ -1,10 +1,11 @@
 /**
  * Apply a verified Stripe event to profiles (service role).
- * Idempotent via stripe_events insert.
+ * Process first, then record stripe_events — so Stripe retries still apply after transient failures.
  */
 
-import { supabaseServiceConfig } from "./supabase.mjs";
 import { pastDueGraceUntil } from "./entitlements.mjs";
+import { getStripe } from "./stripe.mjs";
+import { supabaseServiceConfig } from "./supabase.mjs";
 
 async function rest(path, { method = "GET", body, headers: extra } = {}) {
   const { url, key } = supabaseServiceConfig();
@@ -23,7 +24,16 @@ async function rest(path, { method = "GET", body, headers: extra } = {}) {
   return res;
 }
 
-async function claimEvent(event) {
+async function eventAlreadyProcessed(eventId) {
+  const res = await rest(
+    `/rest/v1/stripe_events?id=eq.${encodeURIComponent(eventId)}&select=id&limit=1`
+  );
+  if (!res.ok) return false;
+  const rows = await res.json();
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+async function recordEvent(event) {
   const res = await rest("/rest/v1/stripe_events", {
     method: "POST",
     headers: { Prefer: "return=minimal" },
@@ -56,7 +66,7 @@ async function updateProfile(userId, patch) {
 async function findProfileByCustomer(customerId) {
   if (!customerId) return null;
   const res = await rest(
-    `/rest/v1/profiles?stripe_customer_id=eq.${encodeURIComponent(customerId)}&select=id,plan,subscription_status&limit=1`
+    `/rest/v1/profiles?stripe_customer_id=eq.${encodeURIComponent(customerId)}&select=id,plan,subscription_status,stripe_subscription_id&limit=1`
   );
   if (!res.ok) return null;
   const rows = await res.json();
@@ -66,7 +76,7 @@ async function findProfileByCustomer(customerId) {
 async function findProfileBySubscription(subscriptionId) {
   if (!subscriptionId) return null;
   const res = await rest(
-    `/rest/v1/profiles?stripe_subscription_id=eq.${encodeURIComponent(subscriptionId)}&select=id,plan,subscription_status&limit=1`
+    `/rest/v1/profiles?stripe_subscription_id=eq.${encodeURIComponent(subscriptionId)}&select=id,plan,subscription_status,stripe_subscription_id&limit=1`
   );
   if (!res.ok) return null;
   const rows = await res.json();
@@ -96,7 +106,19 @@ function revokePro(userId, status = "canceled") {
   });
 }
 
+function checkoutPaymentOk(session) {
+  const status = String(session.payment_status || "").toLowerCase();
+  return status === "paid" || status === "no_payment_required";
+}
+
 async function handleCheckoutCompleted(session) {
+  if (!checkoutPaymentOk(session)) {
+    console.warn(
+      "[stripe] checkout.session.completed ignored — payment_status=",
+      session.payment_status
+    );
+    return;
+  }
   const userId = session.metadata?.userId || session.client_reference_id;
   if (!userId) throw new Error("checkout.session.completed missing userId metadata");
   const subscriptionId =
@@ -131,13 +153,14 @@ async function handleSubscriptionUpdated(sub) {
     return;
   }
   if (status === "past_due" || status === "unpaid") {
-    await updateProfile(profile.id, {
+    const patch = {
       plan: "pro",
       subscription_status: "past_due",
       stripe_subscription_id: sub.id,
-      stripe_customer_id: customerId || undefined,
       grace_until: pastDueGraceUntil(),
-    });
+    };
+    if (customerId) patch.stripe_customer_id = customerId;
+    await updateProfile(profile.id, patch);
     return;
   }
   if (status === "canceled" || status === "incomplete_expired") {
@@ -174,31 +197,41 @@ async function handleChargeRefunded(charge) {
     typeof charge.customer === "string" ? charge.customer : charge.customer?.id;
   const profile = await findProfileByCustomer(customerId);
   if (!profile) return;
-  // Full refund → revoke; partial leaves status (ops can fix via portal)
-  if (charge.refunded || charge.amount_refunded >= charge.amount) {
-    await revokePro(profile.id, "refunded");
+  const fullRefund = charge.refunded || charge.amount_refunded >= charge.amount;
+  if (!fullRefund) return;
+
+  const subId = profile.stripe_subscription_id;
+  if (subId) {
+    const stripe = getStripe();
+    if (stripe) {
+      try {
+        const sub = await stripe.subscriptions.retrieve(subId);
+        const live = ["active", "trialing", "past_due", "unpaid"].includes(sub.status);
+        if (live) {
+          // Don't silently revoke while Stripe still bills — cancel first, then revoke.
+          await stripe.subscriptions.cancel(subId);
+        }
+      } catch (err) {
+        // Already canceled / missing — still revoke local entitlement
+        console.warn("[stripe] refund: subscription cancel skipped", err?.message || err);
+      }
+    }
   }
+  await revokePro(profile.id, "refunded");
 }
 
-/**
- * @param {import('stripe').Stripe.Event} event
- * @returns {Promise<{ duplicate?: boolean, handled: boolean }>}
- */
-export async function applyStripeEvent(event) {
-  const claim = await claimEvent(event);
-  if (claim.duplicate) return { duplicate: true, handled: true };
-
+async function dispatchEvent(event) {
   switch (event.type) {
     case "checkout.session.completed":
       await handleCheckoutCompleted(event.data.object);
-      break;
+      return true;
     case "customer.subscription.created":
     case "customer.subscription.updated":
       await handleSubscriptionUpdated(event.data.object);
-      break;
+      return true;
     case "customer.subscription.deleted":
       await handleSubscriptionDeleted(event.data.object);
-      break;
+      return true;
     case "invoice.paid": {
       const inv = event.data.object;
       const subId = typeof inv.subscription === "string" ? inv.subscription : inv.subscription?.id;
@@ -213,24 +246,43 @@ export async function applyStripeEvent(event) {
           analyses_included: null,
         });
       }
-      break;
+      return true;
     }
     case "invoice.payment_failed":
       await handleInvoicePaymentFailed(event.data.object);
-      break;
+      return true;
     case "charge.refunded":
       await handleChargeRefunded(event.data.object);
-      break;
+      return true;
     default:
-      return { handled: false, duplicate: false };
+      return false;
   }
+}
+
+/**
+ * @param {import('stripe').Stripe.Event} event
+ * @returns {Promise<{ duplicate?: boolean, handled: boolean }>}
+ */
+export async function applyStripeEvent(event) {
+  if (await eventAlreadyProcessed(event.id)) {
+    return { duplicate: true, handled: true };
+  }
+
+  const handled = await dispatchEvent(event);
+  if (!handled) {
+    return { handled: false, duplicate: false };
+  }
+
+  // Record after successful apply so retries can re-apply if this insert never happened
+  await recordEvent(event);
   return { handled: true, duplicate: false };
 }
 
-/** Test helper: apply without stripe_events claim */
+/** Test helper */
 export const __testing = {
   grantPro,
   revokePro,
   handleCheckoutCompleted,
   handleSubscriptionDeleted,
+  checkoutPaymentOk,
 };

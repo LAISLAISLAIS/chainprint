@@ -28,4 +28,9 @@ Upstash Redis REST in production (`requireShared: true` → 503 if missing). In-
 ## Site gate
 
 HMAC-signed HttpOnly cookie. Exempt: `/api/chain/*`, `/api/stripe/webhook`, `/api/health`.  
+If `SITE_GATE_ENABLED` is on but `SITE_PASSWORD` is missing, the gate is **skipped** (fail open) so a misconfigured deploy does not brick the site — set the password or `SITE_GATE_ENABLED=0`.  
 Public launch: `SITE_GATE_ENABLED=0`.
+
+## Stripe webhook idempotency
+
+Events are applied first, then recorded in `stripe_events`. A failed apply does **not** poison the event id, so Stripe retries can still grant Pro.

@@ -64,8 +64,10 @@ export async function handler(event) {
       sessionId.startsWith("cs_")
     ) {
       const session = await stripe.checkout.sessions.retrieve(sessionId);
+      const paid =
+        session.payment_status === "paid" || session.payment_status === "no_payment_required";
       if (
-        session.payment_status === "paid" &&
+        paid &&
         (session.metadata?.userId === user.id || session.client_reference_id === user.id)
       ) {
         await applyStripeEvent({

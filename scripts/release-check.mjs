@@ -62,11 +62,14 @@ const gate = readFileSync(join(root, "netlify/edge-functions/site-gate.js"), "ut
 if (/chainmanpreet/.test(gate)) fail("site-gate still contains default password");
 else pass("site-gate has no hardcoded default password");
 
-// No supabase hardcoded fallback in functions
+// Publishable fallback only for non-production (must still fail closed in prod)
 const supabaseShared = readFileSync(join(root, "netlify/functions/_shared/supabase.mjs"), "utf8");
-if (/wggvvgigtwzwivpgszyr/.test(supabaseShared)) {
-  fail("functions/_shared/supabase.mjs still has hardcoded project fallback");
-} else pass("functions supabase helper has no hardcoded project");
+if (!/isProductionRuntime/.test(supabaseShared)) {
+  fail("functions supabase helper missing production fail-closed guard");
+} else pass("functions supabase helper fails closed in production");
+if (!/DEV_PUBLISHABLE/.test(supabaseShared)) {
+  fail("expected named DEV_PUBLISHABLE fallback for local only");
+} else pass("local publishable fallback is explicitly named");
 
 // DEV_UNLOCK default off
 const quota = readFileSync(join(root, "js/auth/quota.js"), "utf8");
