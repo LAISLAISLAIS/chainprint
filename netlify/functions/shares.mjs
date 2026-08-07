@@ -5,52 +5,48 @@
  * DELETE /api/shares?id=…     — delete mine
  */
 
-import { UUID_RE, supabaseConfig } from "./_shared/supabase.mjs";
-
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type, Authorization",
-  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
-};
+import { corsHeaders, isOriginAllowed } from "./_shared/cors.mjs";
+import { jsonError, jsonResponse } from "./_shared/errors.mjs";
+import { rateLimit, rateLimitHeaders } from "./_shared/rate-limit.mjs";
+import { UUID_RE, bearerFromEvent, getUserFromJwt, supabaseConfig } from "./_shared/supabase.mjs";
 
 const DEFAULT_TTL_DAYS = 90;
 
-function json(statusCode, body) {
-  return {
-    statusCode,
-    headers: { ...CORS, "Content-Type": "application/json", "Cache-Control": "no-store" },
-    body: JSON.stringify(body),
-  };
-}
-
-function bearer(event) {
-  const h = event.headers?.authorization || event.headers?.Authorization || "";
-  const m = String(h).match(/^Bearer\s+(.+)$/i);
-  return m ? m[1].trim() : "";
-}
-
-async function getUserId(token) {
-  const { url, key } = supabaseConfig();
-  const res = await fetch(`${url}/auth/v1/user`, {
-    headers: { apikey: key, Authorization: `Bearer ${token}` },
-  });
-  if (!res.ok) return null;
-  const user = await res.json();
-  return user?.id || null;
-}
-
 export async function handler(event) {
+  const cors = corsHeaders(event);
   if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 204, headers: CORS, body: "" };
+    return { statusCode: 204, headers: cors, body: "" };
+  }
+  if (!isOriginAllowed(event)) {
+    return jsonError(403, "Origin not allowed", null, cors);
   }
 
-  const token = bearer(event);
-  if (!token) return json(401, { error: "Log in to manage share links." });
+  const token = bearerFromEvent(event);
+  if (!token) return jsonError(401, "Log in to manage share links.", null, cors);
 
-  const userId = await getUserId(token);
-  if (!userId) return json(401, { error: "Session expired — sign in again." });
+  const user = await getUserFromJwt(token);
+  const userId = user?.id;
+  if (!userId) return jsonError(401, "Session expired — sign in again.", null, cors);
 
-  const { url, key } = supabaseConfig();
+  const rl = await rateLimit(event, {
+    bucket: "shares",
+    limit: event.httpMethod === "POST" ? 20 : 60,
+    windowSec: 60,
+    userId,
+    requireShared: true,
+  });
+  if (!rl.ok) {
+    return jsonError(rl.statusCode, rl.error, null, { ...cors, ...rateLimitHeaders(rl) });
+  }
+
+  let url;
+  let key;
+  try {
+    ({ url, key } = supabaseConfig());
+  } catch (err) {
+    return jsonError(503, "Share API is not configured.", err, cors);
+  }
+
   const headers = {
     apikey: key,
     Authorization: `Bearer ${token}`,
@@ -77,21 +73,21 @@ export async function handler(event) {
           `&limit=50`;
         res = await fetch(endpoint, { headers });
       }
-      if (!res.ok) return json(502, { error: "Could not list shares." });
+      if (!res.ok) return jsonError(502, "Could not list shares.", null, cors);
       const rows = await res.json();
-      return json(200, { shares: Array.isArray(rows) ? rows : [] });
+      return jsonResponse(200, { shares: Array.isArray(rows) ? rows : [] }, cors);
     }
 
     if (event.httpMethod === "DELETE") {
       const id = String(event.queryStringParameters?.id || "").trim();
-      if (!UUID_RE.test(id)) return json(400, { error: "Malformed share id." });
+      if (!UUID_RE.test(id)) return jsonError(400, "Malformed share id.", null, cors);
       const endpoint =
         `${url}/rest/v1/shared_chains` +
         `?id=eq.${encodeURIComponent(id)}` +
         `&owner=eq.${encodeURIComponent(userId)}`;
       const res = await fetch(endpoint, { method: "DELETE", headers });
-      if (!res.ok) return json(502, { error: "Could not delete that share." });
-      return json(200, { ok: true, id });
+      if (!res.ok) return jsonError(502, "Could not delete that share.", null, cors);
+      return jsonResponse(200, { ok: true, id }, cors);
     }
 
     if (event.httpMethod === "POST") {
@@ -99,10 +95,10 @@ export async function handler(event) {
       try {
         body = JSON.parse(event.body || "{}");
       } catch {
-        return json(400, { error: "Invalid JSON body." });
+        return jsonError(400, "Invalid JSON body.", null, cors);
       }
       if (!body?.payload?.chain) {
-        return json(400, { error: "Nothing to share — missing chain payload." });
+        return jsonError(400, "Nothing to share — missing chain payload.", null, cors);
       }
 
       const targetRaw = String(body.target || "vocal").toLowerCase();
@@ -131,7 +127,6 @@ export async function handler(event) {
       if (!res.ok) {
         const text = await res.text();
         if (/expires_at|PGRST204/i.test(text)) {
-          // Migration 005 not applied yet — retry without expiry
           delete row.expires_at;
           const retry = await fetch(`${url}/rest/v1/shared_chains`, {
             method: "POST",
@@ -139,27 +134,25 @@ export async function handler(event) {
             body: JSON.stringify(row),
           });
           if (!retry.ok) {
-            return json(502, { error: "Could not create share. Run migration 005 if this persists." });
+            return jsonError(502, "Could not create share.", null, cors);
           }
           const created = await retry.json();
           const id = Array.isArray(created) ? created[0]?.id : created?.id;
-          return json(201, { id, expires_at: null });
+          return jsonResponse(201, { id, expires_at: null }, cors);
         }
         if (/shared_chains|PGRST205/i.test(text)) {
-          return json(503, {
-            error: "Share tables missing — run supabase/migrations/004_shared_chains.sql",
-          });
+          return jsonError(503, "Share tables missing — run migrations.", null, cors);
         }
-        return json(502, { error: "Could not create the share link." });
+        return jsonError(502, "Could not create the share link.", null, cors);
       }
       const created = await res.json();
       const id = Array.isArray(created) ? created[0]?.id : created?.id;
-      if (!id) return json(502, { error: "Share created but id missing." });
-      return json(201, { id, expires_at: expiresAt });
+      if (!id) return jsonError(502, "Share created but id missing.", null, cors);
+      return jsonResponse(201, { id, expires_at: expiresAt }, cors);
     }
 
-    return json(405, { error: "Method not allowed" });
+    return jsonError(405, "Method not allowed", null, cors);
   } catch (err) {
-    return json(500, { error: err?.message || "Share API error." });
+    return jsonError(500, "Share API error.", err, cors);
   }
 }

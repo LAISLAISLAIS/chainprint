@@ -5,14 +5,17 @@
 import {
   changePassword,
   clearAvatar,
+  getAccessToken,
   getSession,
   initAuth,
+  resetAuthCache,
   updateAccount,
   updateAvatar,
 } from "../auth/session.js";
 import { avatarInitials } from "../auth/avatar.js";
 import { analysesRemaining, canUseMode, getPlan } from "../auth/quota.js";
 import { validatePassword } from "../auth/validation.js";
+import { fetchBillingSession, openBillingPortal, startCheckout } from "../billing/client.js";
 import { mountAuthNav } from "./nav-auth.js";
 
 await initAuth();
@@ -90,9 +93,14 @@ async function bootSettings(account) {
     if (planNote) {
       planNote.textContent =
         plan.id === "pro"
-          ? "Pro unlocks Deep analysis and higher quotas."
-          : "Free includes limited analyses. Upgrade unlocks Deep and more runs.";
+          ? "Pro unlocks Deep analysis and unlimited runs. Manage payment method or cancel anytime."
+          : "Free includes limited analyses. Upgrade unlocks Deep and unlimited runs.";
     }
+
+    const upgradeBtn = document.querySelector("[data-billing-upgrade]");
+    const portalBtn = document.querySelector("[data-billing-portal]");
+    if (upgradeBtn) upgradeBtn.hidden = plan.id === "pro";
+    if (portalBtn) portalBtn.hidden = plan.id !== "pro";
 
     if (passwordSection) {
       passwordSection.hidden = acc.provider !== "password";
@@ -108,8 +116,74 @@ async function bootSettings(account) {
     el.classList.toggle("is-ok", kind === "ok");
   }
 
+  async function refreshAfterBilling() {
+    resetAuthCache();
+    await initAuth();
+    const next = getSession();
+    if (next) fillForms(next);
+  }
+
+  async function runBillingAction(kind) {
+    const status = document.querySelector("[data-billing-status]");
+    setStatus(status, kind === "portal" ? "Opening billing…" : "Starting checkout…");
+    try {
+      const token = await getAccessToken();
+      if (!token) {
+        setStatus(status, "Sign in again to manage billing.", "error");
+        return;
+      }
+      if (kind === "portal") await openBillingPortal(token);
+      else await startCheckout(token, "pro");
+    } catch (err) {
+      setStatus(status, err.message || "Billing request failed.", "error");
+    }
+  }
+
+  document.querySelector("[data-billing-upgrade]")?.addEventListener("click", () => {
+    void runBillingAction("upgrade");
+  });
+  document.querySelector("[data-billing-portal]")?.addEventListener("click", () => {
+    void runBillingAction("portal");
+  });
+
   fillForms(account);
   void loadShares();
+
+  // Success return from Stripe Checkout
+  const params = new URLSearchParams(location.search);
+  const billing = params.get("billing");
+  const sessionId = params.get("session_id");
+  if (billing === "success") {
+    const status = document.querySelector("[data-billing-status]");
+    setStatus(status, "Confirming payment…");
+    (async () => {
+      try {
+        const token = await getAccessToken();
+        if (token) {
+          for (let i = 0; i < 8; i++) {
+            const result = await fetchBillingSession(token, sessionId);
+            if (result.pro) {
+              setStatus(status, "You’re on Pro. Welcome.", "ok");
+              await refreshAfterBilling();
+              history.replaceState({}, "", "./");
+              return;
+            }
+            await new Promise((r) => setTimeout(r, 1500));
+          }
+        }
+        setStatus(status, "Payment received — Pro may take a moment to activate. Refresh shortly.", "ok");
+        await refreshAfterBilling();
+      } catch (err) {
+        setStatus(status, err.message || "Could not confirm billing status.", "error");
+      }
+    })();
+  } else if (billing === "cancel") {
+    setStatus(document.querySelector("[data-billing-status]"), "Checkout canceled.");
+    history.replaceState({}, "", "./");
+  } else if (billing === "portal") {
+    void refreshAfterBilling();
+    history.replaceState({}, "", "./");
+  }
 
   async function loadShares() {
     const list = document.querySelector("[data-shares-list]");

@@ -3,7 +3,7 @@
  * Mirrors netlify/functions/soundcloud.mjs for hosts that aren't Netlify.
  */
 
-const FALLBACK_CLIENT_ID = "X2iyLRaFdot6PHiU6l7tTR8wRSTY0sFp";
+const FALLBACK_CLIENT_ID = String(process.env.SOUNDCLOUD_CLIENT_ID || "").trim();
 const UA =
   "Mozilla/5.0 (compatible; ChainprintBot/1.0; +https://github.com/LAISLAISLAIS/chainprint)";
 

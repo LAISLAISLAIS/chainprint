@@ -1,5 +1,6 @@
 /**
- * Shared Supabase helpers for Netlify functions (anon or user JWT).
+ * Shared Supabase helpers for Netlify functions (anon, user JWT, or service role).
+ * No hardcoded project fallbacks — missing env fails closed.
  */
 
 export const UUID_RE =
@@ -10,16 +11,51 @@ export function supabaseConfig() {
   const key = String(
     process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || ""
   ).trim();
-  return {
-    url: url || "https://wggvvgigtwzwivpgszyr.supabase.co",
-    key: key || "sb_publishable_mGJIAlOvSs_5sahA8i0qiQ_q5gskCtM",
-  };
+  if (!url || !key) {
+    const err = new Error("Supabase is not configured (SUPABASE_URL / SUPABASE_ANON_KEY).");
+    err.status = 503;
+    throw err;
+  }
+  return { url, key };
+}
+
+export function supabaseServiceConfig() {
+  const url = String(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").trim();
+  const key = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+  if (!url || !key) {
+    const err = new Error(
+      "Supabase service role is not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)."
+    );
+    err.status = 503;
+    throw err;
+  }
+  return { url, key };
 }
 
 export function siteOrigin(event) {
+  const fromEnv = String(process.env.SITE_URL || "").trim().replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
   const proto = event.headers?.["x-forwarded-proto"] || "https";
-  const host = event.headers?.["x-forwarded-host"] || event.headers?.host || "chainprint.app";
+  const host = event.headers?.["x-forwarded-host"] || event.headers?.host || "localhost";
   return `${proto}://${host}`.replace(/\/$/, "");
+}
+
+export async function supabaseRest(path, { service = false, token, method = "GET", body, headers: extra } = {}) {
+  const { url, key } = service ? supabaseServiceConfig() : supabaseConfig();
+  const auth = token || key;
+  const res = await fetch(`${url}${path}`, {
+    method,
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${auth}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+      ...extra,
+    },
+    body: body != null ? JSON.stringify(body) : undefined,
+  });
+  return res;
 }
 
 /**
@@ -54,7 +90,6 @@ export async function fetchSharedChainRow(id, opts = {}) {
     true
   );
   if (!res.ok) {
-    // Migration 005 not applied — retry without expires_at
     res = await query(
       "id,owner,track_name,target,mode,key_label,bpm,artwork_url,payload,created_at",
       false
@@ -110,4 +145,20 @@ export function shareMeta(row) {
     ogDescription: description,
     chipLine: bits.join(" · "),
   };
+}
+
+export async function getUserFromJwt(token) {
+  if (!token) return null;
+  const { url, key } = supabaseConfig();
+  const res = await fetch(`${url}/auth/v1/user`, {
+    headers: { apikey: key, Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export function bearerFromEvent(event) {
+  const h = event.headers?.authorization || event.headers?.Authorization || "";
+  const m = String(h).match(/^Bearer\s+(.+)$/i);
+  return m ? m[1].trim() : "";
 }

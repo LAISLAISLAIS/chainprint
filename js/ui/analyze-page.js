@@ -420,8 +420,19 @@ document.querySelector("[data-logout-gate]")?.addEventListener("click", async ()
   location.href = "../auth/?mode=login&next=/analyze/";
 });
 
-document.querySelector("[data-upgrade-soon]")?.addEventListener("click", () => {
-  alert("Paid plans aren’t live yet — this is where upgrade / billing will land.");
+document.querySelector("[data-upgrade-soon]")?.addEventListener("click", async () => {
+  try {
+    const { getAccessToken } = await import("../auth/session.js");
+    const { startCheckout } = await import("../billing/client.js");
+    const token = await getAccessToken();
+    if (!token) {
+      location.href = "../auth/?mode=login&next=" + encodeURIComponent("/analyze/");
+      return;
+    }
+    await startCheckout(token, "pro");
+  } catch (err) {
+    alert(err?.message || "Could not start upgrade. Open Settings → Plan & billing.");
+  }
 });
 
 function setMode(mode) {

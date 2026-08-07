@@ -1,17 +1,28 @@
 /**
  * Analysis quota + plan gates.
- * Feature tiering is intentionally light — structure first, pricing later.
+ * Server RPC consume_analysis() is authoritative when Supabase is configured.
  */
 
-import { getSession, updateAccount } from "./session.js";
+import { isSupabaseConfigured } from "./config.js";
+import { consumeAnalysisRemote, getSession, updateAccount } from "./session.js";
 
 /** @typedef {'standard' | 'deep'} AnalysisMode */
 
 /**
- * Flip to true while developing / testing to unlock Deep + unlimited free analyses.
- * Keep false for a public launch with real quotas.
+ * Dev unlock — off by default. Set window.__CHAINPRINT_DEV_UNLOCK__ = true only locally.
  */
-export const DEV_UNLOCK_PRO = true;
+function resolveDevUnlock() {
+  try {
+    if (typeof window !== "undefined" && window.__CHAINPRINT_DEV_UNLOCK__ === true) {
+      return true;
+    }
+  } catch {
+    /* ignore */
+  }
+  return false;
+}
+
+export const DEV_UNLOCK_PRO = resolveDevUnlock();
 
 export const PLANS = {
   free: {
@@ -19,6 +30,7 @@ export const PLANS = {
     label: "Free",
     analysesIncluded: DEV_UNLOCK_PRO ? Infinity : 1,
     deepAnalysis: DEV_UNLOCK_PRO,
+    stripePriceEnv: null,
     blurb: DEV_UNLOCK_PRO
       ? "Dev unlock · unlimited + Deep"
       : "One free analysis · upgrade for Deep / Pro",
@@ -28,13 +40,32 @@ export const PLANS = {
     label: "Pro",
     analysesIncluded: Infinity,
     deepAnalysis: true,
+    stripePriceEnv: "STRIPE_PRICE_PRO",
     blurb: "Unlimited analyses + deep vocal, design, instrumental & master analysis",
   },
 };
 
+/** True when the account should receive Pro entitlements right now. */
+export function hasActivePro(account = getSession()) {
+  if (!account) return false;
+  if (DEV_UNLOCK_PRO) return true;
+  if (account.plan !== "pro") return false;
+
+  const status = String(account.subscriptionStatus || "active").toLowerCase();
+  if (status === "active" || status === "trialing") return true;
+  if (status === "past_due") {
+    if (account.graceUntil) return new Date(account.graceUntil).getTime() > Date.now();
+    return true;
+  }
+  // Legacy rows with plan=pro and no status column yet
+  if (!account.subscriptionStatus || status === "none") return true;
+  return false;
+}
+
 export function getPlan(account = getSession()) {
   if (!account) return null;
-  return PLANS[account.plan] || PLANS.free;
+  if (hasActivePro(account)) return PLANS.pro;
+  return PLANS.free;
 }
 
 export function analysesRemaining(account = getSession()) {
@@ -64,15 +95,20 @@ export function canUseMode(mode, account = getSession()) {
 }
 
 /** Call after a successful analysis completes. */
-export function consumeAnalysis() {
+export async function consumeAnalysis() {
   const account = getSession();
   if (!account) return null;
   const plan = getPlan(account);
   if (plan.analysesIncluded === Infinity) return account;
+
+  if (isSupabaseConfigured()) {
+    return consumeAnalysisRemote();
+  }
+
   return updateAccount({ analysesUsed: (account.analysesUsed || 0) + 1 });
 }
 
-/** Dev / admin helper until billing exists. */
+/** @deprecated Client cannot set plan when Supabase billing trigger is applied. */
 export function setPlan(planId) {
   if (!PLANS[planId]) throw new Error(`Unknown plan: ${planId}`);
   const included = PLANS[planId].analysesIncluded === Infinity ? null : PLANS[planId].analysesIncluded;

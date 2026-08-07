@@ -1,28 +1,84 @@
 /**
  * Site-wide password gate (private beta).
- * Set SITE_PASSWORD in Netlify env to override; default matches launch lock.
  *
- * Exempt: /api/chain/* so Ableton MCP can still fetch share payloads.
+ * Env:
+ *   SITE_PASSWORD              — required when gate enabled
+ *   SITE_GATE_SIGNING_SECRET   — HMAC secret (falls back to SITE_PASSWORD)
+ *   SITE_GATE_ENABLED          — "0" / "false" disables gate (public launch)
+ *
+ * Exempt: /api/chain/*, /api/stripe/webhook, /api/health, /.netlify/functions/stripe-webhook
  */
 
-const PASSWORD = Deno.env.get("SITE_PASSWORD") || "chainmanpreet";
 const COOKIE_NAME = "cp_site_gate";
-const COOKIE_VALUE = "1";
+const MAX_AGE_SEC = 2592000; // 30 days
 
-function hasGateCookie(request) {
-  const raw = request.headers.get("cookie") || "";
-  return raw.split(";").some((part) => {
-    const [k, ...rest] = part.trim().split("=");
-    return k === COOKIE_NAME && rest.join("=") === COOKIE_VALUE;
-  });
+function gateEnabled() {
+  const v = (Deno.env.get("SITE_GATE_ENABLED") || "1").trim().toLowerCase();
+  return v !== "0" && v !== "false" && v !== "off";
+}
+
+function password() {
+  return (Deno.env.get("SITE_PASSWORD") || Deno.env.get("SITE_GATE_PASSWORD") || "").trim();
+}
+
+function signingSecret() {
+  return (Deno.env.get("SITE_GATE_SIGNING_SECRET") || password()).trim();
 }
 
 function isExempt(pathname) {
-  return pathname === "/api/chain" || pathname.startsWith("/api/chain/");
+  if (pathname === "/api/chain" || pathname.startsWith("/api/chain/")) return true;
+  if (pathname === "/api/stripe/webhook" || pathname.startsWith("/api/stripe/webhook")) return true;
+  if (pathname === "/api/health") return true;
+  if (pathname.includes("stripe-webhook")) return true;
+  return false;
 }
 
-function gateHtml({ error = false, next = "/" } = {}) {
+async function hmacHex(secret, payload) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"]
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function mintCookieValue(secret) {
+  const exp = Math.floor(Date.now() / 1000) + MAX_AGE_SEC;
+  const payload = `v1.${exp}`;
+  const sig = await hmacHex(secret, payload);
+  return `${payload}.${sig}`;
+}
+
+async function validCookie(request, secret) {
+  if (!secret) return false;
+  const raw = request.headers.get("cookie") || "";
+  const part = raw.split(";").map((p) => p.trim()).find((p) => p.startsWith(`${COOKIE_NAME}=`));
+  if (!part) return false;
+  const value = part.slice(COOKIE_NAME.length + 1);
+  const bits = value.split(".");
+  if (bits.length !== 3 || bits[0] !== "v1") return false;
+  const exp = Number(bits[1]);
+  if (!Number.isFinite(exp) || exp * 1000 < Date.now()) return false;
+  const payload = `${bits[0]}.${bits[1]}`;
+  const expected = await hmacHex(secret, payload);
+  if (expected.length !== bits[2].length) return false;
+  let ok = 0;
+  for (let i = 0; i < expected.length; i++) {
+    ok |= expected.charCodeAt(i) ^ bits[2].charCodeAt(i);
+  }
+  return ok === 0;
+}
+
+function gateHtml({ error = false, next = "/", misconfigured = false } = {}) {
   const safeNext = String(next || "/").startsWith("/") ? String(next || "/") : "/";
+  const msg = misconfigured
+    ? "Site gate is misconfigured (SITE_PASSWORD missing)."
+    : error
+      ? "Wrong password — try again."
+      : "";
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -78,10 +134,10 @@ function gateHtml({ error = false, next = "/" } = {}) {
     <input type="hidden" name="next" value="${safeNext.replace(/"/g, "&quot;")}" />
     <label>
       Password
-      <input type="password" name="password" autocomplete="current-password" required autofocus />
+      <input type="password" name="password" autocomplete="current-password" required autofocus ${misconfigured ? "disabled" : ""} />
     </label>
-    <p class="err">${error ? "Wrong password — try again." : ""}</p>
-    <button type="submit">Enter</button>
+    <p class="err">${msg}</p>
+    <button type="submit" ${misconfigured ? "disabled" : ""}>Enter</button>
   </form>
 </body>
 </html>`;
@@ -99,36 +155,53 @@ function htmlResponse(body, status = 200, extraHeaders = {}) {
 }
 
 export default async (request, context) => {
+  if (!gateEnabled()) {
+    return context.next();
+  }
+
   const url = new URL(request.url);
   const { pathname } = url;
+  const pw = password();
+  const secret = signingSecret();
 
   if (isExempt(pathname)) {
     return context.next();
   }
 
-  if (hasGateCookie(request)) {
+  if (!pw || !secret) {
+    if (pathname.startsWith("/api/") || pathname.startsWith("/.netlify/")) {
+      return new Response(JSON.stringify({ error: "Site gate misconfigured." }), {
+        status: 503,
+        headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+      });
+    }
+    return htmlResponse(gateHtml({ misconfigured: true, next: "/" }), 503);
+  }
+
+  if (await validCookie(request, secret)) {
     return context.next();
   }
 
   if (pathname === "/__unlock" && request.method === "POST") {
-    let password = "";
+    let submitted = "";
     let next = "/";
     try {
       const form = await request.formData();
-      password = String(form.get("password") || "");
+      submitted = String(form.get("password") || "");
       const n = String(form.get("next") || "/");
       next = n.startsWith("/") ? n : "/";
     } catch {
       return htmlResponse(gateHtml({ error: true, next: "/" }), 401);
     }
 
-    if (password === PASSWORD) {
+    if (submitted === pw) {
+      const cookieVal = await mintCookieValue(secret);
       const secure = url.protocol === "https:" ? "; Secure" : "";
       return new Response(null, {
         status: 303,
         headers: {
           Location: next,
-          "Set-Cookie": `${COOKIE_NAME}=${COOKIE_VALUE}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${secure}`,
+          "Set-Cookie": `${COOKIE_NAME}=${cookieVal}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${MAX_AGE_SEC}${secure}`,
           "Cache-Control": "no-store",
         },
       });
@@ -137,7 +210,6 @@ export default async (request, context) => {
     return htmlResponse(gateHtml({ error: true, next }), 401);
   }
 
-  // Don't hijack POSTs to APIs with a login form
   if (pathname.startsWith("/api/") || pathname.startsWith("/.netlify/")) {
     return new Response(JSON.stringify({ error: "Site is password-protected." }), {
       status: 401,
