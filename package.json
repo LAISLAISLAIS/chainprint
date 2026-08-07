@@ -1,0 +1,23 @@
+{
+  "name": "chainprint",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "netlify dev",
+    "check": "node scripts/release-check.mjs",
+    "format": "prettier --write \"**/*.{js,mjs,html,css,md,json,toml}\" --ignore-path .gitignore",
+    "format:check": "prettier --check \"**/*.{js,mjs,html,css,md,json,toml}\" --ignore-path .gitignore",
+    "test:billing": "node --test netlify/functions/_shared/*.test.mjs"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.34.9",
+    "stripe": "^17.7.0"
+  },
+  "devDependencies": {
+    "netlify-cli": "^19.0.0",
+    "prettier": "^3.5.3"
+  }
+}

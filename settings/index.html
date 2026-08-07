@@ -118,7 +118,7 @@
       </section>
 
       <section class="unit settings-card" data-settings-plan>
-        <h2>Plan</h2>
+        <h2>Plan &amp; billing</h2>
         <dl class="settings-plan-grid">
           <div>
             <dt>Current plan</dt>
@@ -130,6 +130,11 @@
           </div>
         </dl>
         <p class="settings-hint" data-plan-note></p>
+        <p class="settings-status" data-billing-status role="status"></p>
+        <div class="settings-actions" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+          <button type="button" class="btn btn-primary" data-billing-upgrade>Upgrade to Pro</button>
+          <button type="button" class="btn" data-billing-portal hidden>Manage billing</button>
+        </div>
       </section>
 
       <section class="unit settings-card" data-settings-password hidden>

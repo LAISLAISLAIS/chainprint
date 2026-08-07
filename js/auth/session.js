@@ -231,8 +231,16 @@ function mapProfileRow(user, profile) {
     plan: /** @type {PlanId} */ (profile?.plan || "free"),
     analysesUsed: Number(profile?.analyses_used || 0),
     analysesIncluded: profile?.analyses_included ?? null,
+    subscriptionStatus: profile?.subscription_status || null,
+    graceUntil: profile?.grace_until || null,
     createdAt: profile?.created_at || user.created_at || new Date().toISOString(),
   });
+}
+
+/** Clear cached init so the next initAuth() re-fetches the profile (e.g. after billing). */
+export function resetAuthCache() {
+  initPromise = null;
+  cacheAccount(null);
 }
 
 /** Warm session cache (call once per page). */
@@ -439,10 +447,57 @@ export async function loginWithSocial({ provider, email, name, providerUserId })
   return cacheAccount(account);
 }
 
+/** Supabase access token for Netlify billing / share APIs. */
+export async function getAccessToken() {
+  if (!isSupabaseConfigured()) return null;
+  const supabase = await getSupabase();
+  if (!supabase) return null;
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session?.access_token) return null;
+  return data.session.access_token;
+}
+
+/**
+ * Server-authoritative quota decrement (security definer RPC).
+ * @returns {Promise<Account|null>}
+ */
+export async function consumeAnalysisRemote() {
+  if (!isSupabaseConfigured()) return null;
+  const session = getSession();
+  if (!session) return null;
+  const supabase = await getSupabase();
+  if (!supabase) return null;
+  const { data, error } = await supabase.rpc("consume_analysis");
+  if (error) {
+    const code = /quota_exceeded/i.test(error.message || "") ? "quota_exceeded" : "consume_failed";
+    throw Object.assign(new Error(
+      code === "quota_exceeded"
+        ? "You’ve used your free analysis — upgrade to Pro for more."
+        : "Could not update analysis quota."
+    ), { code });
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return session;
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) return session;
+  return cacheAccount(mapProfileRow(user, row));
+}
+
 /** Persist mutable fields on the signed-in account. */
 export async function updateAccount(patch) {
   const session = getSession();
   if (!session) return null;
+
+  // Billing fields are server-owned when Supabase is configured
+  if (isSupabaseConfigured()) {
+    const blocked = ["plan", "analysesUsed", "analysesIncluded"];
+    for (const key of blocked) {
+      if (patch[key] !== undefined) {
+        delete patch[key];
+      }
+    }
+  }
 
   const next = { ...session, ...patch, passwordHash: null };
   if (patch.displayName !== undefined) {
@@ -468,9 +523,7 @@ export async function updateAccount(patch) {
     const supabase = await getSupabase();
     if (!supabase) return optimistic;
     const row = {};
-    if (patch.plan != null) row.plan = patch.plan;
-    if (patch.analysesUsed != null) row.analyses_used = patch.analysesUsed;
-    if (patch.analysesIncluded != null) row.analyses_included = patch.analysesIncluded;
+    // plan / analyses_* are not writable from the client (trigger + omit here)
     if (patch.username != null) row.username = optimistic.username;
     if (patch.displayName !== undefined) row.display_name = optimistic.displayName;
     if (patch.avatarUrl !== undefined) row.avatar_url = optimistic.avatarUrl;

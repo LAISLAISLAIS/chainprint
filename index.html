@@ -570,8 +570,11 @@
       cta.innerHTML = access.ok
         ? `<a class="btn btn-primary" href="analyze/">Analyze a track</a>
            <a class="cta-login" href="analyze/">Open workspace</a>`
-        : `<a class="btn btn-primary" href="analyze/">View account</a>
-           <a class="cta-login" href="auth/?mode=login">Switch account</a>`;
+        : access.reason === "quota"
+          ? `<a class="btn btn-primary" href="settings/">Upgrade to Pro</a>
+             <a class="cta-login" href="analyze/">Open workspace</a>`
+          : `<a class="btn btn-primary" href="analyze/">View account</a>
+             <a class="cta-login" href="auth/?mode=login">Switch account</a>`;
     }
   </script>
 </body>

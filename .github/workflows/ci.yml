@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+      - name: Install
+        run: npm ci || npm install
+      - name: Syntax-check Netlify functions
+        run: |
+          set -e
+          for f in netlify/functions/*.mjs netlify/functions/_shared/*.mjs; do
+            case "$f" in
+              *.test.mjs) continue ;;
+            esac
+            node --check "$f"
+          done
+      - name: Release check
+        run: npm run check
+      - name: Billing unit tests
+        run: npm run test:billing
+      - name: MCP pytest
+        working-directory: mcp
+        continue-on-error: true
+        run: |
+          python -m pip install -e ".[dev]" 2>/dev/null || python -m pip install -e .
+          pytest -q

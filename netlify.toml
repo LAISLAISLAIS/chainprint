@@ -3,6 +3,10 @@
   publish = "."
   functions = "netlify/functions"
 
+# Bundle npm deps (stripe, @upstash/redis) into function zips
+[functions]
+  node_bundler = "esbuild"
+
 # Private beta site password (netlify/edge-functions/site-gate.js)
 [[edge_functions]]
   function = "site-gate"
@@ -76,6 +80,31 @@
   status = 200
 
 [[redirects]]
+  from = "/api/stripe/checkout"
+  to = "/.netlify/functions/stripe-checkout"
+  status = 200
+
+[[redirects]]
+  from = "/api/stripe/webhook"
+  to = "/.netlify/functions/stripe-webhook"
+  status = 200
+
+[[redirects]]
+  from = "/api/stripe/portal"
+  to = "/.netlify/functions/stripe-portal"
+  status = 200
+
+[[redirects]]
+  from = "/api/stripe/session"
+  to = "/.netlify/functions/stripe-session"
+  status = 200
+
+[[redirects]]
+  from = "/api/health"
+  to = "/.netlify/functions/health"
+  status = 200
+
+[[redirects]]
   from = "/api/og/:id"
   to = "/.netlify/functions/og-chain"
   status = 200
@@ -91,6 +120,10 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-Frame-Options = "DENY"
+    X-XSS-Protection = "0"
+    Permissions-Policy = "camera=(), geolocation=(), microphone=(self)"
+    Strict-Transport-Security = "max-age=63072000; includeSubDomains; preload"
+    Content-Security-Policy = "default-src 'self'; base-uri 'self'; frame-ancestors 'none'; object-src 'none'; img-src 'self' data: blob: https:; media-src 'self' blob: https:; font-src 'self' data: https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' https://esm.sh; connect-src 'self' https://*.supabase.co wss://*.supabase.co https://esm.sh https://api.stripe.com https://*.soundcloud.com https://*.sndcdn.com https://api.song.link https://song.link; form-action 'self' https://checkout.stripe.com; frame-src https://js.stripe.com https://hooks.stripe.com https://checkout.stripe.com"
 
 [[headers]]
   for = "/data/*"
