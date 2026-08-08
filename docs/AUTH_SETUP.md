@@ -76,6 +76,17 @@ Until SMTP (or a paid Supabase plan) is configured, reset emails stay “Supabas
 
 **Current prod:** Resend SMTP is configured (`smtp.resend.com`, sender **Chainprint** `<noreply@mail.chainprint.app>`). Branded templates are pushed.
 
+### Welcome + Pro product emails
+
+Netlify functions send these via Resend HTTP (`RESEND_API_KEY`), not SMTP:
+
+| Email | Trigger |
+|-------|---------|
+| Welcome | `POST /api/email/welcome` after signup (also on login if never sent) |
+| Pro confirmation | Stripe `checkout.session.completed` webhook |
+
+Tracked on `profiles.welcome_email_sent_at` / `profiles.pro_email_sent_at` (migration `010`).
+
 ## Notes
 
 - Local demo password hashes are browser-only; production must use Supabase Auth (including email resets).

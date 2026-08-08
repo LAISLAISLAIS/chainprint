@@ -12,6 +12,7 @@
 /api/stripe/portal  /.netlify/functions/stripe-portal  200
 /api/stripe/session  /.netlify/functions/stripe-session  200
 /api/health  /.netlify/functions/health  200
+/api/email/welcome  /.netlify/functions/welcome-email  200
 # Per-chain Open Graph image
 /api/og/:id  /.netlify/functions/og-chain  200
 /api/og  /.netlify/functions/og-chain  200

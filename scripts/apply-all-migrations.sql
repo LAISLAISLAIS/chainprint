@@ -1,5 +1,5 @@
 -- =============================================================================
--- Chainprint — apply ALL migrations (001–009) in order
+-- Chainprint — apply ALL migrations (001–010) in order
 -- Paste into: https://supabase.com/dashboard/project/wggvvgigtwzwivpgszyr/sql/new
 -- Safe to re-run: uses IF NOT EXISTS / CREATE OR REPLACE where possible
 -- =============================================================================
@@ -568,4 +568,12 @@ $$;
 
 revoke all on function public.username_taken(text) from public;
 grant execute on function public.username_taken(text) to anon, authenticated;
+
+-- >>> supabase/migrations/010_transactional_emails.sql
+
+-- Track transactional emails so welcome / Pro confirmation send once.
+
+alter table public.profiles
+  add column if not exists welcome_email_sent_at timestamptz,
+  add column if not exists pro_email_sent_at timestamptz;
 

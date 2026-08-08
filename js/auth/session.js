@@ -938,13 +938,30 @@ async function signupRemote({ email, password, username }) {
     }
 
     const profile = await fetchProfile(supabase, user.id);
-    return cacheAccount(mapProfileRow(user, profile));
+    const account = cacheAccount(mapProfileRow(user, profile));
+    void requestWelcomeEmail(data.session.access_token);
+    return account;
   }
 
   throw Object.assign(
     new Error("Account created. Confirm your email, then log in."),
     { code: "confirm_email" }
   );
+}
+
+/** Fire-and-forget welcome email (server sends at most once). */
+function requestWelcomeEmail(accessToken) {
+  if (!accessToken || typeof fetch !== "function") return;
+  fetch("/api/email/welcome", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "Content-Type": "application/json",
+    },
+    body: "{}",
+  }).catch(() => {
+    /* ignore — signup must not fail on email */
+  });
 }
 
 async function loginRemote({ identifier, password }) {
@@ -997,5 +1014,9 @@ async function loginRemote({ identifier, password }) {
     profile = await fetchProfile(supabase, user.id);
   }
 
-  return cacheAccount(mapProfileRow(user, profile));
+  const account = cacheAccount(mapProfileRow(user, profile));
+  if (!profile?.welcome_email_sent_at && data.session?.access_token) {
+    void requestWelcomeEmail(data.session.access_token);
+  }
+  return account;
 }

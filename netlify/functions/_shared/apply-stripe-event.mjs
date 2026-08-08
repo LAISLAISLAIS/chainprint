@@ -4,6 +4,7 @@
  */
 
 import { pastDueGraceUntil } from "./entitlements.mjs";
+import { sendProWelcomeEmail } from "./product-emails.mjs";
 import { getStripe } from "./stripe.mjs";
 import { supabaseServiceConfig } from "./supabase.mjs";
 
@@ -222,9 +223,22 @@ async function handleChargeRefunded(charge) {
 
 async function dispatchEvent(event) {
   switch (event.type) {
-    case "checkout.session.completed":
-      await handleCheckoutCompleted(event.data.object);
+    case "checkout.session.completed": {
+      const session = event.data.object;
+      await handleCheckoutCompleted(session);
+      // Only real Stripe deliveries (skip reconcile_* synthetic events)
+      if (String(event.id || "").startsWith("evt_")) {
+        const userId = session.metadata?.userId || session.client_reference_id;
+        if (userId) {
+          try {
+            await sendProWelcomeEmail(userId);
+          } catch (err) {
+            console.warn("[stripe] pro welcome email failed", err?.message || err);
+          }
+        }
+      }
       return true;
+    }
     case "customer.subscription.created":
     case "customer.subscription.updated":
       await handleSubscriptionUpdated(event.data.object);

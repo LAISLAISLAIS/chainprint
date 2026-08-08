@@ -108,6 +108,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/email/welcome"
+  to = "/.netlify/functions/welcome-email"
+  status = 200
+
+[[redirects]]
   from = "/api/og/:id"
   to = "/.netlify/functions/og-chain"
   status = 200
