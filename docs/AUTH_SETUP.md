@@ -53,6 +53,27 @@ The login page links to **Forgot password?** → Supabase emails a recovery link
 - Recovery session lands on `/auth/?mode=reset`; `completePasswordReset` → `updateUser({ password })`
 - `/auth` is exempt from the private-beta site gate so hash tokens in the email link are not stripped
 
+### Branded auth emails
+
+HTML templates live in `supabase/email-templates/` (recovery, confirm, magic link, invite, email change, reauth, password changed).
+
+**Blocked on free tier + default mailer.** Supabase returns:
+`Email template modification is not available for free tier projects using the default email provider.`
+
+To brand body + From address:
+
+1. Create a [Resend](https://resend.com) account (or Postmark/SES), verify `chainprint.app` (or a subdomain like `mail.chainprint.app`).
+2. Supabase → **Authentication → SMTP**:
+   - Host `smtp.resend.com`, port `465`, user `resend`, pass = Resend API key
+   - Sender name `Chainprint`, sender email e.g. `noreply@mail.chainprint.app`
+3. Push templates:
+
+```bash
+SUPABASE_ACCESS_TOKEN=sbp_… python3 scripts/push-email-templates.py
+```
+
+Until SMTP (or a paid Supabase plan) is configured, reset emails stay “Supabase Auth” with the default body/footer.
+
 ## Notes
 
 - Local demo password hashes are browser-only; production must use Supabase Auth (including email resets).
