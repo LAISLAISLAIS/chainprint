@@ -38,7 +38,7 @@
   <link rel="stylesheet" href="../css/logo.css" />
   <link rel="stylesheet" href="../css/app.css" />
   <link rel="stylesheet" href="../css/plugins.css" />
-  <link rel="stylesheet" href="../css/workspace.css" />
+  <link rel="stylesheet" href="../css/workspace.css?v=20260808i" />
   <link rel="stylesheet" href="../css/auth.css" />
 
   <script type="application/ld+json">
@@ -315,41 +315,43 @@
                   <p class="hear-strip-hint" data-preview-hint>Add your dry take to compare</p>
                 </div>
                 <div class="hear-strip-controls">
-                  <div class="hear-strip-source">
-                    <label class="hear-file" data-hear-field="vocal">
-                      <span class="hear-file-label sr-only" data-hear-file-label>Your dry vocal</span>
-                      <span class="hear-file-row">
-                        <input
-                          type="file"
-                          class="stem-file-input"
-                          data-stem-vocal
-                          accept="audio/*,.wav,.mp3,.flac,.aiff,.m4a"
-                        />
-                        <span class="stem-pick-btn" data-hear-pick-label>Add dry vocal</span>
-                        <span class="stem-name" data-stem-vocal-name>No file yet</span>
-                      </span>
-                    </label>
-                    <label class="hear-file" data-hear-field="instrumental" hidden>
-                      <span class="hear-file-label sr-only">Your dry instrumental</span>
-                      <span class="hear-file-row">
-                        <input
-                          type="file"
-                          class="stem-file-input"
-                          data-stem-instrumental
-                          accept="audio/*,.wav,.mp3,.flac,.aiff,.m4a"
-                        />
-                        <span class="stem-pick-btn">Add dry instrumental</span>
-                        <span class="stem-name" data-stem-instrumental-name>No file yet</span>
-                      </span>
-                    </label>
-                  </div>
-                  <div class="preview-ab-seg" role="group" aria-label="Compare dry vs chain">
-                    <button type="button" class="preview-ab-btn" data-preview-mode="dry" aria-pressed="true" disabled>
-                      Dry
-                    </button>
-                    <button type="button" class="preview-ab-btn" data-preview-mode="chain" aria-pressed="false" disabled>
-                      Through chain
-                    </button>
+                  <div class="hear-strip-compare">
+                    <div class="hear-strip-source">
+                      <label class="hear-file" data-hear-field="vocal">
+                        <span class="hear-file-label sr-only" data-hear-file-label>Your dry vocal</span>
+                        <span class="hear-file-row">
+                          <input
+                            type="file"
+                            class="stem-file-input"
+                            data-stem-vocal
+                            accept="audio/*,.wav,.mp3,.flac,.aiff,.m4a"
+                          />
+                          <span class="stem-pick-btn" data-hear-pick-label>Add dry vocal</span>
+                          <span class="stem-name" data-stem-vocal-name>No file yet</span>
+                        </span>
+                      </label>
+                      <label class="hear-file" data-hear-field="instrumental" hidden>
+                        <span class="hear-file-label sr-only">Your dry instrumental</span>
+                        <span class="hear-file-row">
+                          <input
+                            type="file"
+                            class="stem-file-input"
+                            data-stem-instrumental
+                            accept="audio/*,.wav,.mp3,.flac,.aiff,.m4a"
+                          />
+                          <span class="stem-pick-btn">Add dry instrumental</span>
+                          <span class="stem-name" data-stem-instrumental-name>No file yet</span>
+                        </span>
+                      </label>
+                    </div>
+                    <div class="preview-ab-seg" role="group" aria-label="Compare dry vs through chain">
+                      <button type="button" class="preview-ab-btn" data-preview-mode="dry" aria-pressed="true" disabled>
+                        Dry
+                      </button>
+                      <button type="button" class="preview-ab-btn" data-preview-mode="chain" aria-pressed="false" disabled>
+                        Through chain
+                      </button>
+                    </div>
                   </div>
                 </div>
               </section>
