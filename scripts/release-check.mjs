@@ -32,6 +32,7 @@ for (const key of [
   "STRIPE_WEBHOOK_SECRET",
   "STRIPE_PRICE_PRO",
   "UPSTASH_REDIS_REST_URL",
+  "RESEND_API_KEY",
 ]) {
   if (envExample.includes(key)) pass(`.env.example documents ${key}`);
   else fail(`.env.example missing ${key}`);
@@ -42,6 +43,7 @@ const redirects = readFileSync(join(root, "_redirects"), "utf8");
 for (const path of [
   "/api/stripe/checkout",
   "/api/stripe/webhook",
+  "/api/email/welcome",
   "/api/stripe/portal",
   "/api/stripe/session",
   "/api/health",
