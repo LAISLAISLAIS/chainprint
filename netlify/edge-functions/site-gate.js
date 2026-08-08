@@ -39,7 +39,8 @@ function isExempt(pathname) {
     return true;
   }
   if (pathname === "/api/chain" || pathname.startsWith("/api/chain/")) return true;
-  if (pathname === "/api/stripe/webhook" || pathname.startsWith("/api/stripe/webhook")) return true;
+  // All Stripe routes (checkout/portal/session/webhook) — cookies aren't always sent on fetch.
+  if (pathname === "/api/stripe" || pathname.startsWith("/api/stripe/")) return true;
   if (pathname === "/api/health") return true;
   if (pathname.includes("stripe-webhook")) return true;
   return false;
