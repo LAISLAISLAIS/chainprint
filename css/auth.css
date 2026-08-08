@@ -262,11 +262,11 @@
   margin: 0 0 12px;
   padding: 10px 12px;
   font-size: var(--text-sm);
-  line-height: 1.4;
-  color: var(--ink, #e8e8e8);
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
-  border-radius: 6px;
+  line-height: 1.45;
+  color: var(--readout);
+  background: var(--teal-wash-strong);
+  border: 1px solid var(--teal-soft);
+  border-radius: var(--radius-sm);
 }
 
 .auth-success:not([hidden]) {
