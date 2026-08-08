@@ -5,15 +5,17 @@ Requires SUPABASE_ACCESS_TOKEN (Personal Access Token) and optional
 SUPABASE_PROJECT_REF (default: Chainprint prod).
 
   SUPABASE_ACCESS_TOKEN=sbp_… python3 scripts/push-email-templates.py
+
+Note: Free-tier projects using Supabase's default mailer cannot customize
+templates until you add custom SMTP (Resend/Postmark/SES) or upgrade.
 """
 
 from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
-import urllib.error
-import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -60,31 +62,59 @@ def main() -> int:
         payload[key] = path.read_text(encoding="utf-8")
 
     if "--dry-run" in sys.argv:
-        print(json.dumps({k: (v if not str(v).startswith("<!") else f"<{len(v)} chars>") for k, v in payload.items()}, indent=2))
+        print(
+            json.dumps(
+                {
+                    k: (v if not str(v).startswith("<!") else f"<{len(v)} chars>")
+                    for k, v in payload.items()
+                },
+                indent=2,
+            )
+        )
         return 0
 
-    req = urllib.request.Request(
-        f"https://api.supabase.com/v1/projects/{ref}/config/auth",
-        data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        },
-        method="PATCH",
+    # curl avoids local Python SSL-cert issues on some macOS installs
+    proc = subprocess.run(
+        [
+            "curl",
+            "-sS",
+            "-X",
+            "PATCH",
+            f"https://api.supabase.com/v1/projects/{ref}/config/auth",
+            "-H",
+            f"Authorization: Bearer {token}",
+            "-H",
+            "Content-Type: application/json",
+            "--data-binary",
+            "@-",
+        ],
+        input=json.dumps(payload).encode("utf-8"),
+        capture_output=True,
     )
+    if proc.returncode != 0:
+        print(proc.stderr.decode("utf-8", errors="replace"), file=sys.stderr)
+        return 1
+
     try:
-        with urllib.request.urlopen(req, timeout=60) as res:
-            data = json.loads(res.read().decode("utf-8"))
-    except urllib.error.HTTPError as err:
-        body = err.read().decode("utf-8", errors="replace")
-        print(f"HTTP {err.code}: {body}", file=sys.stderr)
+        data = json.loads(proc.stdout.decode("utf-8"))
+    except json.JSONDecodeError:
+        print(proc.stdout.decode("utf-8", errors="replace"), file=sys.stderr)
+        return 1
+
+    if "mailer_subjects_recovery" not in data:
+        print(json.dumps(data, indent=2), file=sys.stderr)
+        if "free tier" in str(data).lower() or "custom SMTP" in str(data):
+            print(
+                "\nFix: Authentication → SMTP in Supabase (Resend recommended), then re-run.",
+                file=sys.stderr,
+            )
         return 1
 
     for key in SUBJECTS:
         print(f"{key}: {data.get(key)!r}")
     for key in CONTENT_FILES:
         val = data.get(key) or ""
-        print(f"{key}: {len(val)} chars, starts {val[:40]!r}…")
+        print(f"{key}: {len(val)} chars")
     print("password_changed notifications:", data.get("mailer_notifications_password_changed_enabled"))
     print("OK — templates pushed to", ref)
     return 0
