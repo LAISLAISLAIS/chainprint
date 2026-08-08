@@ -74,6 +74,8 @@ SUPABASE_ACCESS_TOKEN=sbp_… python3 scripts/push-email-templates.py
 
 Until SMTP (or a paid Supabase plan) is configured, reset emails stay “Supabase Auth” with the default body/footer.
 
+**Current prod:** Resend SMTP is configured (`smtp.resend.com`, sender name Chainprint). Templates are pushed. From address is temporarily `onboarding@resend.dev` until a verified domain (e.g. `mail.chainprint.app`) is added in Resend and `smtp_admin_email` is updated.
+
 ## Notes
 
 - Local demo password hashes are browser-only; production must use Supabase Auth (including email resets).
