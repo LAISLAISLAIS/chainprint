@@ -6,8 +6,9 @@
 2. Set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` in Netlify (and `.env` for local).
 3. Client publishable URL/anon key: `js/auth/config.js` or `window.__CHAINPRINT_CONFIG__` inject. Never put the service role in the browser.
 4. Auth → Email enabled; match password policy (min 8, upper, number, symbol).
-5. Confirm `DEV_UNLOCK_PRO` is not forced on (`js/auth/quota.js` defaults off).
-6. Google / Apple: Client IDs + Supabase providers before enabling UI buttons.
+5. Auth → URL Configuration: add `https://chainprint.app/auth/` and `https://chainprint.app/auth/?mode=reset` to Redirect URLs (see Password reset below).
+6. Confirm `DEV_UNLOCK_PRO` is not forced on (`js/auth/quota.js` defaults off).
+7. Google / Apple: Client IDs + Supabase providers before enabling UI buttons.
 
 ### Migrations (billing-critical)
 
@@ -30,7 +31,29 @@ Use `consume_analysis()` (called from `js/auth/quota.js`). Clients cannot bump `
 
 `/settings/` — photos use the `avatars` Storage bucket when `003` is applied.
 
+## Password reset (forgot password)
+
+The login page links to **Forgot password?** → Supabase emails a recovery link → `/auth/?mode=reset` → user sets a new password.
+
+### Dashboard
+
+1. **Authentication → URL Configuration**
+   - Site URL: `https://chainprint.app`
+   - Redirect URLs include:
+     - `https://chainprint.app/auth/`
+     - `https://chainprint.app/auth/?mode=reset`
+     - Local: `http://localhost:8888/auth/` and `http://localhost:8888/auth/?mode=reset` (or your port)
+2. **Authentication → Email Templates → Reset password**
+   - Confirm the link uses `{{ .ConfirmationURL }}` (default is fine).
+3. **Authentication → Providers → Email** enabled; SMTP optional (Supabase built-in email works for testing; custom SMTP for production deliverability).
+
+### App behavior
+
+- `requestPasswordReset` → `supabase.auth.resetPasswordForEmail(email, { redirectTo })`
+- Recovery session lands on `/auth/?mode=reset`; `completePasswordReset` → `updateUser({ password })`
+- `/auth` is exempt from the private-beta site gate so hash tokens in the email link are not stripped
+
 ## Notes
 
-- Local demo password hashes are browser-only; production must use Supabase Auth.
+- Local demo password hashes are browser-only; production must use Supabase Auth (including email resets).
 - Billing details: `docs/BILLING.md`.

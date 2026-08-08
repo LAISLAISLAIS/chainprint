@@ -1,25 +1,39 @@
 /**
- * Signup / login page.
+ * Signup / login / forgot-password / reset-password page.
  */
 
-import { getSession, initAuth, login, signup, logout } from "../auth/session.js";
+import {
+  getSession,
+  initAuth,
+  login,
+  signup,
+  logout,
+  requestPasswordReset,
+  completePasswordReset,
+  isPasswordRecoveryLink,
+} from "../auth/session.js";
 import { signInWithProvider, socialStatus } from "../auth/oauth.js";
 import { validatePassword } from "../auth/validation.js";
 import { isSupabaseConfigured } from "../auth/config.js";
 
 const params = new URLSearchParams(location.search);
-const mode = params.get("mode") === "login" ? "login" : "signup";
 const nextRaw = params.get("next") || "/analyze/";
 const next = safeNext(nextRaw);
 
 const titleEl = document.querySelector("[data-auth-title]");
 const ledeEl = document.querySelector("[data-auth-lede]");
 const nameField = document.querySelector("[data-name-field]");
+const emailField = document.querySelector("[data-email-field]");
+const passwordField = document.querySelector("[data-password-field]");
+const confirmField = document.querySelector("[data-confirm-field]");
 const form = document.querySelector("[data-auth-form]");
 const errorEl = document.querySelector("[data-auth-error]");
+const successEl = document.querySelector("[data-auth-success]");
 const submitBtn = document.querySelector("[data-auth-submit]");
 const switchEl = document.querySelector("[data-auth-switch]");
+const forgotLink = document.querySelector("[data-forgot-link]");
 const passwordInput = form?.querySelector("#password");
+const confirmInput = form?.querySelector("#password-confirm");
 const emailInput = form?.querySelector("#email");
 const emailLabel = form?.querySelector('label[for="email"]');
 const requirements = document.querySelector("[data-password-reqs]");
@@ -27,14 +41,27 @@ const termsField = document.querySelector("[data-terms-field]");
 const termsInput = form?.querySelector("#agree-terms");
 const socialNote = document.querySelector("[data-social-note]");
 const dbNote = document.querySelector("[data-db-note]");
+const socialStack = document.querySelector(".social-stack");
+const socialDivider = document.querySelector(".auth-divider");
+
+/** @type {'signup' | 'login' | 'forgot' | 'reset'} */
+let mode = resolveMode();
 
 await initAuth();
 
 // After an explicit logout, never bounce a leftover session back into the app
 if (params.get("signed_out") === "1") {
   if (getSession()) await logout();
-} else if (getSession()) {
+} else if (getSession() && mode !== "reset") {
   location.replace(next);
+}
+
+function resolveMode() {
+  const m = params.get("mode");
+  if (m === "reset" || isPasswordRecoveryLink()) return "reset";
+  if (m === "forgot") return "forgot";
+  if (m === "login") return "login";
+  return "signup";
 }
 
 function safeNext(path) {
@@ -84,48 +111,111 @@ function setPasswordReqsVisible(on) {
   requirements.classList.toggle("is-open", on);
 }
 
+function setSocialVisible(on) {
+  socialStack?.classList.toggle("hidden", !on);
+  socialDivider?.classList.toggle("hidden", !on);
+}
+
 function setMode(m) {
+  mode = m;
   const isLogin = m === "login";
-  document.title = isLogin ? "Log in · Chainprint" : "Sign up · Chainprint";
-  if (titleEl) titleEl.textContent = isLogin ? "Welcome back" : "Create your account";
-  if (ledeEl) {
-    ledeEl.textContent = isLogin
-      ? "Log in with your email or username to continue."
-      : "Choose a username and password to analyze vocal mixes in your DAW.";
-  }
+  const isForgot = m === "forgot";
+  const isReset = m === "reset";
+  const isSignup = m === "signup";
+
+  const titles = {
+    login: "Welcome back",
+    signup: "Create your account",
+    forgot: "Reset your password",
+    reset: "Choose a new password",
+  };
+  const ledes = {
+    login: "Log in with your email or username to continue.",
+    signup: "Choose a username and password to analyze vocal mixes in your DAW.",
+    forgot: "Enter the email on your account. We’ll send a reset link if it exists.",
+    reset: "Pick a new password for your Chainprint account.",
+  };
+  const docTitles = {
+    login: "Log in · Chainprint",
+    signup: "Sign up · Chainprint",
+    forgot: "Forgot password · Chainprint",
+    reset: "Reset password · Chainprint",
+  };
+  const submits = {
+    login: "Log in",
+    signup: "Sign up with email",
+    forgot: "Send reset link",
+    reset: "Update password",
+  };
+
+  document.title = docTitles[m];
+  if (titleEl) titleEl.textContent = titles[m];
+  if (ledeEl) ledeEl.textContent = ledes[m];
+
   if (nameField) {
-    nameField.hidden = isLogin;
+    nameField.hidden = !isSignup;
     const input = nameField.querySelector("input");
-    if (input) input.required = !isLogin;
+    if (input) input.required = isSignup;
   }
-  if (emailLabel) {
-    emailLabel.textContent = isLogin ? "Email or username" : "Email";
-  }
+
+  if (emailField) emailField.hidden = isReset;
   if (emailInput) {
+    emailInput.required = !isReset;
     emailInput.type = isLogin ? "text" : "email";
     emailInput.autocomplete = isLogin ? "username" : "email";
     emailInput.placeholder = isLogin ? "you@studio.com or username" : "you@studio.com";
     emailInput.name = isLogin ? "identifier" : "email";
   }
+  if (emailLabel) {
+    emailLabel.textContent = isLogin ? "Email or username" : "Email";
+  }
+
+  if (passwordField) passwordField.hidden = isForgot;
   if (passwordInput) {
+    passwordInput.required = !isForgot;
     passwordInput.autocomplete = isLogin ? "current-password" : "new-password";
-    passwordInput.placeholder = isLogin ? "Your password" : "Create a password";
+    passwordInput.placeholder = isLogin
+      ? "Your password"
+      : isReset
+        ? "New password"
+        : "Create a password";
     passwordInput.minLength = isLogin ? 1 : 8;
   }
-  // Never show password rules on login; signup shows them while creating a password
-  setPasswordReqsVisible(false);
-  if (termsField) {
-    termsField.hidden = isLogin;
-    if (termsInput) {
-      termsInput.required = !isLogin;
-      if (isLogin) termsInput.checked = false;
+
+  if (confirmField) {
+    confirmField.hidden = !isReset;
+    if (confirmInput) {
+      confirmInput.required = isReset;
+      confirmInput.disabled = !isReset;
     }
   }
-  if (submitBtn) submitBtn.textContent = isLogin ? "Log in" : "Sign up with email";
+
+  if (forgotLink) forgotLink.hidden = !isLogin;
+
+  setPasswordReqsVisible(false);
+
+  if (termsField) {
+    termsField.hidden = !isSignup;
+    if (termsInput) {
+      termsInput.required = isSignup;
+      if (!isSignup) termsInput.checked = false;
+    }
+  }
+
+  setSocialVisible((isLogin || isSignup) && socialReady);
+
+  if (submitBtn) submitBtn.textContent = submits[m];
+
   if (switchEl) {
-    switchEl.innerHTML = isLogin
-      ? `New here? <a href="${switchHref("signup")}">Create an account</a>`
-      : `Already have an account? <a href="${switchHref("login")}">Log in</a>`;
+    if (isForgot) {
+      switchEl.innerHTML = `Remembered it? <a href="${switchHref("login")}">Back to log in</a>`;
+    } else if (isReset) {
+      switchEl.innerHTML = `<a href="${switchHref("login")}">Back to log in</a>`;
+    } else if (isLogin) {
+      switchEl.innerHTML = `New here? <a href="${switchHref("signup")}">Create an account</a>`;
+    } else {
+      switchEl.innerHTML = `Already have an account? <a href="${switchHref("login")}">Log in</a>`;
+    }
   }
 }
 
@@ -143,6 +233,12 @@ function showError(msg) {
   errorEl.classList.toggle("is-visible", Boolean(msg));
 }
 
+function showSuccess(msg) {
+  if (!successEl) return;
+  successEl.textContent = msg || "";
+  successEl.hidden = !msg;
+}
+
 if (dbNote) {
   if (!isSupabaseConfigured()) {
     dbNote.textContent =
@@ -154,15 +250,11 @@ if (dbNote) {
 }
 
 const status = socialStatus();
-const socialStack = document.querySelector(".social-stack");
-const socialDivider = document.querySelector(".auth-divider");
 const socialReady = status.demo || status.google || status.apple;
 
 socialNote?.classList.add("hidden");
 
 if (!socialReady) {
-  socialStack?.classList.add("hidden");
-  socialDivider?.classList.add("hidden");
   document.querySelectorAll("[data-social]").forEach((btn) => {
     btn.disabled = true;
     btn.hidden = true;
@@ -171,14 +263,18 @@ if (!socialReady) {
 
 setMode(mode);
 
+if (mode === "reset" && !getSession() && !isPasswordRecoveryLink()) {
+  showError("Open the link from your email to choose a new password, or request a new reset.");
+}
+
 passwordInput?.addEventListener("focus", () => {
-  if (mode !== "signup") return;
+  if (mode !== "signup" && mode !== "reset") return;
   setPasswordReqsVisible(true);
   syncPasswordReqs(passwordInput.value || "");
 });
 
 passwordInput?.addEventListener("input", () => {
-  if (mode !== "signup") {
+  if (mode !== "signup" && mode !== "reset") {
     setPasswordReqsVisible(false);
     return;
   }
@@ -187,11 +283,10 @@ passwordInput?.addEventListener("input", () => {
 });
 
 passwordInput?.addEventListener("blur", () => {
-  if (mode !== "signup") {
+  if (mode !== "signup" && mode !== "reset") {
     setPasswordReqsVisible(false);
     return;
   }
-  // Keep checklist open if they started typing so they can finish the password
   if (!passwordInput.value) setPasswordReqsVisible(false);
 });
 
@@ -199,7 +294,9 @@ document.querySelectorAll("[data-social]").forEach((btn) => {
   btn.addEventListener("click", async () => {
     const provider = btn.getAttribute("data-social");
     if (provider !== "google" && provider !== "apple") return;
+    if (mode !== "login" && mode !== "signup") return;
     showError("");
+    showSuccess("");
     if (!requireTermsAgreement()) return;
     btn.disabled = true;
     const label = btn.textContent;
@@ -224,8 +321,10 @@ document.querySelectorAll("[data-social]").forEach((btn) => {
 form?.addEventListener("submit", async (e) => {
   e.preventDefault();
   showError("");
+  showSuccess("");
   const fd = new FormData(form);
   const password = String(fd.get("password") || "");
+  const passwordConfirm = String(fd.get("password_confirm") || "");
   const username = String(fd.get("username") || "");
   const identifier = String(fd.get("identifier") || fd.get("email") || "");
   const email = String(fd.get("email") || identifier || "");
@@ -239,20 +338,69 @@ form?.addEventListener("submit", async (e) => {
     }
   }
 
+  if (mode === "reset") {
+    const pass = validatePassword(password);
+    if (!pass.ok) {
+      showError(pass.message);
+      return;
+    }
+    if (password !== passwordConfirm) {
+      showError("Passwords don’t match.");
+      return;
+    }
+  }
+
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.textContent = mode === "login" ? "Logging in…" : "Creating account…";
+    submitBtn.textContent =
+      mode === "login"
+        ? "Logging in…"
+        : mode === "forgot"
+          ? "Sending…"
+          : mode === "reset"
+            ? "Updating…"
+            : "Creating account…";
   }
 
   try {
-    if (mode === "login") await login({ identifier, password });
-    else await signup({ email, password, username });
-    location.assign(next);
+    if (mode === "login") {
+      await login({ identifier, password });
+      location.assign(next);
+      return;
+    }
+    if (mode === "signup") {
+      await signup({ email, password, username });
+      location.assign(next);
+      return;
+    }
+    if (mode === "forgot") {
+      await requestPasswordReset(email);
+      showSuccess("If an account exists for that email, we sent a reset link. Check your inbox.");
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Send reset link";
+      }
+      return;
+    }
+    if (mode === "reset") {
+      await completePasswordReset(password);
+      // Drop recovery tokens from the address bar
+      history.replaceState(null, "", `${location.pathname}?mode=login&next=${encodeURIComponent(nextRaw)}`);
+      showSuccess("Password updated. Taking you in…");
+      location.assign(next);
+      return;
+    }
   } catch (err) {
     showError(err.message || "Something went wrong.");
     if (submitBtn) {
       submitBtn.disabled = false;
-      submitBtn.textContent = mode === "login" ? "Log in" : "Sign up with email";
+      const labels = {
+        login: "Log in",
+        signup: "Sign up with email",
+        forgot: "Send reset link",
+        reset: "Update password",
+      };
+      submitBtn.textContent = labels[mode] || "Continue";
     }
   }
 });

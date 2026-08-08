@@ -85,11 +85,11 @@
               spellcheck="false"
             />
           </div>
-          <div class="field">
+          <div class="field" data-email-field>
             <label for="email">Email</label>
             <input id="email" name="email" type="email" autocomplete="email" required placeholder="you@studio.com" />
           </div>
-          <div class="field">
+          <div class="field" data-password-field>
             <label for="password">Password</label>
             <input
               id="password"
@@ -106,6 +106,20 @@
               <li data-req="number">1 number</li>
               <li data-req="symbol">1 symbol (!@#$…)</li>
             </ul>
+            <p class="auth-forgot" data-forgot-link hidden>
+              <a href="?mode=forgot">Forgot password?</a>
+            </p>
+          </div>
+          <div class="field" data-confirm-field hidden>
+            <label for="password-confirm">Confirm password</label>
+            <input
+              id="password-confirm"
+              name="password_confirm"
+              type="password"
+              autocomplete="new-password"
+              minlength="8"
+              placeholder="Repeat password"
+            />
           </div>
           <label class="terms-check" data-terms-field>
             <input id="agree-terms" name="agree_terms" type="checkbox" value="1" />
@@ -116,6 +130,7 @@
               <a href="../privacy/" target="_blank" rel="noopener">Privacy Policy</a>
             </span>
           </label>
+          <p class="auth-success" data-auth-success role="status" hidden></p>
           <p class="auth-error" data-auth-error role="alert"></p>
           <button class="btn btn-primary auth-submit" type="submit" data-auth-submit>Sign up &amp; analyze</button>
         </form>

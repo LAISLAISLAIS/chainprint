@@ -27,3 +27,6 @@ mcp/dist/
 mcp/.venv/
 mcp/.pytest_cache/
 scripts/.og-tmp/
+
+# Local Netlify folder
+.netlify

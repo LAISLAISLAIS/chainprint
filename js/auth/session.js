@@ -1,6 +1,7 @@
 /**
  * Account session — Supabase Postgres when configured, else local demo store.
- * Public API: initAuth, getSession, signup, login, loginWithSocial, logout, updateAccount.
+ * Public API: initAuth, getSession, signup, login, loginWithSocial, logout,
+ * updateAccount, requestPasswordReset, completePasswordReset, isPasswordRecoveryLink.
  */
 
 import { isSupabaseConfigured } from "./config.js";
@@ -630,6 +631,100 @@ export async function clearAvatar() {
     }
   }
   return updateAccount({ avatarUrl: null });
+}
+
+/** True when the URL hash is a Supabase password-recovery callback. */
+export function isPasswordRecoveryLink() {
+  try {
+    const hash = String(location.hash || "").replace(/^#/, "");
+    if (!hash) return false;
+    const params = new URLSearchParams(hash);
+    return params.get("type") === "recovery";
+  } catch {
+    return false;
+  }
+}
+
+function passwordResetRedirectTo() {
+  const origin = typeof location !== "undefined" ? location.origin : "https://chainprint.app";
+  return `${origin}/auth/?mode=reset`;
+}
+
+/**
+ * Email a password-reset link (Supabase Auth). Always resolves successfully for
+ * unknown emails to avoid account enumeration — Supabase does the same.
+ * @param {string} email
+ */
+export async function requestPasswordReset(email) {
+  const normalized = String(email || "")
+    .trim()
+    .toLowerCase();
+  if (!looksLikeEmail(normalized)) {
+    throw Object.assign(new Error("Enter a valid email address."), { code: "invalid_email" });
+  }
+
+  if (!isSupabaseConfigured()) {
+    throw Object.assign(
+      new Error("Password reset needs the cloud database. Connect Supabase to enable email resets."),
+      { code: "not_configured" }
+    );
+  }
+
+  const supabase = await getSupabase();
+  if (!supabase) {
+    throw Object.assign(new Error("Database is not configured."), { code: "not_configured" });
+  }
+
+  const { error } = await supabase.auth.resetPasswordForEmail(normalized, {
+    redirectTo: passwordResetRedirectTo(),
+  });
+  if (error) {
+    throw Object.assign(new Error(error.message || "Couldn’t send reset email."), {
+      code: "reset_failed",
+    });
+  }
+  return true;
+}
+
+/**
+ * Set a new password after the user opens the recovery link from email.
+ * @param {string} newPassword
+ */
+export async function completePasswordReset(newPassword) {
+  const pass = validatePassword(newPassword);
+  if (!pass.ok) throw Object.assign(new Error(pass.message), { code: "weak_password" });
+
+  if (!isSupabaseConfigured()) {
+    throw Object.assign(
+      new Error("Password reset needs the cloud database."),
+      { code: "not_configured" }
+    );
+  }
+
+  const supabase = await getSupabase();
+  if (!supabase) {
+    throw Object.assign(new Error("Database is not configured."), { code: "not_configured" });
+  }
+
+  const { data, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !data.session?.user) {
+    throw Object.assign(
+      new Error("This reset link is invalid or expired. Request a new one from the login page."),
+      { code: "invalid_link" }
+    );
+  }
+
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) {
+    throw Object.assign(new Error(error.message || "Couldn’t update password."), {
+      code: "update_failed",
+    });
+  }
+
+  // Refresh cached profile; user stays signed in after a successful reset.
+  initPromise = null;
+  await initAuth();
+  return true;
 }
 
 /**

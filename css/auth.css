@@ -241,6 +241,38 @@
   display: block;
 }
 
+.auth-forgot {
+  margin: 8px 0 0;
+  font-size: var(--text-sm);
+  text-align: right;
+}
+
+.auth-forgot a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.auth-forgot a:hover {
+  text-decoration: underline;
+}
+
+.auth-success {
+  display: none;
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  color: var(--ink, #e8e8e8);
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 6px;
+}
+
+.auth-success:not([hidden]) {
+  display: block;
+}
+
 .auth-submit {
   width: 100%;
   margin-top: 4px;
