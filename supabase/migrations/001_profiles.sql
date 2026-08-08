@@ -55,12 +55,12 @@ begin
   if position('@' in id_norm) > 0 then
     select email::text into found
     from public.profiles
-    where email = id_norm
+    where email = id_norm::citext
     limit 1;
   else
     select email::text into found
     from public.profiles
-    where username = id_norm
+    where username = id_norm::citext
     limit 1;
   end if;
 
@@ -78,7 +78,7 @@ security definer
 set search_path = public
 as $$
   select exists(
-    select 1 from public.profiles where username = lower(trim(u))
+    select 1 from public.profiles where username = lower(trim(u))::citext
   );
 $$;
 
