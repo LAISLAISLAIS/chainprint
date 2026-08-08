@@ -24,10 +24,10 @@ DEFAULT_REF = "wggvvgigtwzwivpgszyr"
 
 SUBJECTS = {
     "mailer_subjects_recovery": "Reset your Chainprint password",
-    "mailer_subjects_confirmation": "Confirm your Chainprint email",
+    "mailer_subjects_confirmation": "Confirm your email · Chainprint",
     "mailer_subjects_magic_link": "Your Chainprint sign-in link",
     "mailer_subjects_invite": "You’re invited to Chainprint",
-    "mailer_subjects_email_change": "Confirm your new Chainprint email",
+    "mailer_subjects_email_change": "Confirm your new email · Chainprint",
     "mailer_subjects_reauthentication": "{{ .Token }} is your Chainprint code",
     "mailer_subjects_password_changed_notification": "Your Chainprint password was changed",
 }
