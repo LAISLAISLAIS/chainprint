@@ -7,6 +7,9 @@
 [functions]
   node_bundler = "esbuild"
 
+[build.environment]
+  NODE_VERSION = "20"
+
 # Private beta site password (netlify/edge-functions/site-gate.js)
 [[edge_functions]]
   function = "site-gate"

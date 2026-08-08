@@ -6,7 +6,7 @@
  *   SITE_GATE_SIGNING_SECRET   — HMAC secret (falls back to SITE_PASSWORD)
  *   SITE_GATE_ENABLED          — "0" / "false" disables gate (public launch)
  *
- * Exempt: /auth (password-reset + OAuth callbacks), /api/chain/*,
+ * Exempt: /auth, static assets (/js /css /assets), /api/chain/*,
  *   /api/stripe/webhook, /api/health, /.netlify/functions/stripe-webhook
  */
 
@@ -27,8 +27,17 @@ function signingSecret() {
 }
 
 function isExempt(pathname) {
-  // Auth must stay ungated so recovery/magic-link hashes aren't lost behind the beta gate.
+  // Auth + its static deps must stay ungated so recovery links work without the beta cookie.
   if (pathname === "/auth" || pathname.startsWith("/auth/")) return true;
+  if (
+    pathname.startsWith("/js/") ||
+    pathname.startsWith("/css/") ||
+    pathname.startsWith("/assets/") ||
+    pathname === "/site.webmanifest" ||
+    pathname === "/favicon.ico"
+  ) {
+    return true;
+  }
   if (pathname === "/api/chain" || pathname.startsWith("/api/chain/")) return true;
   if (pathname === "/api/stripe/webhook" || pathname.startsWith("/api/stripe/webhook")) return true;
   if (pathname === "/api/health") return true;
