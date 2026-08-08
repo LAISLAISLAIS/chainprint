@@ -8,7 +8,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "supabase" / "email-templates"
 
-LOGO = "https://chainprint.app/assets/apple-touch-icon.png?v=20260808e"
+# PNG marks (email clients block SVG). Circular “profile” treatment in the body.
+AVATAR = "https://chainprint.app/assets/icon-512.png?v=20260808f"
+LOGO = "https://chainprint.app/assets/apple-touch-icon.png?v=20260808f"
 SITE = "https://chainprint.app"
 FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif"
 MONO = "ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,'Liberation Mono',monospace"
@@ -104,7 +106,25 @@ def shell(
           </tr>
           <!-- Body -->
           <tr>
-            <td class="cp-pad" style="padding:36px 32px 12px;">
+            <td class="cp-pad" style="padding:32px 32px 12px;">
+              <!-- Profile / brand avatar -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 22px;">
+                <tr>
+                  <td style="width:72px;height:72px;border-radius:999px;background:#000000;border:3px solid #6ec4b4;text-align:center;vertical-align:middle;">
+                    <a href="{SITE}" style="text-decoration:none;">
+                      <img src="{AVATAR}" width="66" height="66" alt="Chainprint" style="display:block;width:66px;height:66px;border:0;border-radius:999px;margin:0 auto;" />
+                    </a>
+                  </td>
+                  <td style="padding-left:14px;vertical-align:middle;">
+                    <p style="margin:0 0 2px;font-family:{FONT};font-size:15px;font-weight:700;letter-spacing:-0.02em;color:#111111;">
+                      Chainprint
+                    </p>
+                    <p style="margin:0;font-family:{FONT};font-size:12px;line-height:1.4;color:#8a8a8a;">
+                      noreply@mail.chainprint.app
+                    </p>
+                  </td>
+                </tr>
+              </table>
               <p style="margin:0 0 10px;font-family:{FONT};font-size:11px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#6ec4b4;">
                 {eyebrow}
               </p>
