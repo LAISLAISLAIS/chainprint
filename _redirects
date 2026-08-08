@@ -6,6 +6,12 @@
 /api/chain  /.netlify/functions/chain  200
 # Share CRUD (auth required)
 /api/shares  /.netlify/functions/shares  200
+# Stripe billing
+/api/stripe/checkout  /.netlify/functions/stripe-checkout  200
+/api/stripe/webhook  /.netlify/functions/stripe-webhook  200
+/api/stripe/portal  /.netlify/functions/stripe-portal  200
+/api/stripe/session  /.netlify/functions/stripe-session  200
+/api/health  /.netlify/functions/health  200
 # Per-chain Open Graph image
 /api/og/:id  /.netlify/functions/og-chain  200
 /api/og  /.netlify/functions/og-chain  200

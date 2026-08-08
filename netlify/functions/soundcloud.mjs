@@ -7,23 +7,21 @@
  * Range-fetch ~30–45s only — never treat this as a full-master download.
  */
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-};
+import { corsHeaders } from "./_shared/cors.mjs";
+import { rateLimit, rateLimitHeaders } from "./_shared/rate-limit.mjs";
 
-const FALLBACK_CLIENT_ID = "X2iyLRaFdot6PHiU6l7tTR8wRSTY0sFp";
+const FALLBACK_CLIENT_ID = String(process.env.SOUNDCLOUD_CLIENT_ID || "").trim();
 const UA =
   "Mozilla/5.0 (compatible; ChainprintBot/1.0; +https://github.com/LAISLAISLAIS/chainprint)";
 
 let cachedClientId = null;
 let cachedAt = 0;
 
-function json(statusCode, body) {
+function json(statusCode, body, event, extra = {}) {
+  const CORS = corsHeaders(event || {}, { allowPublic: true });
   return {
     statusCode,
-    headers: { ...CORS, "Content-Type": "application/json" },
+    headers: { ...CORS, "Content-Type": "application/json", ...extra },
     body: JSON.stringify(body),
   };
 }
@@ -176,8 +174,19 @@ async function streamForTrack(track, clientId) {
 }
 
 export async function handler(event) {
+  const CORS = corsHeaders(event, { allowPublic: true });
   if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 204, headers: CORS };
+    return { statusCode: 204, headers: CORS, body: "" };
+  }
+
+  const rl = await rateLimit(event, {
+    bucket: "soundcloud",
+    limit: 40,
+    windowSec: 60,
+    requireShared: true,
+  });
+  if (!rl.ok) {
+    return json(rl.statusCode, { error: rl.error }, event, rateLimitHeaders(rl));
   }
 
   const q = clean(event.queryStringParameters?.q || "");
@@ -186,18 +195,21 @@ export async function handler(event) {
   const artist = clean(event.queryStringParameters?.artist || "");
 
   if (!q && !trackUrl && !(title || artist)) {
-    return json(400, { error: "missing q, url, or title/artist" });
+    return json(400, { error: "missing q, url, or title/artist" }, event);
   }
 
   try {
     const clientId = await discoverClientId();
+    if (!clientId) {
+      return json(503, { error: "SoundCloud client is not configured." }, event);
+    }
 
     if (trackUrl) {
       const track = await resolveUrl(trackUrl, clientId);
-      if (!track) return json(404, { error: "could_not_resolve", url: trackUrl });
+      if (!track) return json(404, { error: "could_not_resolve", url: trackUrl }, event);
       const previewUrl = await streamForTrack(track, clientId);
-      if (!previewUrl) return json(404, { error: "no_stream", url: trackUrl });
-      return json(200, toPayload(track, previewUrl));
+      if (!previewUrl) return json(404, { error: "no_stream", url: trackUrl }, event);
+      return json(200, toPayload(track, previewUrl), event);
     }
 
     const query = q || [artist, title].filter(Boolean).join(" ");
@@ -212,10 +224,9 @@ export async function handler(event) {
 
     for (const { t } of ranked) {
       const previewUrl = await streamForTrack(t, clientId);
-      if (previewUrl) return json(200, toPayload(t, previewUrl));
+      if (previewUrl) return json(200, toPayload(t, previewUrl), event);
     }
 
-    // Looser pass if strict artist filter wiped everything
     if (wantArtist && !ranked.length) {
       const loose = tracks
         .map((t) => ({ t, score: scoreTrack(t, wantTitle, "") }))
@@ -232,12 +243,13 @@ export async function handler(event) {
           if (!(na.includes(wa) || wa.includes(na))) continue;
         }
         const previewUrl = await streamForTrack(t, clientId);
-        if (previewUrl) return json(200, toPayload(t, previewUrl));
+        if (previewUrl) return json(200, toPayload(t, previewUrl), event);
       }
     }
 
-    return json(404, { error: "no_match", query });
+    return json(404, { error: "no_match", query }, event);
   } catch (err) {
-    return json(502, { error: String(err?.message || err) });
+    console.error("[soundcloud]", err);
+    return json(502, { error: "Lookup failed." }, event);
   }
 }

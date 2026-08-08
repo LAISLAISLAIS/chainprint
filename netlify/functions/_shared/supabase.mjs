@@ -1,25 +1,82 @@
 /**
- * Shared Supabase helpers for Netlify functions (anon or user JWT).
+ * Shared Supabase helpers for Netlify functions (anon, user JWT, or service role).
+ * Production: SUPABASE_URL + SUPABASE_ANON_KEY required (fail closed).
+ * Local/dev only: optional publishable fallback so `netlify dev` works before env is wired.
+ * Service role never falls back.
  */
 
 export const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
+function isProductionRuntime() {
+  return process.env.CONTEXT === "production" || process.env.NODE_ENV === "production";
+}
+
+/** Publishable-only local fallback (same project as js/auth/config.js). Never use service role here. */
+const DEV_PUBLISHABLE = {
+  url: "https://wggvvgigtwzwivpgszyr.supabase.co",
+  key: "sb_publishable_mGJIAlOvSs_5sahA8i0qiQ_q5gskCtM",
+};
+
 export function supabaseConfig() {
-  const url = String(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").trim();
-  const key = String(
+  let url = String(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").trim();
+  let key = String(
     process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || ""
   ).trim();
-  return {
-    url: url || "https://wggvvgigtwzwivpgszyr.supabase.co",
-    key: key || "sb_publishable_mGJIAlOvSs_5sahA8i0qiQ_q5gskCtM",
-  };
+
+  if ((!url || !key) && !isProductionRuntime()) {
+    console.warn(
+      "[supabase] SUPABASE_URL/ANON_KEY unset — using local publishable fallback (not for production)"
+    );
+    url = url || DEV_PUBLISHABLE.url;
+    key = key || DEV_PUBLISHABLE.key;
+  }
+
+  if (!url || !key) {
+    const err = new Error("Supabase is not configured (SUPABASE_URL / SUPABASE_ANON_KEY).");
+    err.status = 503;
+    throw err;
+  }
+  return { url, key };
+}
+
+export function supabaseServiceConfig() {
+  const url = String(process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || "").trim();
+  const key = String(process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+  if (!url || !key) {
+    const err = new Error(
+      "Supabase service role is not configured (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)."
+    );
+    err.status = 503;
+    throw err;
+  }
+  return { url, key };
 }
 
 export function siteOrigin(event) {
+  const fromEnv = String(process.env.SITE_URL || "").trim().replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
   const proto = event.headers?.["x-forwarded-proto"] || "https";
-  const host = event.headers?.["x-forwarded-host"] || event.headers?.host || "chainprint.app";
+  const host = event.headers?.["x-forwarded-host"] || event.headers?.host || "localhost";
   return `${proto}://${host}`.replace(/\/$/, "");
+}
+
+export async function supabaseRest(path, { service = false, token, method = "GET", body, headers: extra } = {}) {
+  const { url, key } = service ? supabaseServiceConfig() : supabaseConfig();
+  const auth = token || key;
+  const res = await fetch(`${url}${path}`, {
+    method,
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${auth}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      Prefer: "return=representation",
+      ...extra,
+    },
+    body: body != null ? JSON.stringify(body) : undefined,
+  });
+  return res;
 }
 
 /**
@@ -54,7 +111,6 @@ export async function fetchSharedChainRow(id, opts = {}) {
     true
   );
   if (!res.ok) {
-    // Migration 005 not applied — retry without expires_at
     res = await query(
       "id,owner,track_name,target,mode,key_label,bpm,artwork_url,payload,created_at",
       false
@@ -110,4 +166,20 @@ export function shareMeta(row) {
     ogDescription: description,
     chipLine: bits.join(" · "),
   };
+}
+
+export async function getUserFromJwt(token) {
+  if (!token) return null;
+  const { url, key } = supabaseConfig();
+  const res = await fetch(`${url}/auth/v1/user`, {
+    headers: { apikey: key, Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export function bearerFromEvent(event) {
+  const h = event.headers?.authorization || event.headers?.Authorization || "";
+  const m = String(h).match(/^Bearer\s+(.+)$/i);
+  return m ? m[1].trim() : "";
 }

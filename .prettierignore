@@ -1,0 +1,7 @@
+node_modules
+mcp/.venv
+mcp/dist
+package-lock.yaml
+*.min.js
+assets
+.data

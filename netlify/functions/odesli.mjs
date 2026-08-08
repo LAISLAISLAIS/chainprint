@@ -4,16 +4,14 @@
  * is title-only — so we resolve artist (and Spotify's ~30s preview) here.
  */
 
-const CORS = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "Content-Type",
-  "Access-Control-Allow-Methods": "GET, OPTIONS",
-};
+import { corsHeaders } from "./_shared/cors.mjs";
+import { rateLimit, rateLimitHeaders } from "./_shared/rate-limit.mjs";
 
-function json(statusCode, body) {
+function json(statusCode, body, event, extra = {}) {
+  const CORS = corsHeaders(event || {}, { allowPublic: true });
   return {
     statusCode,
-    headers: { ...CORS, "Content-Type": "application/json" },
+    headers: { ...CORS, "Content-Type": "application/json", ...extra },
     body: JSON.stringify(body),
   };
 }
@@ -114,13 +112,24 @@ async function fromSpotifyPage(trackUrl) {
 }
 
 export async function handler(event) {
+  const CORS = corsHeaders(event, { allowPublic: true });
   if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 204, headers: CORS };
+    return { statusCode: 204, headers: CORS, body: "" };
+  }
+
+  const rl = await rateLimit(event, {
+    bucket: "odesli",
+    limit: 60,
+    windowSec: 60,
+    requireShared: true,
+  });
+  if (!rl.ok) {
+    return json(rl.statusCode, { error: rl.error }, event, rateLimitHeaders(rl));
   }
 
   const trackUrl = event.queryStringParameters?.url;
   if (!trackUrl) {
-    return json(400, { error: "missing url" });
+    return json(400, { error: "missing url" }, event);
   }
 
   const country = event.queryStringParameters?.userCountry || "US";
@@ -142,11 +151,12 @@ export async function handler(event) {
     }
 
     if (!identity) {
-      return json(404, { error: "could_not_resolve", url: trackUrl });
+      return json(404, { error: "could_not_resolve", url: trackUrl }, event);
     }
 
-    return json(200, { ...identity, previewUrl });
+    return json(200, { ...identity, previewUrl }, event);
   } catch (err) {
-    return json(502, { error: String(err?.message || err) });
+    console.error("[odesli]", err);
+    return json(502, { error: "Lookup failed." }, event);
   }
 }
