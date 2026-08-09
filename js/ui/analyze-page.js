@@ -254,6 +254,7 @@ const matchMoves = document.querySelector("[data-match-moves]");
 const matchNote = document.querySelector("[data-match-note]");
 const previewDryBtn = document.querySelector('[data-preview-mode="dry"]');
 const previewChainBtn = document.querySelector('[data-preview-mode="chain"]');
+const hearPlayBtn = document.querySelector("[data-hear-play]");
 const previewHint = document.querySelector("[data-preview-hint]");
 const hearFieldVocal = document.querySelector('[data-hear-field="vocal"]');
 const hearFieldInstrumental = document.querySelector('[data-hear-field="instrumental"]');
@@ -781,6 +782,14 @@ function syncChainPreviewUi() {
 
   if (previewDryBtn) previewDryBtn.disabled = !canPreview;
   if (previewChainBtn) previewChainBtn.disabled = !canPreview;
+  if (hearPlayBtn) {
+    hearPlayBtn.disabled = !stem;
+    hearPlayBtn.title = stem
+      ? canPreview
+        ? "Play / pause preview (use Dry or Through chain)"
+        : "Play / pause dry take"
+      : "Add a dry take to play";
+  }
 
   if (!canPreview && isChainPreview()) {
     setChainPreview(false);
@@ -797,20 +806,23 @@ function syncChainPreviewUi() {
 
   if (previewHint) {
     if (!hasChain) {
-      previewHint.textContent = "Analyze a reference first";
+      previewHint.textContent = stem
+        ? "Play your dry take here — analyze a reference to A/B through the chain"
+        : "Analyze a reference first";
     } else if (!stem) {
       previewHint.textContent =
         analysisTarget === "instrumental"
-          ? "Add your dry instrumental to compare"
+          ? "Add your dry instrumental, then press play"
           : analysisTarget === "full"
-            ? "Add a dry take to compare"
-            : "Add your dry vocal to compare";
+            ? "Add a dry take, then press play"
+            : "Add your dry vocal, then press play";
     } else if (previewOn) {
-      previewHint.textContent = "Hearing through chain";
+      previewHint.textContent = "Playing through chain — press play or flip to Dry";
     } else {
-      previewHint.textContent = "Hearing dry — switch to Through chain";
+      previewHint.textContent = "Press play, then flip to Through chain to compare";
     }
   }
+  syncHearPlayButton();
 }
 
 function audioFileForEntry(entry) {
@@ -827,6 +839,18 @@ function applyChainFxFromAdvice(advice) {
   syncChainPreviewUi();
 }
 
+function dryPlaybackKey() {
+  const entry = library.active();
+  return entry ? `${entry.id}:dry` : "dry-preview";
+}
+
+function syncHearPlayButton() {
+  if (!hearPlayBtn) return;
+  const on = playingKey() === dryPlaybackKey() && Boolean(dryPreviewStem());
+  hearPlayBtn.classList.toggle("is-playing", on);
+  hearPlayBtn.setAttribute("aria-label", on ? "Pause preview" : "Play dry take");
+}
+
 function syncPlayButtons() {
   const key = playingKey();
   libraryList?.querySelectorAll("[data-library-play]").forEach((btn) => {
@@ -835,6 +859,7 @@ function syncPlayButtons() {
     btn.classList.toggle("is-playing", on);
     btn.setAttribute("aria-label", on ? "Pause" : "Play");
   });
+  syncHearPlayButton();
 }
 
 function dryRoleLabel() {
@@ -927,6 +952,9 @@ async function setPreviewMode(mode) {
 
 previewDryBtn?.addEventListener("click", () => setPreviewMode("dry"));
 previewChainBtn?.addEventListener("click", () => setPreviewMode("chain"));
+hearPlayBtn?.addEventListener("click", () => {
+  void toggleDryPlayback();
+});
 
 function setProgress(on, { label = "", progress = 0, stage = "" } = {}) {
   if (!progressRoot) return;

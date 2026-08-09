@@ -2320,6 +2320,61 @@
   min-width: 0;
 }
 
+.hear-preview-play {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f0f0f0;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.hear-preview-play:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.hear-preview-play:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.hear-preview-play.is-playing {
+  background: rgba(110, 196, 180, 0.18);
+  border-color: rgba(110, 196, 180, 0.45);
+  color: #8ed9cb;
+}
+
+.hear-preview-play:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.hear-preview-play-icon {
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 6px 0 6px 10px;
+  border-color: transparent transparent transparent currentColor;
+  margin-left: 2px;
+}
+
+.hear-preview-play.is-playing .hear-preview-play-icon {
+  width: 10px;
+  height: 10px;
+  margin-left: 0;
+  border: none;
+  background:
+    linear-gradient(currentColor, currentColor) left / 3px 100% no-repeat,
+    linear-gradient(currentColor, currentColor) right / 3px 100% no-repeat;
+}
+
 .preview-ab-seg {
   display: inline-flex;
   align-items: center;
@@ -4722,6 +4777,11 @@
   .hear-file-row .stem-pick-btn {
     height: 44px;
     min-height: 44px;
+  }
+
+  .hear-preview-play {
+    width: 44px;
+    height: 44px;
   }
 
   .preview-ab-seg {
