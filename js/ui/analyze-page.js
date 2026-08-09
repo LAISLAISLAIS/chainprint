@@ -2166,7 +2166,8 @@ exportAbletonBtn?.addEventListener("click", async () => {
     setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 
     const tips = [];
-    tips.push("Drag the .adg onto an audio track in Ableton Live (Standard/Suite).");
+    tips.push("Drag the .adg onto an audio track in Ableton Live 11 or 12 (Standard/Suite).");
+    tips.push("If Live says it can’t be loaded, use File → Collect All and Save once, or try Live 11/12 Suite.");
     if (eqNotes.length) {
       tips.push(
         `EQ / de-ess stages are in the rack's Info View (and macro names) — dial EQ Eight by hand:\n• ${eqNotes.slice(0, 4).join("\n• ")}`

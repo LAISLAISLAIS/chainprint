@@ -105,8 +105,92 @@ async function loadTemplates() {
   const bin = Uint8Array.from(atob(ABLETON_TEMPLATES_B64), (c) => c.charCodeAt(0));
   const stream = new DecompressionStream("gzip");
   const plain = await new Response(new Blob([bin]).stream().pipeThrough(stream)).text();
-  templates = JSON.parse(plain);
+  const raw = JSON.parse(plain);
+  templates = {
+    ...raw,
+    StereoGain: sanitizeDevicePreset(raw.StereoGain, "StereoGain", "Utility"),
+    Compressor2: sanitizeDevicePreset(raw.Compressor2, "Compressor2", "Compressor"),
+    Reverb: sanitizeDevicePreset(raw.Reverb, "Reverb", "Reverb"),
+    CrossDelay: sanitizeDevicePreset(raw.CrossDelay, "CrossDelay", "Simple Delay"),
+    _AudioEffectGroupDevice: sanitizeRackShell(raw._AudioEffectGroupDevice || ""),
+    _BranchSkeleton: scrubAbsolutePaths(raw._BranchSkeleton || ""),
+  };
   return templates;
+}
+
+/** Scrub Live 10 leftovers from the Audio Effect Rack device shell. */
+function sanitizeRackShell(xml) {
+  let out = scrubAbsolutePaths(xml);
+  const live11FileRef = `<FileRef><RelativePathType Value="1" /><RelativePath Value="" /><Path Value="" /><Type Value="2" /><LivePackName Value="" /><LivePackId Value="" /><OriginalFileSize Value="0" /><OriginalCrc Value="0" /></FileRef>`;
+  out = out.replace(/<FilePresetRef\b[\s\S]*?<\/FilePresetRef>/g, live11FileRef);
+  out = out.replace(/<FileRef(?:\s[^>]*)?>\s*<HasRelativePath[\s\S]*?<\/FileRef>/g, live11FileRef);
+  out = out.replace(
+    /<RelativePath>\s*(?:<RelativePathElement[^/]*\/>\s*)+<\/RelativePath>/g,
+    `<RelativePath Value="" />`
+  );
+  out = out.replace(/<HasRelativePath[^/]*\/>\s*/g, "");
+  out = out.replace(/OverwriteProtectionNumber Value="2560"/g, 'OverwriteProtectionNumber Value="2818"');
+  return out;
+}
+
+/**
+ * Normalize stock device presets so Live 11/12 will load them.
+ * The shipped CrossDelay shell mixed Live 10 FileRef paths + OverwriteProtection 2560
+ * into a Live 11 rack and Ableton refused the .adg.
+ */
+function sanitizeDevicePreset(xml, deviceId, coreLibFolder) {
+  if (!xml) return xml;
+  let out = scrubAbsolutePaths(xml);
+
+  const live11FileRef = `<FileRef><RelativePathType Value="5" /><RelativePath Value="Devices/Audio Effects/${escAttr(coreLibFolder)}" /><Path Value="" /><Type Value="2" /><LivePackName Value="Core Library" /><LivePackId Value="www.ableton.com/0" /><OriginalFileSize Value="0" /><OriginalCrc Value="0" /></FileRef>`;
+  const defaultRef = `<AbletonDefaultPresetRef Id="0">${live11FileRef}<DeviceId Name="${escAttr(deviceId)}" /></AbletonDefaultPresetRef>`;
+
+  // Drop device-level OverwriteProtection (Live 10 leftover); keep AbletonDevicePreset-level 2818
+  out = out.replace(
+    /(<SourceContext>[\s\S]*?<\/SourceContext>\s*)<OverwriteProtectionNumber Value="\d+" \/>/,
+    `$1`
+  );
+  out = out.replace(/OverwriteProtectionNumber Value="2560"/g, 'OverwriteProtectionNumber Value="2818"');
+
+  // Live ≤10 FilePresetRef → AbletonDefaultPresetRef
+  out = out.replace(/<FilePresetRef\b[\s\S]*?<\/FilePresetRef>/g, defaultRef);
+
+  // Live ≤10 FileRef with RelativePathElement children → Live 11 string RelativePath
+  out = out.replace(/<FileRef(?:\s[^>]*)?>\s*<HasRelativePath[\s\S]*?<\/FileRef>/g, live11FileRef);
+
+  // Safety: any remaining RelativePathElement lists → string path
+  out = out.replace(
+    /<RelativePath>\s*(?:<RelativePathElement[^/]*\/>\s*)+<\/RelativePath>/g,
+    `<RelativePath Value="Devices/Audio Effects/${escAttr(coreLibFolder)}" />`
+  );
+  out = out.replace(/<HasRelativePath[^/]*\/>\s*/g, "");
+
+  // Outer PresetRef must not wrap AbletonDefaultPresetRef in <Value>
+  out = out.replace(
+    /<\/Device>\s*<PresetRef>\s*<Value>([\s\S]*?)<\/Value>\s*<\/PresetRef>\s*<\/AbletonDevicePreset>/,
+    `</Device><PresetRef>$1</PresetRef></AbletonDevicePreset>`
+  );
+
+  // Ensure outer PresetRef / LastPresetRef use AbletonDefaultPresetRef
+  out = out.replace(
+    /<LastPresetRef>[\s\S]*?<\/LastPresetRef>/,
+    `<LastPresetRef><Value>${defaultRef}</Value></LastPresetRef>`
+  );
+  out = out.replace(
+    /<PresetRef>[\s\S]*?<\/PresetRef>(\s*<\/AbletonDevicePreset>)/,
+    `<PresetRef>${defaultRef}</PresetRef>$1`
+  );
+
+  out = out.replace(/<(AutomationTarget|ModulationTarget) Id="\d+"/g, '<$1 Id="0"');
+
+  return out;
+}
+
+function scrubAbsolutePaths(xml) {
+  return String(xml || "")
+    .replace(/<Path Value="\/[^"]*"\s*\/>/g, '<Path Value="" />')
+    .replace(/\/Users\/[^"<]+/g, "")
+    .replace(/\/Applications\/[^"<]+/g, "");
 }
 
 /**
