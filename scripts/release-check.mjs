@@ -54,7 +54,13 @@ for (const path of [
 
 // Migrations
 const migDir = join(root, "supabase/migrations");
-for (const f of ["006_billing.sql", "007_consume_analysis.sql", "008_profiles_rls_lockdown.sql"]) {
+for (const f of [
+  "006_billing.sql",
+  "007_consume_analysis.sql",
+  "008_profiles_rls_lockdown.sql",
+  "009_fix_username_login.sql",
+  "010_transactional_emails.sql",
+]) {
   if (existsSync(join(migDir, f))) pass(`migration ${f}`);
   else fail(`missing migration ${f}`);
 }

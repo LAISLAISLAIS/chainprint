@@ -15,7 +15,7 @@ chainprint/
 ├── netlify/edge-functions/  # optional site password gate
 ├── supabase/migrations/ # apply in order on your project
 ├── mcp/                 # Ableton Live MCP package (Python)
-├── docs/                # AUTH, BILLING, SECURITY, LAUNCH_CHECKLIST
+├── docs/                # AUTH, BILLING, SECURITY, LAUNCH, SYSTEM_REVIEW
 └── package.json         # stripe + upstash for functions
 ```
 
@@ -28,7 +28,7 @@ npm install
 npm run dev          # netlify dev → http://localhost:8888
 ```
 
-Apply SQL in `supabase/migrations/` (001 → 008) on your Supabase project before testing auth/billing.
+Apply SQL in `supabase/migrations/` (001 → 010) on your Supabase project before testing auth/billing.
 
 Stripe locally:
 
@@ -39,17 +39,19 @@ stripe listen --forward-to localhost:8888/api/stripe/webhook
 
 ## Production
 
-1. Set Netlify env from `.env.example` (live Stripe + Upstash required).
-2. Run migrations including `006`–`008`.
+1. Set Netlify env from `.env.example` (live Stripe + Upstash required). **Netlify is the only production host** — `vercel.json` and `Dockerfile` are static leftovers and cannot bill or share.
+2. Run migrations `001`–`010` (billing-critical: `006`–`008`; username login: `009`; product email columns: `010`).
 3. Follow [docs/LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md).
 4. `npm run check` before deploy.
 
 ## Docs
 
-| Doc | Purpose |
-|-----|---------|
-| [docs/AUTH_SETUP.md](docs/AUTH_SETUP.md) | Supabase auth + RLS |
-| [docs/BILLING.md](docs/BILLING.md) | Stripe checkout / webhook / portal |
-| [docs/SECURITY.md](docs/SECURITY.md) | Headers, CORS, rate limits, secrets |
-| [docs/LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md) | Go-live gate |
-| [AGENTS.md](AGENTS.md) | Agent / contributor context |
+| Doc                                                  | Purpose                             |
+| ---------------------------------------------------- | ----------------------------------- |
+| [docs/AUTH_SETUP.md](docs/AUTH_SETUP.md)             | Supabase auth + RLS                 |
+| [docs/BILLING.md](docs/BILLING.md)                   | Stripe checkout / webhook / portal  |
+| [docs/SECURITY.md](docs/SECURITY.md)                 | Headers, CORS, rate limits, secrets |
+| [docs/LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md) | Go-live gate                        |
+| [docs/SYSTEM_REVIEW.md](docs/SYSTEM_REVIEW.md)       | Architecture + prioritized backlog  |
+| [docs/AGENT_SCOUT.md](docs/AGENT_SCOUT.md)           | Short agent orientation             |
+| [AGENTS.md](AGENTS.md)                               | Agent / contributor context         |

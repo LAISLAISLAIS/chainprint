@@ -4,7 +4,7 @@ Do not enable live Stripe or open the site publicly until every box is checked.
 
 ## Supabase
 
-- [ ] Migrations `001`–`008` applied on production project (see `scripts/apply-migrations.md`)
+- [ ] Migrations `001`–`010` applied on production project (see `scripts/apply-migrations.md`)
 - [ ] REST self-upgrade of `plan` fails (trigger / RLS)
 - [ ] `consume_analysis` works for free user and blocks at quota
 - [ ] Service role key only in Netlify env (not client)

@@ -2,7 +2,7 @@
 
 ## Launch checklist
 
-1. Create a Supabase project and run SQL migrations **in order** (`001` → `008`).
+1. Create a Supabase project and run SQL migrations **in order** (`001` → `010`).
 2. Set `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` in Netlify (and `.env` for local).
 3. Client publishable URL/anon key: `js/auth/config.js` or `window.__CHAINPRINT_CONFIG__` inject. Never put the service role in the browser.
 4. Auth → Email enabled; match password policy (min 8, upper, number, symbol).
@@ -12,12 +12,14 @@
 
 ### Migrations (billing-critical)
 
-| File | Purpose |
-|------|---------|
-| `001`–`005` | Profiles, shares, settings, expiry |
-| `006_billing.sql` | Stripe columns + `stripe_events` |
-| `007_consume_analysis.sql` | Quota RPC |
-| `008_profiles_rls_lockdown.sql` | Billing field trigger |
+| File                            | Purpose                                                 |
+| ------------------------------- | ------------------------------------------------------- |
+| `001`–`005`                     | Profiles, shares, settings, expiry                      |
+| `006_billing.sql`               | Stripe columns + `stripe_events`                        |
+| `007_consume_analysis.sql`      | Quota RPC                                               |
+| `008_profiles_rls_lockdown.sql` | Billing field trigger                                   |
+| `009_fix_username_login.sql`    | `resolve_login_email` / `username_taken` citext compare |
+| `010_transactional_emails.sql`  | `welcome_email_sent_at` / `pro_email_sent_at`           |
 
 ### “violates row-level security policy for table profiles”
 
@@ -80,10 +82,10 @@ Until SMTP (or a paid Supabase plan) is configured, reset emails stay “Supabas
 
 Netlify functions send these via Resend HTTP (`RESEND_API_KEY`), not SMTP:
 
-| Email | Trigger |
-|-------|---------|
-| Welcome | `POST /api/email/welcome` after signup (also on login if never sent) |
-| Pro confirmation | Stripe `checkout.session.completed` webhook |
+| Email            | Trigger                                                              |
+| ---------------- | -------------------------------------------------------------------- |
+| Welcome          | `POST /api/email/welcome` after signup (also on login if never sent) |
+| Pro confirmation | Stripe `checkout.session.completed` webhook                          |
 
 Tracked on `profiles.welcome_email_sent_at` / `profiles.pro_email_sent_at` (migration `010`).
 
