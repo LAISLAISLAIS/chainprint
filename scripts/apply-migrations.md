@@ -10,6 +10,8 @@ In the Supabase SQL editor (production project), run each file **in order**:
 6. `supabase/migrations/006_billing.sql` ← Stripe columns + `stripe_events`
 7. `supabase/migrations/007_consume_analysis.sql` ← quota RPC
 8. `supabase/migrations/008_profiles_rls_lockdown.sql` ← billing field trigger
+9. `supabase/migrations/009_fix_username_login.sql` ← username/email login citext compare
+10. `supabase/migrations/010_transactional_emails.sql` ← welcome / Pro email sent-at columns
 
 Verify:
 
@@ -21,5 +23,9 @@ select column_name from information_schema.columns
 where table_name = 'profiles'
   and column_name like 'stripe%' or column_name in ('subscription_status','grace_until');
 
-select proname from pg_proc where proname = 'consume_analysis';
+select proname from pg_proc where proname in ('consume_analysis', 'resolve_login_email');
+
+select column_name from information_schema.columns
+where table_name = 'profiles'
+  and column_name in ('welcome_email_sent_at', 'pro_email_sent_at');
 ```

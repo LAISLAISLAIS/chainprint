@@ -4,13 +4,15 @@ Vocal analysis SaaS: static vanilla JS + Netlify Functions + Supabase + Stripe.
 
 ## Read first
 
-| Document | Location |
-|----------|----------|
-| Launch gate | `docs/LAUNCH_CHECKLIST.md` |
-| Billing | `docs/BILLING.md` |
-| Security | `docs/SECURITY.md` |
-| Auth / RLS | `docs/AUTH_SETUP.md` |
-| Env template | `.env.example` |
+| Document      | Location                   |
+| ------------- | -------------------------- |
+| Launch gate   | `docs/LAUNCH_CHECKLIST.md` |
+| System review | `docs/SYSTEM_REVIEW.md`    |
+| Agent scout   | `docs/AGENT_SCOUT.md`      |
+| Billing       | `docs/BILLING.md`          |
+| Security      | `docs/SECURITY.md`         |
+| Auth / RLS    | `docs/AUTH_SETUP.md`       |
+| Env template  | `.env.example`             |
 
 ## Implemented (production path)
 
