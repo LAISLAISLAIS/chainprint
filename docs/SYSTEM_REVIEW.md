@@ -58,9 +58,9 @@ The production path is largely **implemented**, not stubbed. The launch gap is o
 - **Webhook retry posture is correct.** Events are applied first, then recorded in `stripe_events` (`docs/SECURITY.md`). Failed apply does not poison the event id.
 - **Entitlement rules exist in three places and are close.** `hasActivePro` (`js/auth/quota.js`), `hasProAccess` (`_shared/entitlements.mjs`), and `consume_analysis()` SQL all treat `active` / `trialing` / legacy `none` / `past_due`+grace the same way.
 - **CORS + rate limits are real.** Write APIs use an origin allowlist. Production `requireShared: true` routes 503 without Upstash. Site gate has no hardcoded password; missing password **skips** the gate rather than 503ing the site.
-- **Shares and Ableton export exist.** Authenticated CRUD, public `/c/:id` + `/api/chain/:id` for MCP, `.adg` assembly with a local smoke test (unwired — see P1).
+- **Shares and Ableton export exist.** Authenticated CRUD, public `/c/:id` + `/api/chain/:id` for MCP, `.adg` assembly with a CI-gated smoke test (`npm run test:ableton`).
 - **Transactional email path exists.** Resend welcome + Pro mail, tracked by migration `010`. Auth recovery is exempt from the site gate so hash tokens survive.
-- **Release preflight and billing unit tests exist.** `npm run check` + `npm run test:billing` run in CI. Function syntax is `node --check`’d.
+- **Release preflight and unit tests exist.** `npm run check` + `npm run test:billing` + `npm run test:ableton` run in CI, plus a blocking MCP `pytest` job. Function syntax is `node --check`’d.
 
 `docs/LAUNCH_CHECKLIST.md` is still **fully unchecked**. That is the stated go-live gate (`AGENTS.md`: do not enable live Stripe until it is complete). Code being ready does not mean production is ready.
 
@@ -76,7 +76,7 @@ Severity: **P0** = do before public/paid traffic when hosting returns. **P1** = 
 | G2  | P0       | Launch ops        | Checklist unchecked: Auth URLs, Upstash, CORS=prod, site-gate password or `SITE_GATE_ENABLED=0`, `/api/health` → `stripe: ok` + `rateLimitBackend: upstash`, billing smokes, legal copy. Site is down (`usage_exceeded`) so several items cannot be re-proved against prod until hosting returns.                                                                                                                                                          |
 | G3  | P0       | Billing / product | Quota is consumed **after** a successful client analysis (`analyze-page.js` → `consumeAnalysis()`). DSP never leaves the browser, so the RPC is honor-system. A client that skips the call, or a throw after results are written to the library, yields a free analysis. Deep mode is a **client-only** gate (`canUseMode("deep")`).                                                                                                                       |
 | G4  | P0       | Hosting confusion | `vercel.json` and Docker/nginx look like deploy configs but omit Stripe, shares, CSP/HSTS, and (Docker) every function. Shipping either as “prod” would serve a site that cannot bill or share. `.dockerignore` does not exclude `.env`.                                                                                                                                                                                                                   |
-| G5  | P1       | CI                | `js/export/ableton-rack.test.mjs` is runnable (`node --test`) and **not** in `package.json` or CI. MCP pytest is `continue-on-error: true`. No `node:test` for DSP / recommend / a shared entitlement fixture. `quota-client.test.mjs` **reimplements** `hasActivePro` instead of importing it.                                                                                                                                                            |
+| G5  | P1       | CI                | Ableton rack + MCP pytest are now hard-fail in `.github/workflows/ci.yml` (`npm run test:ableton`, dedicated `mcp` job). Remaining: no `node:test` for DSP / recommend / a shared entitlement fixture. `quota-client.test.mjs` **reimplements** `hasActivePro` instead of importing it.                                                                                                                                                                 |
 | G6  | P1       | Maintainability   | `js/ui/analyze-page.js` is 3281 lines (persist, quota chrome, library/blend, match, readout render, share/MCP, playback/dry stems, `runAnalysis`). `js/auth/session.js` is 1022 lines and still carries a localStorage demo-auth path that is dead while `js/auth/config.js` hardcodes a publishable project.                                                                                                                                              |
 | G7  | P1       | Billing edges     | `past_due` with **null** `grace_until` is treated as Pro (fail-open) on client, server, and SQL. `invoice.paid` grants Pro without checking price/product. `008` trigger does **not** lock `welcome_email_sent_at` / `pro_email_sent_at` (added in `010`) — a client could mark mail sent. `CHAINPRINT_DEV_UNLOCK` is documented as an env flag “forced off in production”; **no code reads that env** — only `window.__CHAINPRINT_DEV_UNLOCK__ === true`. |
 | G8  | P1       | Abuse / size      | `POST /api/shares` does not cap `payload` size. `/api/chain` and the SoundCloud/Odesli proxies are public CORS (`allowPublic`) with `requireShared: false`. `api/soundcloud.js` is a Vercel-shaped duplicate of `netlify/functions/soundcloud.mjs`.                                                                                                                                                                                                        |
@@ -137,14 +137,14 @@ Confirm a username login that used to fail (mixed-case stored name) resolves. No
 
 #### P1-1. Put Ableton + MCP + entitlement parity under CI
 
-**Why:** Users pay for chains and Ableton export. CI today protects Stripe apply helpers and a string preflight. `ableton-rack.test.mjs` already exists; MCP tests exist and `publish-mcp.yml` already runs them as a hard gate.
+**Why:** Users pay for chains and Ableton export. CI used to protect only Stripe apply helpers and a string preflight. Ableton + MCP unit tests now hard-fail; entitlement/DSP coverage is still missing.
 
-**Approach:**
+**Done:** `npm test` / `test:ableton` run `js/export/ableton-rack.test.mjs`. The `mcp` CI job installs `.[dev]` with `actions/setup-python` and runs `python -m pytest -q` (no `continue-on-error`).
 
-1. Add `npm test` (or extend `test:billing`) to run `node --test netlify/functions/_shared/*.test.mjs js/export/ableton-rack.test.mjs`.
-2. Import `hasProAccess` from `_shared/entitlements.mjs` and a extracted `hasActivePro` (or a tiny shared fixture) so `quota-client.test.mjs` cannot drift.
-3. Add `actions/setup-python` and drop `continue-on-error` on MCP pytest once `cd mcp && pytest -q` is green on the CI image.
-4. Optional cheap DSP test: one frozen `measureBuffer` / `characterize` fixture (synthetic buffer) so recommend output cannot silently flip.
+**Still open:**
+
+1. Import `hasProAccess` from `_shared/entitlements.mjs` and an extracted `hasActivePro` (or a tiny shared fixture) so `quota-client.test.mjs` cannot drift.
+2. Optional cheap DSP test: one frozen `measureBuffer` / `characterize` fixture (synthetic buffer) so recommend output cannot silently flip.
 
 #### P1-2. Split `analyze-page.js` without changing behavior
 
@@ -221,9 +221,9 @@ The DSP pipeline itself is already split (`analyze.js`, `dsp/*`, `recommend.js`)
 | Function `node --check`               | Yes                                                  |
 | `npm run check` (`release-check.mjs`) | Yes — now also requires `009` / `010` files to exist |
 | `npm run test:billing`                | Yes — entitlements + `checkoutPaymentOk` only        |
-| `js/export/ableton-rack.test.mjs`     | **No** (comment says how to run it)                  |
+| `js/export/ableton-rack.test.mjs`     | Yes — `npm run test:ableton` / `npm test`            |
 | DSP / recommend / analyze             | **No**                                               |
-| MCP `pytest`                          | Yes, **`continue-on-error: true`**                   |
+| MCP `pytest`                          | Yes, hard-fail (`mcp` job, `setup-python` 3.12)      |
 | MCP publish workflow pytest           | Yes, hard-fail (release only)                        |
 
 ---

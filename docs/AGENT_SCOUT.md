@@ -21,7 +21,7 @@ The repo is a working vocal/mix-analysis SaaS (vanilla JS + Netlify Functions + 
 - **Host:** Netlify is production. `vercel.json` and Docker/nginx are non-prod static leftovers.
 - **API:** thin `netlify/functions/*.mjs`; logic in `_shared/`.
 - **Data:** Supabase migrations `001`–`010`. Plan/quota are not client-writable.
-- **CI:** `npm run check` + `test:billing`. Ableton rack tests and MCP pytest are not hard-gated yet (see SYSTEM_REVIEW P1-1).
+- **CI:** `npm run check` + `test:billing` + `test:ableton` (hard-fail). MCP `pytest` is a separate hard-fail job. Entitlement-fixture drift and DSP/recommend tests are still open (SYSTEM_REVIEW P1-1 remainder).
 
 ## If you only open three files
 
