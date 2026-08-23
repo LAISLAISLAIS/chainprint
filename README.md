@@ -15,7 +15,7 @@ chainprint/
 ├── netlify/edge-functions/  # optional site password gate
 ├── supabase/migrations/ # apply in order on your project
 ├── mcp/                 # Ableton Live MCP package (Python)
-├── docs/                # AUTH, BILLING, SECURITY, LAUNCH_CHECKLIST
+├── docs/                # AUTH, BILLING, SECURITY, LAUNCH_CHECKLIST, AGENT_SCOUT
 └── package.json         # stripe + upstash for functions
 ```
 
@@ -52,4 +52,5 @@ stripe listen --forward-to localhost:8888/api/stripe/webhook
 | [docs/BILLING.md](docs/BILLING.md) | Stripe checkout / webhook / portal |
 | [docs/SECURITY.md](docs/SECURITY.md) | Headers, CORS, rate limits, secrets |
 | [docs/LAUNCH_CHECKLIST.md](docs/LAUNCH_CHECKLIST.md) | Go-live gate |
+| [docs/AGENT_SCOUT.md](docs/AGENT_SCOUT.md) | Stack map, entry points, top follow-ups |
 | [AGENTS.md](AGENTS.md) | Agent / contributor context |
