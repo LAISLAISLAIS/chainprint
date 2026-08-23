@@ -29,7 +29,10 @@ npm install
 cp .env.example .env   # fill values
 npm run dev            # netlify dev
 npm run check
+npm test                 # billing + Ableton rack
 npm run test:billing
+npm run test:ableton
+# MCP (from mcp/): python -m pip install -e ".[dev]" && python -m pytest -q
 ```
 
 ## Conventions
